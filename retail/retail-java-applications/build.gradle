@@ -50,10 +50,6 @@ spotless {
 
 subprojects {
     apply plugin: 'com.github.spotbugs'
-
-    spotbugs {
-        effort = 'max'
-    }
 }
 
 wrapper {
