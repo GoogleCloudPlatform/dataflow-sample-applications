@@ -48,6 +48,14 @@ spotless {
     }
 }
 
+subprojects {
+    apply plugin: 'com.github.spotbugs'
+
+    spotbugs {
+        effort = 'max'
+    }
+}
+
 wrapper {
     gradleVersion = '5.6.1'
 }
