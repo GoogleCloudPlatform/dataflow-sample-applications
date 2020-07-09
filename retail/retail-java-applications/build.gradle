@@ -18,6 +18,7 @@
 
 plugins {
     id 'idea'
+    id 'java'
     id "com.diffplug.gradle.spotless" version "4.5.1"
     id "com.github.spotbugs" version "4.4.4"
 }
@@ -45,10 +46,6 @@ spotless {
         googleJavaFormat('1.7')
         target fileTree(dir: project.rootDir, includes: ['retail-java-applications/java/**/*.java'])
     }
-}
-
-spotbugs {
-    toolVersion = '4.0.6'
 }
 
 wrapper {
