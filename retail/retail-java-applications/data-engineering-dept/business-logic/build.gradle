@@ -23,6 +23,17 @@ plugins {
 description = "Retail Sample Application :: Java :: Business Logic"
 ext.summary = "Business data transformations"
 
+spotbugs {
+    ignoreFailures = true
+}
+
+tasks.matching {task -> task.name.startsWith('spotbugs')}.forEach {
+    it.reports {
+        html.enabled = true
+        xml.enabled = false
+    }
+}
+
 dependencies {
     compile project(':data-engineering-dept:data-objects')
 
