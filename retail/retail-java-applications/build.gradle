@@ -44,7 +44,7 @@ spotless {
     java {
         licenseHeaderFile 'spotless/Apache_Licence_For_Spotless'
         googleJavaFormat('1.7')
-        target fileTree(dir: project.rootDir, includes: ['retail-java-applications/java/**/*.java'])
+        target fileTree(dir: project.rootDir, includes: ['**/*.java'])
     }
 }
 
