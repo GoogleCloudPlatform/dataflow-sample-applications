@@ -83,16 +83,16 @@ public class JSONUtils {
       } catch (NoSuchSchemaException e) {
         LOG.error(e.getMessage());
         throw new IllegalArgumentException(
-                String.format("Could not find schema for Object of %s", clazz.getCanonicalName()));
+            String.format("Could not find schema for Object of %s", clazz.getCanonicalName()));
       }
 
-      try{
-      errMessageSchema = input.getPipeline().getSchemaRegistry().getSchema(ErrorMsg.class);
-    } catch (NoSuchSchemaException e) {
-      LOG.error(e.getMessage());
+      try {
+        errMessageSchema = input.getPipeline().getSchemaRegistry().getSchema(ErrorMsg.class);
+      } catch (NoSuchSchemaException e) {
+        LOG.error(e.getMessage());
         throw new IllegalArgumentException(
-                String.format("Could not find schema for %s", ErrorMsg.class.getCanonicalName()));
-    }
+            String.format("Could not find schema for %s", ErrorMsg.class.getCanonicalName()));
+      }
 
       ParseResult result =
           input.apply(JsonToRow.withExceptionReporting(objectSchema).withExtendedErrorInfo());

@@ -106,7 +106,8 @@ public class JSONUtilsTest {
   }
 
   @Test
-  // This test will fail with 2.22.0 as non strict representation of null is not supported. Corrected in > 2.22.0
+  // This test will fail with 2.22.0 as non strict representation of null is not supported.
+  // Corrected in > 2.22.0
   @Ignore
   public void testParseWithNonStrictNullsClickstream() {
 
@@ -118,9 +119,9 @@ public class JSONUtilsTest {
     String jsonString = gson.toJson(withNull);
 
     PCollection<ClickStreamEvent> events =
-            pipeline
-                    .apply(Create.of(jsonString))
-                    .apply(JSONUtils.ConvertJSONtoPOJO.<ClickStreamEvent>create(ClickStreamEvent.class));
+        pipeline
+            .apply(Create.of(jsonString))
+            .apply(JSONUtils.ConvertJSONtoPOJO.<ClickStreamEvent>create(ClickStreamEvent.class));
 
     PAssert.that(events).containsInAnyOrder(AUTO_VALUE_EVENT.toBuilder().setUid(null).build());
 
