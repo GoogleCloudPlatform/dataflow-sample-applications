@@ -17,21 +17,21 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.options;
 
-import com.google.dataflow.sample.retail.businesslogic.externalservices.RetailPipelineStoresOptions;
-import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
 import org.apache.beam.sdk.options.Default;
+import org.apache.beam.sdk.options.PipelineOptions;
 
-public interface RetailPipelineOptions
-    extends DataflowPipelineOptions,
-        RetailPipelineAggregationOptions,
-        RetailPipelineClickStreamOptions,
-        RetailPipelineInventoryOptions,
-        RetailPipelineTransactionsOptions,
-        RetailPipelineStoresOptions,
-        RetailPipelineReportingOptions {
+public interface RetailPipelineInventoryOptions extends PipelineOptions {
 
-  @Default.Boolean(false)
-  Boolean getDebugMode();
+  @Default.String("subscriptions/global-inventory-topic")
+  String getInventoryPubSubSubscriptions();
 
-  void setDebugMode(Boolean debugMode);
+  void setInventoryPubSubOutput(String inventoryOutput);
+
+  String getInventoryBigQueryRawTable();
+
+  void setInventoryBigQueryRawTable(String clickStreamBigQueryRawTable);
+
+  String getInventoryBigQueryCleanTable();
+
+  void setInventoryBigQueryCleanTable(String clickStreamBigQueryRawTable);
 }
