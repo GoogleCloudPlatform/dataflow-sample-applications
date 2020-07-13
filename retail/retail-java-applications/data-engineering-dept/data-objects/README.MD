@@ -16,3 +16,11 @@
     specific language governing permissions and limitations
     under the License.
 -->
+
+#Overview
+This module holds all the schema information for the objects used in the pipelines.
+Other schema information, for example BigTable column names are also stored in this module.
+ 
+
+
+

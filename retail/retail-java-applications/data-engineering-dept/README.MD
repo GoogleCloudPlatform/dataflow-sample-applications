@@ -16,3 +16,14 @@
     specific language governing permissions and limitations
     under the License.
 -->
+#Overview
+The engineering dept's code base, including:
+
+##business-logic
+Where the core functionality of the data engineering pipelines are stored.  
+##data-objects
+Where schema information is stored about the objects being processed by the pipeline, including serialization within and external to the pipeline.
+##pipelines
+Where the data pipelines are composed using the building blocks created within the business-logic layer. 
+
+
