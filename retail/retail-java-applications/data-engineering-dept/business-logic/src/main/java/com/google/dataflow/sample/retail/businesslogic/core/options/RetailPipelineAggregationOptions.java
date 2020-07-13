@@ -19,6 +19,7 @@ package com.google.dataflow.sample.retail.businesslogic.core.options;
 
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryOptions;
 import org.apache.beam.sdk.options.Default;
+import org.apache.beam.sdk.options.Description;
 
 public interface RetailPipelineAggregationOptions extends BigQueryOptions {
 
@@ -31,4 +32,11 @@ public interface RetailPipelineAggregationOptions extends BigQueryOptions {
   String getAggregateBigQueryTable();
 
   void setAggregateBigQueryTable(String aggregateBigQueryTable);
+
+
+  @Description("The fixed window period which aggregations are computed over")
+  @Default.Integer(5)
+  Integer getAggregationDefaultSec();
+
+  void setAggregationDefaultSec(Integer aggregationDefaultSec);
 }
