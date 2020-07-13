@@ -42,4 +42,10 @@ public interface RetailPipelineReportingOptions extends PipelineOptions {
   String getAggregateBigQueryDataset();
 
   void setAggregateBigQueryDataset(String aggregateBigQueryDataset);
+
+  @Default.String("/topics/global-stock-level-topic")
+  String getAggregateStockPubSubOutputTopic();
+
+  void setAggregateStockPubSubOutputTopic(String aggregateStockPubSubOutputTopic);
+
 }
