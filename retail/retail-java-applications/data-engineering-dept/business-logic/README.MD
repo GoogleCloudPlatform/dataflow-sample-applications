@@ -16,6 +16,54 @@
     specific language governing permissions and limitations
     under the License.
 -->
+# Clickstream Processing
 
-Important note with regards to JsonToRow...
-Null. 
+All business transformations for the processing and analysis of clickstream data.
+
+# Main Process Clickstream:
+ * Read Click Stream Topic
+ * Parse Messages to Beam SCHEMAS
+ * Branch 1:
+   * Write RAW JSON String Clickstream for storage
+ * Branch 2:
+   * Clean the data
+   * Write Cleaned Data to BigQuery
+ * Branch 2.1:
+   * Filter out events of type ERROR
+   * Count Page Views per product in 5 sec windows
+   * Export page view aggregates to BigTable
+   * Export page view aggregates to BigQuery 
+   
+# Main Transactions Processing
+
+All business transformations for the processing and analysis of transaction data.
+
+Process Transaction:
+ * Read transaction Stream Topic
+ * Branch 1:
+   * Write RAW JSON String Transaction for storage
+ * Branch 2:
+   * Parse Messages to Beam SCHEMAS
+   * Convert to transaction object
+   * Enrich the data
+   * Write enriched Data to BigQuery
+
+All business transformations for the processing and analysis of stock data.
+
+# Main Stock Processing
+ * Read stock Stream Topic
+ * Branch 1:
+   * Write RAW JSON String stock for storage
+ * Branch 2:
+   * Parse Messages to Beam SCHEMAS
+   * Convert to Stock Object
+   * Write Data to BigQuery
+  
+# Utility Transaction
+ * Count sales per item per store within a fixed window
+ * Count sales per item within a fixed window
+  
+# Utility Stock
+ * Count incoming stock per item per store within a fixed window
+ * Count incoming stock per item within a fixed window
+ 
