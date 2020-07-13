@@ -22,8 +22,8 @@ import org.apache.beam.sdk.options.Default;
 
 public interface RetailPipelineClickStreamOptions extends PubsubOptions {
 
-  @Default.String("projects/instant-insights/subscriptions/global-clickstream-topic")
-  String getClickStreamPubSubTopic();
+  @Default.String("subscriptions/global-clickstream-topic")
+  String getClickStreamPubSubSubscription();
 
   void setClickStreamPubSubTopic(String clickStreamOutput);
 

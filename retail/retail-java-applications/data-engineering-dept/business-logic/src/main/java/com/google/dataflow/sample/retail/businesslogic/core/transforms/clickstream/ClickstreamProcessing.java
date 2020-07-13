@@ -31,7 +31,6 @@ import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.WriteDisposition;
 import org.apache.beam.sdk.schemas.transforms.Filter;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PDone;
 import org.joda.time.Duration;
 
 /**
@@ -61,10 +60,10 @@ import org.joda.time.Duration;
  *
  * <p>Export page view aggregates to BigQuery
  */
-public class ProcessClickstream {
+public class ClickstreamProcessing {
 
   @PartialResultsExpectedOnDrain
-  public static Pipeline processClickStreamPipeline(Pipeline p) {
+  public static PCollection<ClickStreamEvent> processClickStreamPipeline(Pipeline p) {
 
     RetailPipelineOptions options = p.getOptions().as(RetailPipelineOptions.class);
 
@@ -76,17 +75,16 @@ public class ProcessClickstream {
     PCollection<String> clickStreamJSONMessages =
         p.apply(
             "ReadClickStream",
-            new ReadPubSubMsgPayLoadAsString(options.getClickStreamPubSubTopic()));
+            new ReadPubSubMsgPayLoadAsString(options.getClickStreamPubSubSubscription()));
 
-    clickStreamJSONMessages.apply("ProcessClickStream", new ProcessClickStream());
-
-    return p;
+    return clickStreamJSONMessages.apply("ProcessClickStream", new ProcessClickStream());
   }
 
-  private static class ProcessClickStream extends PTransform<PCollection<String>, PDone> {
+  private static class ProcessClickStream
+      extends PTransform<PCollection<String>, PCollection<ClickStreamEvent>> {
 
     @Override
-    public PDone expand(PCollection<String> input) {
+    public PCollection<ClickStreamEvent> expand(PCollection<String> input) {
 
       RetailPipelineOptions options =
           input.getPipeline().getOptions().as(RetailPipelineOptions.class);
@@ -166,7 +164,7 @@ public class ProcessClickstream {
           WriteAggregationToBigQuery.writeAggregationToBigQuery(
               "PageView", Duration.standardSeconds(5)));
 
-      return PDone.in(input.getPipeline());
+      return cleanDataWithOutErrorEvents;
     }
   }
 }
