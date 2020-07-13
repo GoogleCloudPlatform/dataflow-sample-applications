@@ -48,6 +48,10 @@ spotless {
     }
 }
 
+afterEvaluate {
+    tasks.getByName('spotlessCheck').dependsOn(tasks.getByName('spotlessApply'))
+}
+
 subprojects {
     apply plugin: 'com.github.spotbugs'
 }
