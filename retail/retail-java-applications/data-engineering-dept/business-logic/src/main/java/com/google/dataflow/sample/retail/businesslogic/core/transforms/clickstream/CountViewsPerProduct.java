@@ -20,6 +20,8 @@ package com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstr
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.PageViewAggregator;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.schemas.Schema;
+import org.apache.beam.sdk.schemas.Schema.Field;
 import org.apache.beam.sdk.schemas.Schema.FieldType;
 import org.apache.beam.sdk.schemas.transforms.AddFields;
 import org.apache.beam.sdk.schemas.transforms.Convert;
@@ -91,7 +93,13 @@ public class CountViewsPerProduct
     @Override
     public PCollection<PageViewAggregator> expand(PCollection<Row> input) {
 
-      input.getPipeline().getSchemaRegistry().registerPOJO(PageViewAggregator.class);
+      // TODO the schema registry for PageViewAggregator throws a class cast issue
+      Schema schema =
+          Schema.of(
+              Field.of("pageRef", FieldType.STRING),
+              Field.of("count", FieldType.INT64),
+              Field.of("startTime", FieldType.INT64),
+              Field.of("durationMS", FieldType.INT64));
 
       return input
           // Note key and value are results of Group + Count operation in the previous transform.
@@ -107,10 +115,18 @@ public class CountViewsPerProduct
                     @ProcessElement
                     public void process(
                         @Element Row input, @Timestamp Instant time, OutputReceiver<Row> o) {
-                      o.output(
-                          Row.fromRow(input).withFieldValue("startTime", time.getMillis()).build());
+                      // The default timestamp attached to a combined value is the end of the window
+                      // To find the start of the window we deduct the duration + 1 as beam windows
+                      // are (start,end] with epsilon of 1 ms
+                      Row row =
+                          Row.fromRow(input)
+                              .withFieldValue("durationMS", durationMS)
+                              .withFieldValue("startTime", time.getMillis() - durationMS + 1)
+                              .build();
+                      o.output(row);
                     }
                   }))
+          .setRowSchema(schema)
           .apply(Convert.fromRows(PageViewAggregator.class));
     }
   }

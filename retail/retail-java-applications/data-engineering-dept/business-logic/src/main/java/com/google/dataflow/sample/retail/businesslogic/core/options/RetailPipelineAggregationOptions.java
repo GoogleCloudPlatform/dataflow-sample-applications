@@ -33,7 +33,6 @@ public interface RetailPipelineAggregationOptions extends BigQueryOptions {
 
   void setAggregateBigQueryTable(String aggregateBigQueryTable);
 
-
   @Description("The fixed window period which aggregations are computed over")
   @Default.Integer(5)
   Integer getAggregationDefaultSec();

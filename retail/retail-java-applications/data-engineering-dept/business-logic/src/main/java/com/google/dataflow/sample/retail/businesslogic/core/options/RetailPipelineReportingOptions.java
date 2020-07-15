@@ -47,5 +47,4 @@ public interface RetailPipelineReportingOptions extends PipelineOptions {
   String getAggregateStockPubSubOutputTopic();
 
   void setAggregateStockPubSubOutputTopic(String aggregateStockPubSubOutputTopic);
-
 }

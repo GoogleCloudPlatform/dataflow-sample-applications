@@ -144,7 +144,7 @@ public class SlowMovingStoreLocationDimension {
 
                       for (FieldValueList r : result.iterateAll()) {
                         StoreLocation sl = convertBQRowToStoreLocation(r);
-                        map.put(sl.id, sl);
+                        map.put(sl.getId(), sl);
                       }
 
                       o.output(map);
@@ -164,13 +164,13 @@ public class SlowMovingStoreLocationDimension {
   }
 
   private static StoreLocation convertBQRowToStoreLocation(FieldValueList fieldValues) {
-    StoreLocation storeLocation = new StoreLocation();
-    storeLocation.id = Integer.valueOf((String) fieldValues.get("id").getValue());
-    storeLocation.zip = Integer.valueOf((String) fieldValues.get("zip").getValue());
-    storeLocation.city = fieldValues.get("city").getStringValue();
-    storeLocation.state = fieldValues.get("state").getStringValue();
-    storeLocation.lat = fieldValues.get("lat").getDoubleValue();
-    storeLocation.lng = fieldValues.get("lng").getDoubleValue();
-    return storeLocation;
+    return StoreLocation.builder()
+        .setId(Integer.valueOf((String) fieldValues.get("id").getValue()))
+        .setZip(Integer.valueOf((String) fieldValues.get("zip").getValue()))
+        .setCity(fieldValues.get("city").getStringValue())
+        .setState(fieldValues.get("state").getStringValue())
+        .setLat(fieldValues.get("lat").getDoubleValue())
+        .setLng(fieldValues.get("lng").getDoubleValue())
+        .build();
   }
 }
