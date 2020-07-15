@@ -27,19 +27,19 @@ import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 public abstract class StockAggregation {
 
   @Nullable
-  public abstract Long durationMS();
+  public abstract Long getDurationMS();
 
   @Nullable
-  public abstract Long startTime();
+  public abstract Long getStartTime();
 
   @Nullable
-  public abstract Integer productId();
+  public abstract Integer getProductId();
 
   @Nullable
-  public abstract Integer storeId();
+  public abstract Integer getStoreId();
 
   @Nullable
-  public abstract Long count();
+  public abstract Long getCount();
 
   public abstract StockAggregation.Builder toBuilder();
 
@@ -49,6 +49,7 @@ public abstract class StockAggregation {
 
   @AutoValue.Builder
   public abstract static class Builder {
+
     public abstract Builder setDurationMS(Long value);
 
     public abstract Builder setStartTime(Long value);

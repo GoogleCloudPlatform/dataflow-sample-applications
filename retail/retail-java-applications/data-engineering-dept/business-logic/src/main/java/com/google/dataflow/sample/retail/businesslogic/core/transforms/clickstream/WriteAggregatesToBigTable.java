@@ -80,13 +80,15 @@ public class WriteAggregatesToBigTable {
     public void process(@Element PageViewAggregator input, OutputReceiver<Mutation> o)
         throws UnsupportedEncodingException {
 
-      Put put = new Put(String.format("%s-%s", input.pageRef, input.startTime).getBytes("UTF-8"));
+      Put put =
+          new Put(
+              String.format("%s-%s", input.getPageRef(), input.getStartTime()).getBytes("UTF-8"));
 
       String charset = "UTF-8";
 
       // TODO This should never be Null eliminate bug.
-      String pageRef = Optional.ofNullable(input.pageRef).orElse("");
-      Long count = Optional.ofNullable(input.count).orElse(0L);
+      String pageRef = Optional.ofNullable(input.getPageRef()).orElse("");
+      Long count = Optional.ofNullable(input.getCount()).orElse(0L);
 
       put.addColumn(
           ClickStreamBigTableSchema.PAGE_VIEW_AGGREGATION_COL_FAMILY.getBytes(charset),

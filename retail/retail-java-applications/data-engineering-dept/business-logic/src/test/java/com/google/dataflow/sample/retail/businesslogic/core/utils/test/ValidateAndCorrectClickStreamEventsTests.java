@@ -23,7 +23,6 @@ import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.Filter;
-import org.apache.beam.sdk.transforms.JsonToRow;
 import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.Instant;
@@ -32,7 +31,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** Unit tests for {@link JsonToRow}. */
+/** Unit tests for {@link ValidateAndCorrectClickStreamEvents}. */
 @RunWith(JUnit4.class)
 public class ValidateAndCorrectClickStreamEventsTests {
   private static final Long TIME = Instant.parse("2000-01-01T00:00:00").getMillis();

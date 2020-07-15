@@ -21,11 +21,9 @@ import com.google.api.services.bigquery.model.TimePartitioning;
 import com.google.dataflow.sample.retail.businesslogic.core.DeploymentAnnotations.PartialResultsExpectedOnDrain;
 import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.JSONUtils;
-import com.google.dataflow.sample.retail.businesslogic.core.utils.ReadPubSubMsgPayLoadAsString;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.WriteRawJSONMessagesToBigQuery;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.PageViewAggregator;
-import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.WriteDisposition;
 import org.apache.beam.sdk.schemas.transforms.Filter;
@@ -60,111 +58,91 @@ import org.joda.time.Duration;
  *
  * <p>Export page view aggregates to BigQuery
  */
-public class ClickstreamProcessing {
+@PartialResultsExpectedOnDrain
+public class ClickstreamProcessing
+    extends PTransform<PCollection<String>, PCollection<ClickStreamEvent>> {
 
-  @PartialResultsExpectedOnDrain
-  public static PCollection<ClickStreamEvent> processClickStreamPipeline(Pipeline p) {
+  @Override
+  public PCollection<ClickStreamEvent> expand(PCollection<String> input) {
 
-    RetailPipelineOptions options = p.getOptions().as(RetailPipelineOptions.class);
+    RetailPipelineOptions options =
+        input.getPipeline().getOptions().as(RetailPipelineOptions.class);
 
     /**
      * **********************************************************************************************
-     * Read Click Stream Topic
+     * Parse Messages to Beam SCHEMAS
      * **********************************************************************************************
      */
-    PCollection<String> clickStreamJSONMessages =
-        p.apply(
-            "ReadClickStream",
-            new ReadPubSubMsgPayLoadAsString(options.getClickStreamPubSubSubscription()));
+    PCollection<ClickStreamEvent> clickStreamEvents =
+        input.apply(JSONUtils.ConvertJSONtoPOJO.create(ClickStreamEvent.class));
 
-    return clickStreamJSONMessages.apply("ProcessClickStream", new ProcessClickStream());
-  }
+    /**
+     * **********************************************************************************************
+     * Write RAW JSON String Clickstream for storage
+     * **********************************************************************************************
+     */
+    input.apply(
+        "StoreRawData",
+        new WriteRawJSONMessagesToBigQuery(
+            options.getDataWarehouseOutputProject(), options.getClickStreamBigQueryRawTable()));
 
-  private static class ProcessClickStream
-      extends PTransform<PCollection<String>, PCollection<ClickStreamEvent>> {
+    /**
+     * **********************************************************************************************
+     * Clean the data
+     * **********************************************************************************************
+     */
+    PCollection<ClickStreamEvent> cleanedData =
+        clickStreamEvents.apply("Clean Data", new ValidateAndCorrectClickStreamEvents());
 
-    @Override
-    public PCollection<ClickStreamEvent> expand(PCollection<String> input) {
+    /**
+     * **********************************************************************************************
+     * Write Cleaned Data to BigQuery
+     * **********************************************************************************************
+     */
 
-      RetailPipelineOptions options =
-          input.getPipeline().getOptions().as(RetailPipelineOptions.class);
+    // TODO Hack around the Instant issue with POJO.
 
-      /**
-       * **********************************************************************************************
-       * Parse Messages to Beam SCHEMAS
-       * **********************************************************************************************
-       */
-      PCollection<ClickStreamEvent> clickStreamEvents =
-          input.apply(JSONUtils.ConvertJSONtoPOJO.create(ClickStreamEvent.class));
+    cleanedData.apply(
+        "StoreCleanedDataToDW",
+        BigQueryIO.<ClickStreamEvent>write()
+            .useBeamSchema()
+            .withWriteDisposition(WriteDisposition.WRITE_APPEND)
+            .withTimePartitioning(new TimePartitioning().setField("timestamp"))
+            .to(
+                String.format(
+                    "%s:%s",
+                    options.getDataWarehouseOutputProject(),
+                    options.getClickStreamBigQueryCleanTable())));
 
-      /**
-       * **********************************************************************************************
-       * Write RAW JSON String Clickstream for storage
-       * **********************************************************************************************
-       */
-      input.apply(
-          "StoreRawData",
-          new WriteRawJSONMessagesToBigQuery(
-              options.getDataWarehouseOutputProject(), options.getClickStreamBigQueryRawTable()));
+    /**
+     * **********************************************************************************************
+     * Filter out events of type ERROR
+     * **********************************************************************************************
+     */
+    PCollection<ClickStreamEvent> cleanDataWithOutErrorEvents =
+        cleanedData.apply(
+            Filter.<ClickStreamEvent>create().whereFieldName("event", c -> !c.equals("ERROR")));
 
-      /**
-       * **********************************************************************************************
-       * Clean the data
-       * **********************************************************************************************
-       */
-      PCollection<ClickStreamEvent> cleanedData =
-          clickStreamEvents.apply("Clean Data", new ValidateAndCorrectClickStreamEvents());
+    /**
+     * **********************************************************************************************
+     * Count Page Views per product in 5 sec windows
+     * **********************************************************************************************
+     */
+    PCollection<PageViewAggregator> pageViewAggregator =
+        cleanDataWithOutErrorEvents.apply(new CountViewsPerProduct(Duration.standardSeconds(5)));
 
-      /**
-       * **********************************************************************************************
-       * Write Cleaned Data to BigQuery
-       * **********************************************************************************************
-       */
+    /**
+     * **********************************************************************************************
+     * Export page view aggregates to BigTable & BigQuery
+     * **********************************************************************************************
+     */
+    pageViewAggregator.apply(
+        WriteAggregatesToBigTable.writeToBigTable(Duration.standardSeconds(5)));
 
-      // TODO Hack around the Instant issue with POJO.
+    pageViewAggregator.apply(
+        WriteAggregationToBigQuery.writeAggregationToBigQuery(
+            "PageView", Duration.standardSeconds(5)));
 
-      cleanedData.apply(
-          "StoreCleanedDataToDW",
-          BigQueryIO.<ClickStreamEvent>write()
-              .useBeamSchema()
-              .withWriteDisposition(WriteDisposition.WRITE_APPEND)
-              .withTimePartitioning(new TimePartitioning().setField("timestamp"))
-              .to(
-                  String.format(
-                      "%s:%s",
-                      options.getDataWarehouseOutputProject(),
-                      options.getClickStreamBigQueryCleanTable())));
-
-      /**
-       * **********************************************************************************************
-       * Filter out events of type ERROR
-       * **********************************************************************************************
-       */
-      PCollection<ClickStreamEvent> cleanDataWithOutErrorEvents =
-          cleanedData.apply(
-              Filter.<ClickStreamEvent>create().whereFieldName("event", c -> !c.equals("ERROR")));
-
-      /**
-       * **********************************************************************************************
-       * Count Page Views per product in 5 sec windows
-       * **********************************************************************************************
-       */
-      PCollection<PageViewAggregator> pageViewAggregator =
-          cleanDataWithOutErrorEvents.apply(new CountViewsPerProduct(Duration.standardSeconds(5)));
-
-      /**
-       * **********************************************************************************************
-       * Export page view aggregates to BigTable & BigQuery
-       * **********************************************************************************************
-       */
-      pageViewAggregator.apply(
-          WriteAggregatesToBigTable.writeToBigTable(Duration.standardSeconds(5)));
-
-      pageViewAggregator.apply(
-          WriteAggregationToBigQuery.writeAggregationToBigQuery(
-              "PageView", Duration.standardSeconds(5)));
-
-      return cleanDataWithOutErrorEvents;
-    }
+    return cleanDataWithOutErrorEvents;
   }
 }

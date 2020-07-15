@@ -31,36 +31,36 @@ public class Transaction {
   @DefaultSchema(AutoValueSchema.class)
   public abstract static class TransactionEvent {
     @SchemaFieldName("timestamp")
-    public abstract @Nullable Long timestamp();
+    public abstract @Nullable Long getTimestamp();
 
     @SchemaFieldName("uid")
-    public abstract @Nullable Integer uid();
+    public abstract @Nullable Integer getUid();
 
     @SchemaFieldName("orderNumber")
-    public abstract @Nullable String orderNumber();
+    public abstract @Nullable String getOrderNumber();
 
     @SchemaFieldName("userId")
-    public abstract @Nullable Integer userId();
+    public abstract @Nullable Integer getUserId();
 
     @SchemaFieldName("storeId")
-    public abstract @Nullable Integer storeId();
+    public abstract @Nullable Integer getStoreId();
 
     @SchemaFieldName("timeOfSale")
-    public abstract @Nullable Long timeOfSale();
+    public abstract @Nullable Long getTimeOfSale();
 
     @SchemaFieldName("departmentId")
-    public abstract @Nullable Integer departmentId();
+    public abstract @Nullable Integer getDepartmentId();
 
     @SchemaFieldName("productId")
-    public abstract @Nullable Integer productId();
+    public abstract @Nullable Integer getProductId();
 
     @SchemaFieldName("productCount")
-    public abstract @Nullable Integer productCount();
+    public abstract @Nullable Integer getProductCount();
 
     @SchemaFieldName("price")
-    public abstract @Nullable Float price();
+    public abstract @Nullable Float getPrice();
 
-    public abstract @Nullable StoreLocation storeLocation();
+    public abstract @Nullable StoreLocation getStoreLocation();
 
     public abstract TransactionEvent.Builder toBuilder();
 

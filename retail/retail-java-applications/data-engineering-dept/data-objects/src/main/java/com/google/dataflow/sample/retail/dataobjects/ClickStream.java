@@ -20,7 +20,6 @@ package com.google.dataflow.sample.retail.dataobjects;
 import com.google.auto.value.AutoValue;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
-import org.apache.beam.sdk.schemas.JavaFieldSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
 
@@ -101,6 +100,7 @@ public class ClickStream {
   // -----------------------------------
   // Schema used for dealing with page views when working with BigTable.
   // -----------------------------------
+
   /** This class hosts the strings used for the row being stored in BigTable. */
   public static class ClickStreamBigTableSchema {
     public static final String PAGE_VIEW_AGGREGATION_COL_FAMILY = "pageViewAgg";
@@ -108,12 +108,35 @@ public class ClickStream {
     public static final String PAGE_VIEW_AGGREGATION_COL_PAGE_VIEW_COUNT = "pageViewCount";
   }
 
-  // TODO convert to hand built schema as POJO is not needed
-  @DefaultSchema(JavaFieldSchema.class)
-  public static class PageViewAggregator {
-    @Nullable public Long durationMS;
-    @Nullable public Long startTime;
-    @Nullable public String pageRef;
-    @Nullable public Long count;
+  @AutoValue
+  @DefaultSchema(AutoValueSchema.class)
+  public abstract static class PageViewAggregator {
+    public @Nullable abstract Long getDurationMS();
+
+    public @Nullable abstract Long getStartTime();
+
+    public @Nullable abstract String getPageRef();
+
+    public @Nullable abstract Long getCount();
+
+    public abstract Builder toBuilder();
+
+    public static Builder builder() {
+
+      return new AutoValue_ClickStream_PageViewAggregator.Builder();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract Builder setDurationMS(Long value);
+
+      public abstract Builder setStartTime(Long value);
+
+      public abstract Builder setPageRef(String value);
+
+      public abstract Builder setCount(Long value);
+
+      public abstract PageViewAggregator build();
+    }
   }
 }

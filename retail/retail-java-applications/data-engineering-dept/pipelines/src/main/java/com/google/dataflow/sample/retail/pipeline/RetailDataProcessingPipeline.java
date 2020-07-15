@@ -23,9 +23,9 @@ import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstre
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.stock.Stock;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.stock.Stock.CountGlobalStockFromLocationStock;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.stock.Stock.CountIncomingStockPerProductLocation;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.transaction.CountGlobalStockFromTransaction;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.transaction.TransactionPerProductAndLocation;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.transaction.TransactionProcessing;
-import com.google.dataflow.sample.retail.businesslogic.core.transforms.transaction.TransactionProcessing.CountGlobalStockFromTransaction;
-import com.google.dataflow.sample.retail.businesslogic.core.transforms.transaction.TransactionProcessing.TransactionPerProductAndLocation;
 import com.google.dataflow.sample.retail.dataobjects.Stock.StockEvent;
 import com.google.dataflow.sample.retail.dataobjects.StockAggregation;
 import com.google.dataflow.sample.retail.dataobjects.Transaction.TransactionEvent;
@@ -41,14 +41,15 @@ import org.apache.beam.sdk.values.TypeDescriptors;
 import org.joda.time.Duration;
 
 /**
- * Primary pipeline using {@link ClickstreamProcessing}, {@link TransactionProcessing}, {@link Stock}.
- *
+ * Primary pipeline using {@link ClickstreamProcessing}, {@link TransactionProcessing}, {@link
+ * Stock}.
  */
 public class RetailDataProcessingPipeline {
 
   public static void main(String[] args) throws NoSuchSchemaException {
 
-    RetailPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(RetailPipelineOptions.class);
+    RetailPipelineOptions options =
+        PipelineOptionsFactory.fromArgs(args).withValidation().as(RetailPipelineOptions.class);
 
     Pipeline p = Pipeline.create(options);
 
@@ -57,14 +58,22 @@ public class RetailDataProcessingPipeline {
      * Process Clickstream
      * **********************************************************************************************
      */
-    ClickstreamProcessing.processClickStreamPipeline(p);
+    PCollection<String> clickStreamJSONMessages =
+        p.apply(
+            "ReadClickStream",
+            PubsubIO.readStrings()
+                .fromSubscription(options.getClickStreamPubSubSubscription())
+                .withTimestampAttribute("TIMESTAMP"));
+
+    clickStreamJSONMessages.apply(new ClickstreamProcessing());
 
     /**
      * **********************************************************************************************
      * Process Transactions
      * **********************************************************************************************
      */
-    PCollection<TransactionEvent> transactionWithStoreLoc = TransactionProcessing.processTransactions(p);
+    PCollection<TransactionEvent> transactionWithStoreLoc =
+        TransactionProcessing.processTransactions(p);
 
     /**
      * **********************************************************************************************
@@ -75,7 +84,8 @@ public class RetailDataProcessingPipeline {
         transactionWithStoreLoc.apply(new TransactionPerProductAndLocation());
 
     PCollection<StockAggregation> inventoryTransactionPerProduct =
-        transactionPerProductAndLocation.apply(new CountGlobalStockFromTransaction());
+        transactionPerProductAndLocation.apply(
+            new CountGlobalStockFromTransaction(Duration.standardSeconds(5)));
 
     /**
      * **********************************************************************************************
@@ -123,9 +133,7 @@ public class RetailDataProcessingPipeline {
      */
     inventoryGlobalUpdates
         .apply("ConvertToPubSub", MapElements.into(TypeDescriptors.strings()).via(Object::toString))
-        .apply(
-            PubsubIO.writeStrings()
-                .to(options.getAggregateStockPubSubOutputTopic()));
+        .apply(PubsubIO.writeStrings().to(options.getAggregateStockPubSubOutputTopic()));
 
     p.run();
   }
