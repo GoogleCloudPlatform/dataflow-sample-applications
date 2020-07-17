@@ -18,26 +18,32 @@
 package com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream;
 
 import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
+import com.google.dataflow.sample.retail.businesslogic.core.utils.Print;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.CreateDisposition;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.WriteDisposition;
-import org.apache.beam.sdk.io.gcp.bigquery.WriteResult;
 import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PDone;
 import org.joda.time.Duration;
 import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Write page view aggregation data to BigQuery.
  *
  * @param <T>
  */
-public class WriteAggregationToBigQuery<T> extends PTransform<PCollection<T>, WriteResult> {
+public class WriteAggregationToBigQuery<T> extends PTransform<PCollection<T>, PDone> {
 
   private String aggregationName;
   private Duration aggregationDuration;
+
+  private static final Logger LOG = LoggerFactory.getLogger(WriteAggregationToBigQuery.class);
 
   WriteAggregationToBigQuery(String aggregationName, Duration aggregationDuration) {
     this.aggregationName = aggregationName;
@@ -85,12 +91,18 @@ public class WriteAggregationToBigQuery<T> extends PTransform<PCollection<T>, Wr
   }
 
   @Override
-  public WriteResult expand(PCollection<T> input) {
+  public PDone expand(PCollection<T> input) {
 
     RetailPipelineOptions options =
         input.getPipeline().getOptions().as(RetailPipelineOptions.class);
 
-    return input.apply(
+    if (options.getTestModeEnabled()) {
+
+      input.apply(ParDo.of(new Print<T>()));
+
+      return PDone.in(input.getPipeline());
+    }
+    input.apply(
         BigQueryIO.<T>write()
             .useBeamSchema()
             .to(
@@ -103,5 +115,7 @@ public class WriteAggregationToBigQuery<T> extends PTransform<PCollection<T>, Wr
             // .withTimePartitioning(new TimePartitioning().setField("startTime"))
             .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
             .withWriteDisposition(WriteDisposition.WRITE_APPEND));
+
+    return PDone.in(input.getPipeline());
   }
 }

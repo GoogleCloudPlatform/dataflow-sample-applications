@@ -15,9 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.retail.businesslogic.core.transforms.transaction;
+package com.google.dataflow.sample.retail.businesslogic.core.transforms.stock;
 
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.CreateStockAggregatorMetadata;
+import com.google.dataflow.sample.retail.dataobjects.Stock.StockEvent;
 import com.google.dataflow.sample.retail.dataobjects.StockAggregation;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.schemas.Schema.FieldType;
@@ -31,34 +32,36 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.joda.time.Duration;
 
-public class CountGlobalStockFromTransaction
-    extends PTransform<PCollection<StockAggregation>, PCollection<StockAggregation>> {
+public class CountIncomingStockPerProductLocation
+    extends PTransform<PCollection<StockEvent>, PCollection<StockAggregation>> {
 
-  private Duration durationMS;
+  private Duration duration;
 
-  public CountGlobalStockFromTransaction(Duration durationMS) {
-    this.durationMS = durationMS;
+  public CountIncomingStockPerProductLocation(Duration duration) {
+    this.duration = duration;
   }
 
-  public CountGlobalStockFromTransaction(@Nullable String name, Duration durationMS) {
+  public CountIncomingStockPerProductLocation(@Nullable String name, Duration duration) {
     super(name);
-    this.durationMS = durationMS;
+    this.duration = duration;
   }
 
   @Override
-  public PCollection<StockAggregation> expand(PCollection<StockAggregation> input) {
+  public PCollection<StockAggregation> expand(PCollection<StockEvent> input) {
     return input
-        .apply("SelectProductId", Select.<StockAggregation>fieldNames("product_id"))
+        .apply("SelectProductIdStoreId", Select.<StockEvent>fieldNames("product_id", "store_id"))
         .apply(
-            Group.<Row>byFieldNames("product_id")
-                .aggregateField("product_id", Count.combineFn(), "count"))
-        .apply("SelectProductCount", Select.fieldNames("key.product_id", "value.count"))
+            Group.<Row>byFieldNames("product_id", "store_id")
+                .aggregateField("*", Count.combineFn(), "count"))
+        .apply(
+            "SelectProductIdStoreIdCount",
+            Select.<Row>fieldNames("key.product_id", "key.store_id", "value.count"))
         .apply(
             AddFields.<Row>create()
-                .field("store_id", FieldType.INT32)
+                // Need this field until we have @Nullable Schema check
                 .field("durationMS", FieldType.INT64)
                 .field("startTime", FieldType.INT64))
         .apply(Convert.to(StockAggregation.class))
-        .apply(new CreateStockAggregatorMetadata(durationMS.getMillis()));
+        .apply(new CreateStockAggregatorMetadata(duration.getMillis()));
   }
 }

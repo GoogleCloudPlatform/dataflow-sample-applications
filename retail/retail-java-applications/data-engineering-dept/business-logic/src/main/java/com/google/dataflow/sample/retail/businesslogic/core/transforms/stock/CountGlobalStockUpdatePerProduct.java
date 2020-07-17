@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.retail.businesslogic.core.transforms.transaction;
+package com.google.dataflow.sample.retail.businesslogic.core.transforms.stock;
 
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.CreateStockAggregatorMetadata;
 import com.google.dataflow.sample.retail.dataobjects.StockAggregation;
@@ -31,34 +31,34 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.joda.time.Duration;
 
-public class CountGlobalStockFromTransaction
+public class CountGlobalStockUpdatePerProduct
     extends PTransform<PCollection<StockAggregation>, PCollection<StockAggregation>> {
 
-  private Duration durationMS;
+  Duration duration;
 
-  public CountGlobalStockFromTransaction(Duration durationMS) {
-    this.durationMS = durationMS;
+  public CountGlobalStockUpdatePerProduct(Duration duration) {
+    this.duration = duration;
   }
 
-  public CountGlobalStockFromTransaction(@Nullable String name, Duration durationMS) {
+  public CountGlobalStockUpdatePerProduct(@Nullable String name, Duration duration) {
     super(name);
-    this.durationMS = durationMS;
+    this.duration = duration;
   }
 
   @Override
   public PCollection<StockAggregation> expand(PCollection<StockAggregation> input) {
     return input
-        .apply("SelectProductId", Select.<StockAggregation>fieldNames("product_id"))
+        .apply("SelectProductID", Select.<StockAggregation>fieldNames("product_id"))
         .apply(
             Group.<Row>byFieldNames("product_id")
-                .aggregateField("product_id", Count.combineFn(), "count"))
-        .apply("SelectProductCount", Select.fieldNames("key.product_id", "value.count"))
+                .aggregateField("product_id", Count.<Integer>combineFn(), "count"))
+        .apply("SelectProductIdCount", Select.<Row>fieldNames("key.product_id", "value.count"))
         .apply(
             AddFields.<Row>create()
                 .field("store_id", FieldType.INT32)
                 .field("durationMS", FieldType.INT64)
                 .field("startTime", FieldType.INT64))
         .apply(Convert.to(StockAggregation.class))
-        .apply(new CreateStockAggregatorMetadata(durationMS.getMillis()));
+        .apply(new CreateStockAggregatorMetadata(duration.getMillis()));
   }
 }

@@ -15,11 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.retail.businesslogic.core.utils.test;
+package com.google.dataflow.sample.retail.businesslogic.core.utils.test.stock;
 
-import com.google.dataflow.sample.retail.businesslogic.core.transforms.transaction.TransactionPerProductAndLocation;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.stock.CountGlobalStockUpdatePerProduct;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.stock.CountIncomingStockPerProductLocation;
+import com.google.dataflow.sample.retail.dataobjects.Stock.StockEvent;
 import com.google.dataflow.sample.retail.dataobjects.StockAggregation;
-import com.google.dataflow.sample.retail.dataobjects.Transaction.TransactionEvent;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
@@ -36,24 +37,24 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 /** Unit tests for {@link ClickstreamProcessing}. */
-public class TransactionPerProductAndLocationTest {
+public class CountGlobalStockUpdatePerProductTest {
 
   private static final Long TIME = Instant.parse("2000-01-01T00:00:00").getMillis();
 
-  private static final TimestampedValue<TransactionEvent> EVENT_PRODUCT_1_STORE_1 =
+  private static final TimestampedValue<StockEvent> EVENT_PRODUCT_1_STORE_1 =
       TimestampedValue.of(
-          TransactionEvent.builder().setProductId(1).setStoreId(1).build(),
+          StockEvent.builder().setProductId(1).setStoreId(1).setCount(1).build(),
           Instant.ofEpochMilli(TIME));
 
-  private static final TimestampedValue<TransactionEvent> EVENT_PRODUCT_1_STORE_2 =
+  private static final TimestampedValue<StockEvent> EVENT_PRODUCT_1_STORE_2 =
       TimestampedValue.of(
-          TransactionEvent.builder().setProductId(1).setStoreId(2).build(),
+          StockEvent.builder().setProductId(1).setStoreId(2).setCount(1).build(),
           Instant.ofEpochMilli(TIME));
 
   @Rule public transient TestPipeline pipeline = TestPipeline.create();
 
   @Test
-  public void testCountGroupSalesByProductStores() {
+  public void testCountGroupStockByProduct() {
 
     Duration windowDuration = Duration.standardMinutes(5);
 
@@ -61,16 +62,18 @@ public class TransactionPerProductAndLocationTest {
         pipeline
             .apply(Create.timestamped(EVENT_PRODUCT_1_STORE_1, EVENT_PRODUCT_1_STORE_2))
             .apply(Window.into(FixedWindows.of(windowDuration)))
-            .apply(new TransactionPerProductAndLocation());
+            .apply(new CountIncomingStockPerProductLocation(windowDuration))
+            .apply(new CountGlobalStockUpdatePerProduct(windowDuration));
 
-    StockAggregation stockAggregationStore1 =
-        StockAggregation.builder().setCount(1L).setProductId(1).setStoreId(1).build();
+    StockAggregation stockAggregationStore =
+        StockAggregation.builder()
+            .setCount(2L)
+            .setProductId(1)
+            .setStartTime(TIME)
+            .setDurationMS(windowDuration.getMillis())
+            .build();
 
-    StockAggregation stockAggregationStore2 =
-        StockAggregation.builder().setCount(1L).setProductId(1).setStoreId(2).build();
-
-    PAssert.that(countStockPerProductPerLocation)
-        .containsInAnyOrder(stockAggregationStore1, stockAggregationStore2);
+    PAssert.that(countStockPerProductPerLocation).containsInAnyOrder(stockAggregationStore);
 
     pipeline.run();
   }

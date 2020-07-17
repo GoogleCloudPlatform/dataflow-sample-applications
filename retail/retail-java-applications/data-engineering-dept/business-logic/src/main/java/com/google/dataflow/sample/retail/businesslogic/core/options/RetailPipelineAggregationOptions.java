@@ -28,7 +28,7 @@ public interface RetailPipelineAggregationOptions extends BigQueryOptions {
 
   void setAggregateBigTableInstance(String aggregateBigTableInstance);
 
-  @Default.String("aggregate_tables")
+  @Default.String("Retail_Store_Aggregations")
   String getAggregateBigQueryTable();
 
   void setAggregateBigQueryTable(String aggregateBigQueryTable);

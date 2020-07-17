@@ -36,25 +36,25 @@ public class Transaction {
     @SchemaFieldName("uid")
     public abstract @Nullable Integer getUid();
 
-    @SchemaFieldName("orderNumber")
+    @SchemaFieldName("order_number")
     public abstract @Nullable String getOrderNumber();
 
-    @SchemaFieldName("userId")
+    @SchemaFieldName("user_id")
     public abstract @Nullable Integer getUserId();
 
-    @SchemaFieldName("storeId")
+    @SchemaFieldName("store_id")
     public abstract @Nullable Integer getStoreId();
 
-    @SchemaFieldName("timeOfSale")
+    @SchemaFieldName("time_of_sale")
     public abstract @Nullable Long getTimeOfSale();
 
-    @SchemaFieldName("departmentId")
+    @SchemaFieldName("department_id")
     public abstract @Nullable Integer getDepartmentId();
 
-    @SchemaFieldName("productId")
+    @SchemaFieldName("product_id")
     public abstract @Nullable Integer getProductId();
 
-    @SchemaFieldName("productCount")
+    @SchemaFieldName("product_count")
     public abstract @Nullable Integer getProductCount();
 
     @SchemaFieldName("price")

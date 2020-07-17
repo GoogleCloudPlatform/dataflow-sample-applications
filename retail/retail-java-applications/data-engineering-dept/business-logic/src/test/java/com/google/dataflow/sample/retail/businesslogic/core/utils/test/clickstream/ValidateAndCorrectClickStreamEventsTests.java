@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.retail.businesslogic.core.utils.test;
+package com.google.dataflow.sample.retail.businesslogic.core.utils.test.clickstream;
 
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.ValidateAndCorrectClickStreamEvents;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;

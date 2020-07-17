@@ -15,28 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.retail.businesslogic.core.options;
+package com.google.dataflow.sample.retail.pipeine.test;
 
-import com.google.dataflow.sample.retail.businesslogic.externalservices.RetailPipelineStoresOptions;
-import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
-import org.apache.beam.sdk.options.Default;
+import java.util.List;
+import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.values.PBegin;
+import org.apache.beam.sdk.values.PCollection;
 
-public interface RetailPipelineOptions
-    extends DataflowPipelineOptions,
-        RetailPipelineAggregationOptions,
-        RetailPipelineClickStreamOptions,
-        RetailPipelineInventoryOptions,
-        RetailPipelineTransactionsOptions,
-        RetailPipelineStoresOptions,
-        RetailPipelineReportingOptions {
+public class TestDataInjector {
 
-  @Default.Boolean(false)
-  Boolean getDebugMode();
+  public class CreateClickStream extends PTransform<PBegin, PCollection<String>> {
 
-  void setDebugMode(Boolean debugMode);
+    @Override
+    public PCollection<String> expand(PBegin input) {
+      return null;
+    }
+  }
 
-  @Default.Boolean(false)
-  Boolean getTestModeEnabled();
+  public static List<String> createClickstreamSession() {
+    return null;
+  }
 
-  void setTestModeEnabled(Boolean testModeEnabled);
+  public static List<String> createBrokenClickstream() {
+    return null;
+  }
+
+  public static List<String> createTransaction() {
+    return null;
+  }
+
+  public static List<String> createStock() {
+    return null;
+  }
 }

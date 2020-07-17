@@ -19,17 +19,17 @@ package com.google.dataflow.sample.retail.businesslogic.core.transforms.transact
 
 import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.JSONUtils;
-import com.google.dataflow.sample.retail.businesslogic.core.utils.ReadPubSubMsgPayLoadAsString;
+import com.google.dataflow.sample.retail.businesslogic.core.utils.Print;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.WriteRawJSONMessagesToBigQuery;
 import com.google.dataflow.sample.retail.businesslogic.externalservices.SlowMovingStoreLocationDimension.StoreLocations;
 import com.google.dataflow.sample.retail.dataobjects.Dimensions.StoreLocation;
 import com.google.dataflow.sample.retail.dataobjects.Transaction.TransactionEvent;
 import java.util.Map;
-import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.WriteDisposition;
 import org.apache.beam.sdk.schemas.transforms.Convert;
 import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.windowing.FixedWindows;
 import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.PCollection;
@@ -37,69 +37,54 @@ import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.beam.sdk.values.Row;
 import org.joda.time.Duration;
 
-public class TransactionProcessing {
+public class TransactionProcessing
+    extends PTransform<PCollection<String>, PCollection<TransactionEvent>> {
 
-  public static PCollection<TransactionEvent> processTransactions(Pipeline p) {
+  @Override
+  public PCollection<TransactionEvent> expand(PCollection<String> input) {
 
-    RetailPipelineOptions options = p.getOptions().as(RetailPipelineOptions.class);
+    RetailPipelineOptions options =
+        input.getPipeline().getOptions().as(RetailPipelineOptions.class);
 
     /**
      * **********************************************************************************************
-     * Read Raw Transactions
+     * Write Raw Transactions
      * **********************************************************************************************
      */
-    PCollection<String> transactionsJSON =
-        p.apply(
-            "ReadTransactionStream",
-            new ReadPubSubMsgPayLoadAsString(options.getTransactionsPubSubSubscription()));
+    input.apply(new WriteRawJSONMessagesToBigQuery(options.getTransactionsBigQueryRawTable()));
 
-    return transactionsJSON.apply("ProcessTransactions", new ProcessTransactions());
-  }
+    /**
+     * **********************************************************************************************
+     * Convert to Transactions Object
+     * **********************************************************************************************
+     */
+    PCollection<TransactionEvent> transactions =
+        input.apply(JSONUtils.ConvertJSONtoPOJO.create(TransactionEvent.class));
 
-  private static class ProcessTransactions
-      extends PTransform<PCollection<String>, PCollection<TransactionEvent>> {
+    /**
+     * **********************************************************************************************
+     * Validate & Enrich Transactions
+     * **********************************************************************************************
+     */
+    PCollectionView<Map<Integer, StoreLocation>> storeLocationSideinput =
+        input
+            .getPipeline()
+            .apply(
+                StoreLocations.create(
+                    Duration.standardMinutes(10), options.getStoreLocationBigQueryTableRef()));
 
-    @Override
-    public PCollection<TransactionEvent> expand(PCollection<String> input) {
+    PCollection<TransactionEvent> transactionWithStoreLoc =
+        transactions.apply(EnrichTransactionWithStoreLocation.create(storeLocationSideinput));
 
-      RetailPipelineOptions options =
-          input.getPipeline().getOptions().as(RetailPipelineOptions.class);
+    /**
+     * **********************************************************************************************
+     * Write Cleaned Data to BigQuery
+     * **********************************************************************************************
+     */
+    if (options.getTestModeEnabled()) {
+      transactionWithStoreLoc.apply(ParDo.of(new Print<>()));
 
-      /**
-       * **********************************************************************************************
-       * Write Raw Transactions
-       * **********************************************************************************************
-       */
-      input.apply(new WriteRawJSONMessagesToBigQuery(options.getTransactionsBigQueryRawTable()));
-
-      /**
-       * **********************************************************************************************
-       * Convert to Transactions Object
-       * **********************************************************************************************
-       */
-      PCollection<TransactionEvent> transactions =
-          input.apply(JSONUtils.ConvertJSONtoPOJO.create(TransactionEvent.class));
-
-      /**
-       * **********************************************************************************************
-       * Validate & Enrich Transactions
-       * **********************************************************************************************
-       */
-      PCollectionView<Map<Integer, StoreLocation>> storeLocationSideinput =
-          input
-              .getPipeline()
-              .apply(
-                  StoreLocations.create(
-                      Duration.standardMinutes(10), options.getStoreLocationBigQueryTableRef()));
-
-      PCollection<TransactionEvent> transactionWithStoreLoc =
-          transactions.apply(EnrichTransactionWithStoreLocation.create(storeLocationSideinput));
-
-      /**
-       * **********************************************************************************************
-       * Write Cleaned Data to BigQuery
-       * **********************************************************************************************
-       */
+    } else {
       transactionWithStoreLoc
           .apply(Convert.toRows())
           .apply(
@@ -113,9 +98,8 @@ public class TransactionProcessing {
                           "%s:%s",
                           options.getDataWarehouseOutputProject(),
                           options.getTransactionsBigQueryCleanTable())));
-
-      return transactionWithStoreLoc.apply(
-          Window.into(FixedWindows.of(Duration.standardSeconds(5))));
     }
+
+    return transactionWithStoreLoc.apply(Window.into(FixedWindows.of(Duration.standardSeconds(5))));
   }
 }

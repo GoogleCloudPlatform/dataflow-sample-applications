@@ -40,16 +40,16 @@ public class TransactionPerProductAndLocation
 
     PCollection<Row> aggregate =
         input.apply(
-            "SelectProductStore", Select.<TransactionEvent>fieldNames("productId", "storeId"));
+            "SelectProductStore", Select.<TransactionEvent>fieldNames("product_id", "store_id"));
 
     PCollection<Row> cnt =
         aggregate
             .apply(
-                Group.<Row>byFieldNames("productId", "storeId")
-                    .aggregateField("storeId", Count.combineFn(), "count"))
+                Group.<Row>byFieldNames("product_id", "store_id")
+                    .aggregateField("store_id", Count.combineFn(), "count"))
             .apply(
                 "SelectStoreProductCount",
-                Select.fieldNames("key.storeId", "key.productId", "value.count"))
+                Select.fieldNames("key.store_id", "key.product_id", "value.count"))
             .apply(
                 AddFields.<Row>create()
                     .field("durationMS", FieldType.INT64)

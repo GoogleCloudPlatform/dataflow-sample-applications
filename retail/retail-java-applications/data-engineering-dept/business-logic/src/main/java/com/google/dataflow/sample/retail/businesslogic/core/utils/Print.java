@@ -15,28 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.retail.businesslogic.core.options;
+package com.google.dataflow.sample.retail.businesslogic.core.utils;
 
-import com.google.dataflow.sample.retail.businesslogic.externalservices.RetailPipelineStoresOptions;
-import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
-import org.apache.beam.sdk.options.Default;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.WriteAggregatesToBigTable.PrintMutation;
+import java.io.IOException;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public interface RetailPipelineOptions
-    extends DataflowPipelineOptions,
-        RetailPipelineAggregationOptions,
-        RetailPipelineClickStreamOptions,
-        RetailPipelineInventoryOptions,
-        RetailPipelineTransactionsOptions,
-        RetailPipelineStoresOptions,
-        RetailPipelineReportingOptions {
+public class Print<T> extends DoFn<T, String> {
 
-  @Default.Boolean(false)
-  Boolean getDebugMode();
+  private static final Logger LOG = LoggerFactory.getLogger(PrintMutation.class);
 
-  void setDebugMode(Boolean debugMode);
+  @ProcessElement
+  public void process(@Element T row) throws IOException {
 
-  @Default.Boolean(false)
-  Boolean getTestModeEnabled();
-
-  void setTestModeEnabled(Boolean testModeEnabled);
+    LOG.info("Aggregation to BigQuery is " + row.toString());
+  }
 }

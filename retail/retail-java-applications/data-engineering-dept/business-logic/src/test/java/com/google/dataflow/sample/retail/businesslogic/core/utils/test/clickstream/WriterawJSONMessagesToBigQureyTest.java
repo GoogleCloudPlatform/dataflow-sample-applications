@@ -15,28 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.retail.businesslogic.core.options;
+package com.google.dataflow.sample.retail.businesslogic.core.utils.test.clickstream;
 
-import com.google.dataflow.sample.retail.businesslogic.externalservices.RetailPipelineStoresOptions;
-import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
-import org.apache.beam.sdk.options.Default;
+import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.testing.TestPipeline;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
-public interface RetailPipelineOptions
-    extends DataflowPipelineOptions,
-        RetailPipelineAggregationOptions,
-        RetailPipelineClickStreamOptions,
-        RetailPipelineInventoryOptions,
-        RetailPipelineTransactionsOptions,
-        RetailPipelineStoresOptions,
-        RetailPipelineReportingOptions {
+@RunWith(JUnit4.class)
+/** Unit tests for {@link ClickstreamProcessing}. */
+public class WriterawJSONMessagesToBigQureyTest {
 
-  @Default.Boolean(false)
-  Boolean getDebugMode();
+  RetailPipelineOptions options = PipelineOptionsFactory.as(RetailPipelineOptions.class);
 
-  void setDebugMode(Boolean debugMode);
+  {
+    options.setTestModeEnabled(true);
+  }
 
-  @Default.Boolean(false)
-  Boolean getTestModeEnabled();
+  @Rule public transient TestPipeline pipeline = TestPipeline.create();
 
-  void setTestModeEnabled(Boolean testModeEnabled);
+  @Test
+  public void testCountViews() {
+
+    pipeline.run();
+  }
 }

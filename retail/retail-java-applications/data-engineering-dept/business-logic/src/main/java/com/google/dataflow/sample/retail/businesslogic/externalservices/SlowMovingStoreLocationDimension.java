@@ -21,6 +21,7 @@ import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.TableResult;
 import com.google.dataflow.sample.retail.businesslogic.core.DeploymentAnnotations.NoPartialResultsOnDrain;
 import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineClickStreamOptions;
+import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.BigQueryUtil;
 import com.google.dataflow.sample.retail.dataobjects.Dimensions.StoreLocation;
 import java.util.HashMap;
@@ -33,6 +34,7 @@ import org.apache.beam.sdk.io.GenerateSequence;
 import org.apache.beam.sdk.schemas.NoSuchSchemaException;
 import org.apache.beam.sdk.schemas.SchemaCoder;
 import org.apache.beam.sdk.schemas.SchemaRegistry;
+import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -118,6 +120,24 @@ public class SlowMovingStoreLocationDimension {
                     schemaRegistry.getFromRowFunction(type)));
       } catch (NoSuchSchemaException e) {
         LOG.error("No Schema found for {} in SchemaRegistry", type);
+      }
+
+      if (input.getPipeline().getOptions().as(RetailPipelineOptions.class).getTestModeEnabled()) {
+        Map<Integer, StoreLocation> map = new HashMap<>();
+        map.put(
+            1,
+            StoreLocation.builder()
+                .setId(1)
+                .setLng(1D)
+                .setLat(1D)
+                .setState("CA")
+                .setZip(90000)
+                .setCity("City")
+                .build());
+
+        return input
+            .apply(Create.<Map<Integer, StoreLocation>>of(map).withCoder(coder))
+            .apply(View.asSingleton());
       }
 
       String project =
