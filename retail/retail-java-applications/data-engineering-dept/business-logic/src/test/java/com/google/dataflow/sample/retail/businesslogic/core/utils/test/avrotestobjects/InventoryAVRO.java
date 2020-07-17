@@ -15,25 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.retail.businesslogic.core.options;
+package com.google.dataflow.sample.retail.businesslogic.core.utils.test.avrotestobjects;
 
-import org.apache.beam.sdk.io.gcp.pubsub.PubsubOptions;
-import org.apache.beam.sdk.options.Default;
+import org.apache.avro.reflect.Nullable;
+import org.apache.beam.sdk.coders.AvroCoder;
+import org.apache.beam.sdk.coders.DefaultCoder;
 
-public interface RetailPipelineClickStreamOptions extends PubsubOptions {
+@DefaultCoder(AvroCoder.class)
+public class InventoryAVRO {
 
-  @Default.String("subscriptions/global-clickstream-topic")
-  String getClickStreamPubSubSubscription();
-
-  void setClickStreamPubSubSubscription(String clickStreamOutput);
-
-  @Default.String("Retail_Store.raw_clickstream_data")
-  String getClickStreamBigQueryRawTable();
-
-  void setClickStreamBigQueryRawTable(String clickStreamBigQueryRawTable);
-
-  @Default.String("Retail_Store.clean_clickstream_data")
-  String getClickStreamBigQueryCleanTable();
-
-  void setClickStreamBigQueryCleanTable(String clickStreamBigQueryCleanTable);
+  public @Nullable long timestamp;
+  public @Nullable int count;
+  public @Nullable int sku;
+  public @Nullable int product_id;
+  public @Nullable int store_id;
+  public @Nullable int aisleId;
+  public @Nullable String product_name;
+  public @Nullable int departmentId;
+  public @Nullable Float price;
+  public @Nullable String recipeId;
+  public @Nullable String image;
 }

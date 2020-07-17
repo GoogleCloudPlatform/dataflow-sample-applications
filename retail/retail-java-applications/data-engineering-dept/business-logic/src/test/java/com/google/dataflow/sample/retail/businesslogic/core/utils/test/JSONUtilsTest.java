@@ -18,10 +18,8 @@
 package com.google.dataflow.sample.retail.businesslogic.core.utils.test;
 
 import com.google.dataflow.sample.retail.businesslogic.core.utils.JSONUtils;
+import com.google.dataflow.sample.retail.businesslogic.core.utils.test.avrotestobjects.ClickStreamEventAVRO;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
-import org.apache.avro.reflect.Nullable;
-import org.apache.beam.sdk.coders.AvroCoder;
-import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
@@ -146,19 +144,5 @@ public class JSONUtilsTest {
     PAssert.that(events).empty();
 
     pipeline.run();
-  }
-
-  @DefaultCoder(AvroCoder.class)
-  public static class ClickStreamEventAVRO {
-    @Nullable long timestamp;
-    @Nullable Long uid;
-    @Nullable String sessionId;
-    @Nullable String pageRef;
-    @Nullable String pageTarget;
-    @Nullable Double lat;
-    @Nullable Double lng;
-    @Nullable String agent;
-    @Nullable String event;
-    @Nullable boolean transaction;
   }
 }

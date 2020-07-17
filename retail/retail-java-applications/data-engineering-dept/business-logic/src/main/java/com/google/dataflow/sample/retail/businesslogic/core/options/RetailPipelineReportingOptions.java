@@ -24,6 +24,7 @@ import org.apache.beam.sdk.options.PipelineOptions;
 public interface RetailPipelineReportingOptions extends PipelineOptions {
 
   @Description("Deadletter Table for pipeline.")
+  @Default.String("Retail_Store.deadletter_data")
   String getDeadLetterTable();
 
   void setDeadLetterTable(String deadletterBigQueryTable);

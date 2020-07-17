@@ -18,10 +18,10 @@
 package com.google.dataflow.sample.retail.dataobjects;
 
 import com.google.auto.value.AutoValue;
-import com.google.dataflow.sample.retail.dataobjects.Transaction.TransactionEvent.Builder;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
+import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
 
 /**
  * A Inventory event is linked to a purchase, either in-store or via the website / mobile
@@ -32,31 +32,34 @@ public class Stock {
   @AutoValue
   @DefaultSchema(AutoValueSchema.class)
   public abstract static class StockEvent {
-    public abstract @Nullable Integer count();
+    public abstract @Nullable Integer getCount();
 
-    public abstract @Nullable Integer sku();
+    public abstract @Nullable Integer getSku();
 
-    public abstract @Nullable Integer productId();
+    @SchemaFieldName("product_id")
+    public abstract @Nullable Integer getProductId();
 
-    public abstract @Nullable Integer storeId();
+    @SchemaFieldName("store_id")
+    public abstract @Nullable Integer getStoreId();
 
-    public abstract @Nullable Integer aisleId();
+    public abstract @Nullable Integer getAisleId();
 
-    public abstract @Nullable String product_name();
+    public abstract @Nullable String getProduct_name();
 
-    public abstract @Nullable Integer departmentId();
+    public abstract @Nullable Integer getDepartmentId();
 
-    public abstract @Nullable Float price();
+    public abstract @Nullable Float getPrice();
 
-    public abstract @Nullable String recipeId();
+    public abstract @Nullable String getRecipeId();
 
-    public abstract @Nullable String image();
+    public abstract @Nullable String getImage();
 
-    public abstract @Nullable Long timestamp();
+    public abstract @Nullable Long getTimestamp();
 
     public abstract Stock.StockEvent.Builder toBuilder();
 
     public static Stock.StockEvent.Builder builder() {
+
       return new AutoValue_Stock_StockEvent.Builder();
     }
 

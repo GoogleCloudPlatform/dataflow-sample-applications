@@ -27,12 +27,14 @@ public interface RetailPipelineTransactionsOptions extends PipelineOptions {
   @Default.String("subscriptions/global-transaction-topic")
   String getTransactionsPubSubSubscription();
 
-  void setTransactionsPubSubOutput(String transactionsOutput);
+  void setTransactionsPubSubSubscription(String transactionsOutput);
 
+  @Default.String("Retail_Store.raw_transactions_data")
   String getTransactionsBigQueryRawTable();
 
   void setTransactionsBigQueryRawTable(String transactionsBigQueryRawTable);
 
+  @Default.String("Retail_Store.clean_transaction_data")
   String getTransactionsBigQueryCleanTable();
 
   void setTransactionsBigQueryCleanTable(String transactionsBigQueryCleanTable);

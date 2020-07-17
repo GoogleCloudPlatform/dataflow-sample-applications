@@ -18,6 +18,7 @@
 package com.google.dataflow.sample.retail.businesslogic.core.transforms;
 
 import com.google.dataflow.sample.retail.businesslogic.core.DeploymentAnnotations.NoPartialResultsOnDrain;
+import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
 import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineReportingOptions;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.CreateDisposition;
@@ -62,6 +63,7 @@ public class DeadLetterSink extends PTransform<PCollection<ErrorMsg>, PDone> {
   private DeadLetterSink() {};
 
   public static DeadLetterSink createSink(SinkType type) {
+
     switch (type) {
       case BIGQUERY:
         {
@@ -90,9 +92,10 @@ public class DeadLetterSink extends PTransform<PCollection<ErrorMsg>, PDone> {
   @Override
   public PDone expand(PCollection<ErrorMsg> input) {
 
-    if (sinkType.equals(SinkType.BIGQUERY)) {
-      RetailPipelineReportingOptions options =
-          input.getPipeline().getOptions().as(RetailPipelineReportingOptions.class);
+    RetailPipelineOptions options =
+        input.getPipeline().getOptions().as(RetailPipelineOptions.class);
+
+    if (sinkType.equals(SinkType.BIGQUERY) && !options.getTestModeEnabled()) {
 
       String table =
           String.format(
@@ -123,7 +126,7 @@ public class DeadLetterSink extends PTransform<PCollection<ErrorMsg>, PDone> {
                   .useBeamSchema());
     }
 
-    if (sinkType.equals(SinkType.LOG)) {
+    if (sinkType.equals(SinkType.LOG) || options.getTestModeEnabled()) {
       input.apply(
           MapElements.into(TypeDescriptors.strings())
               .via(

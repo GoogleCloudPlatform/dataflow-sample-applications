@@ -23,6 +23,7 @@ import com.google.common.primitives.Longs;
 import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamBigTableSchema;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.PageViewAggregator;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -34,6 +35,8 @@ import org.apache.beam.sdk.values.PDone;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.joda.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class WriteAggregatesToBigTable {
 
@@ -67,11 +70,17 @@ public class WriteAggregatesToBigTable {
               .withTableId("PageView5MinAggregates")
               .build();
 
-      return input
-          .apply(
+      PCollection<Mutation> mutations =
+          input.apply(
               "Convert Aggregation to BigTable Put",
-              ParDo.of(new CreateBigTableRowFromAggregation()))
-          .apply(CloudBigtableIO.writeToTable(tableConfiguration));
+              ParDo.of(new CreateBigTableRowFromAggregation()));
+
+      if (options.getTestModeEnabled()) {
+        mutations.apply(ParDo.of(new PrintMutation()));
+        return PDone.in(input.getPipeline());
+      }
+
+      return mutations.apply(CloudBigtableIO.writeToTable(tableConfiguration));
     }
   }
 
@@ -101,6 +110,17 @@ public class WriteAggregatesToBigTable {
           Longs.toByteArray(count));
 
       o.output(put);
+    }
+  }
+
+  public static class PrintMutation extends DoFn<Mutation, Mutation> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(PrintMutation.class);
+
+    @ProcessElement
+    public void process(@Element Mutation mutation) throws IOException {
+
+      LOG.info("Mutation to BigTable is " + mutation.toJSON());
     }
   }
 }

@@ -21,8 +21,7 @@ import com.google.api.services.bigquery.model.TableFieldSchema;
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.api.services.bigquery.model.TableSchema;
 import com.google.api.services.bigquery.model.TimePartitioning;
-import com.google.common.collect.ImmutableList;
-import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineReportingOptions;
+import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.CreateDisposition;
@@ -30,10 +29,15 @@ import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.WriteDisposition;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PDone;
+import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 import org.joda.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class WriteRawJSONMessagesToBigQuery extends PTransform<PCollection<String>, PDone> {
+public class WriteRawJSONMessagesToBigQuery
+    extends PTransform<PCollection<String>, PCollection<String>> {
+
+  private static final Logger LOG = LoggerFactory.getLogger(WriteRawJSONMessagesToBigQuery.class);
 
   private String bigQueryTable;
 
@@ -47,16 +51,22 @@ public class WriteRawJSONMessagesToBigQuery extends PTransform<PCollection<Strin
   }
 
   @Override
-  public PDone expand(PCollection<String> input) {
+  public PCollection<String> expand(PCollection<String> input) {
 
-    RetailPipelineReportingOptions options =
-        input.getPipeline().getOptions().as(RetailPipelineReportingOptions.class);
+    RetailPipelineOptions options =
+        input.getPipeline().getOptions().as(RetailPipelineOptions.class);
 
     /**
      * **********************************************************************************************
      * Write the raw output to BigQuery. The JSON is preserved.
      * **********************************************************************************************
      */
+    if (options.getTestModeEnabled()) {
+      LOG.info("In test mode, no raw messages will be sent to BigQuery.");
+      // TODO investigate why PDone here would cause a test hang.
+      return input;
+    }
+
     input.apply(
         BigQueryIO.<String>write()
             .to(String.format("%s:%s", options.getDataWarehouseOutputProject(), bigQueryTable))
@@ -78,6 +88,6 @@ public class WriteRawJSONMessagesToBigQuery extends PTransform<PCollection<Strin
                             .set("json", input1)
                             .set("processed_timestamp", Instant.now().getMillis() / 1000)));
 
-    return PDone.in(input.getPipeline());
+    return input;
   }
 }

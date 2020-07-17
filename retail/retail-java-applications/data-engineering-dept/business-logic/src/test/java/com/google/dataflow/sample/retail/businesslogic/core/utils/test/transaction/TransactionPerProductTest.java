@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.retail.businesslogic.core.utils.test;
+package com.google.dataflow.sample.retail.businesslogic.core.utils.test.transaction;
 
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.transaction.CountGlobalStockFromTransaction;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.transaction.TransactionPerProductAndLocation;

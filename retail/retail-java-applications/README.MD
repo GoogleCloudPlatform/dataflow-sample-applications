@@ -16,7 +16,6 @@
     specific language governing permissions and limitations
     under the License.
 -->
-
 # Overview
 
 This sample retail application, is intended to be used as an exemplar blueprint for similar applications. 
@@ -59,6 +58,10 @@ Store the views per product in a low latency store for usage by the application 
 
 The total number of sales per store and globally per item for a given period is to be computed alongside the total number of incoming stocks. This information is to be sent onto the inventory systems on a continuous basis. The inventory department will make use of this information for stock decisions. 
 Implementation of the requirements using canonical patterns
+
+# To run the pipeline locally you can make use of the smoke test 
+gradlew :data-engineering-dept:pipelines:test --tests com.google.dataflow.sample.retail.pipeine.test.RetailDataProcessingPipelineSimpleSmokeTest --info --rerun-tasks
+
 
 # Common Patterns
 There are some common patterns required to achieve the business requirements, these are highlighted here along with a link to the code.

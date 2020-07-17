@@ -15,25 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.retail.businesslogic.core.options;
+package com.google.dataflow.sample.retail.businesslogic.core.utils.test.avrotestobjects;
 
-import org.apache.beam.sdk.io.gcp.pubsub.PubsubOptions;
-import org.apache.beam.sdk.options.Default;
+import org.apache.avro.reflect.Nullable;
+import org.apache.beam.sdk.coders.AvroCoder;
+import org.apache.beam.sdk.coders.DefaultCoder;
 
-public interface RetailPipelineClickStreamOptions extends PubsubOptions {
-
-  @Default.String("subscriptions/global-clickstream-topic")
-  String getClickStreamPubSubSubscription();
-
-  void setClickStreamPubSubSubscription(String clickStreamOutput);
-
-  @Default.String("Retail_Store.raw_clickstream_data")
-  String getClickStreamBigQueryRawTable();
-
-  void setClickStreamBigQueryRawTable(String clickStreamBigQueryRawTable);
-
-  @Default.String("Retail_Store.clean_clickstream_data")
-  String getClickStreamBigQueryCleanTable();
-
-  void setClickStreamBigQueryCleanTable(String clickStreamBigQueryCleanTable);
+@DefaultCoder(AvroCoder.class)
+/** Used as part of utility for creation of JSON with {@link Gson}. */
+public class ClickStreamEventAVRO {
+  public @Nullable long timestamp;
+  public @Nullable Long uid;
+  public @Nullable String sessionId;
+  public @Nullable String pageRef;
+  public @Nullable Double lat;
+  public @Nullable Double lng;
+  public @Nullable String pageTarget;
+  public @Nullable String agent;
+  public @Nullable String event;
+  public @Nullable boolean transaction;
 }
