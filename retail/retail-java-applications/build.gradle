@@ -26,8 +26,8 @@ plugins {
 // All common configuration
 allprojects {
 
-    group 'com.google.dataflow.sample.applications'
-    version '0.9.0-SNAPSHOT'
+    group 'com.google.dataflow.sample'
+    version '0.9.0'
 
     ext {
         beamVersion = '2.22.0'
