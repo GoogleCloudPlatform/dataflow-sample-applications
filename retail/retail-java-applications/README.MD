@@ -70,22 +70,22 @@ Please consult
 *PubSub as both input and output.
 
 ### Create PubSub Topics and Subscriptions
-####Create four topics:
+#### Create four topics:
 * "Clickstream-inbound"
 * "Transactions-inbound"
 * "Inventory-inbound"
 * "Inventory-outbound"
 
-####Create three subscriptions
+#### Create three subscriptions
 * "Clickstream-inbound-sub"
 * "Transactions-inbound-sub"
 * "Inventory-inbound-sub"
 
-###Create BigQuery objects
-####Create two dataset in BigQuery
+### Create BigQuery objects
+#### Create two dataset in BigQuery
 * "Retail_Store"
 * "Retail_Store_Aggregations"
-####Create a location table
+#### Create a location table
 This table is used by the slow update side input pattern. 
 The test data has only one store with id 1. 
 ```
@@ -99,7 +99,7 @@ INSERT INTO
 VALUES
   (1, 'a_city', 'a_state',00000); 
 ```
-###Create a Bigtable instance
+### Create a Bigtable instance
 #### Create an instance
 * Create a BigTable instance within your project
 #### Create a table
