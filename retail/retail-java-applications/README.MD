@@ -62,6 +62,48 @@ Implementation of the requirements using canonical patterns
 # To run the pipeline locally you can make use of the smoke test 
 gradlew :data-engineering-dept:pipelines:test --tests com.google.dataflow.sample.retail.pipeine.test.RetailDataProcessingPipelineSimpleSmokeTest --info --rerun-tasks
 
+# Setup required for running the sample application on Dataflow service
+
+Please note this application has many inputs and outputs.
+All of these will need to be enabled in your project. 
+Please consult 
+*PubSub as both input and output.
+
+### Create PubSub Topics and Subscriptions
+####Create four topics:
+* "Clickstream-inbound"
+* "Transactions-inbound"
+* "Inventory-inbound"
+* "Inventory-outbound"
+
+####Create three subscriptions
+* "Clickstream-inbound-sub"
+* "Transactions-inbound-sub"
+* "Inventory-inbound-sub"
+
+###Create BigQuery objects
+####Create two dataset in BigQuery
+* "Retail_Store"
+* "Retail_Store_Aggregations"
+####Create a location table
+This table is used by the slow update side input pattern. 
+The test data has only one store with id 1. 
+```
+CREATE TABLE
+  Retail_Store.Store_Locations ( d INT64,
+    city STRING,
+    state STRING,
+    zip INT64 );
+INSERT INTO
+  Retail_Store.Store_Locations
+VALUES
+  (1, 'a_city', 'a_state',00000); 
+```
+###Create a Bigtable instance
+#### Create an instance
+* Create a BigTable instance within your project
+#### Create a table
+* Create the "PageView5MinAggregates" table with Column family "pageViewAgg"
 
 # Common Patterns
 There are some common patterns required to achieve the business requirements, these are highlighted here along with a link to the code.
