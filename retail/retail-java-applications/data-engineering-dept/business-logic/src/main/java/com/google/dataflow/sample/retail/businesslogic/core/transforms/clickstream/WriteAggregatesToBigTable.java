@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Optional;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -38,6 +39,7 @@ import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Experimental
 public class WriteAggregatesToBigTable {
 
   public static WriteToBigTable writeToBigTable(Duration windowSize) {

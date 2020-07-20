@@ -17,9 +17,11 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.options;
 
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.PipelineOptions;
 
+@Experimental
 public interface RetailPipelineInventoryOptions extends PipelineOptions {
 
   @Default.String("subscriptions/global-inventory-topic")

@@ -20,6 +20,7 @@ package com.google.dataflow.sample.retail.businesslogic.core.transforms.transact
 import com.google.dataflow.sample.retail.dataobjects.Dimensions.StoreLocation;
 import com.google.dataflow.sample.retail.dataobjects.StockAggregation;
 import com.google.dataflow.sample.retail.dataobjects.Transaction.TransactionEvent;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.Schema.FieldType;
 import org.apache.beam.sdk.schemas.transforms.AddFields;
 import org.apache.beam.sdk.schemas.transforms.Convert;
@@ -30,6 +31,7 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 
+@Experimental
 public class TransactionPerProductAndLocation
     extends PTransform<PCollection<TransactionEvent>, PCollection<StockAggregation>> {
 

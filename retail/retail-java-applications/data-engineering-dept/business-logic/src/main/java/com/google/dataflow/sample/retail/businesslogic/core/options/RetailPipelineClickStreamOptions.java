@@ -17,9 +17,11 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.options;
 
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubOptions;
 import org.apache.beam.sdk.options.Default;
 
+@Experimental
 public interface RetailPipelineClickStreamOptions extends PubsubOptions {
 
   @Default.String("subscriptions/global-clickstream-topic")

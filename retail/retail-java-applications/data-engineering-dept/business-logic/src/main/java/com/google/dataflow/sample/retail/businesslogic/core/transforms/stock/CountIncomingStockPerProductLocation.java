@@ -21,6 +21,7 @@ import com.google.dataflow.sample.retail.businesslogic.core.transforms.CreateSto
 import com.google.dataflow.sample.retail.dataobjects.Stock.StockEvent;
 import com.google.dataflow.sample.retail.dataobjects.StockAggregation;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.Schema.FieldType;
 import org.apache.beam.sdk.schemas.transforms.AddFields;
 import org.apache.beam.sdk.schemas.transforms.Convert;
@@ -32,6 +33,7 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.joda.time.Duration;
 
+@Experimental
 public class CountIncomingStockPerProductLocation
     extends PTransform<PCollection<StockEvent>, PCollection<StockAggregation>> {
 

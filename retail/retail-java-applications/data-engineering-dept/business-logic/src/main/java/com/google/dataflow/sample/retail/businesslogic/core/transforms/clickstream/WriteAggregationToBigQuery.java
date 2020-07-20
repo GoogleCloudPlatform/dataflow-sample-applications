@@ -20,6 +20,7 @@ package com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstr
 import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.Print;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.CreateDisposition;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.WriteDisposition;
@@ -38,6 +39,7 @@ import org.slf4j.LoggerFactory;
  *
  * @param <T>
  */
+@Experimental
 public class WriteAggregationToBigQuery<T> extends PTransform<PCollection<T>, PDone> {
 
   private String aggregationName;

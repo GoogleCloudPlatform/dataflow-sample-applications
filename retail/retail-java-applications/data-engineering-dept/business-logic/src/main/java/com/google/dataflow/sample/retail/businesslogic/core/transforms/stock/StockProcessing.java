@@ -23,6 +23,7 @@ import com.google.dataflow.sample.retail.businesslogic.core.utils.Print;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.WriteRawJSONMessagesToBigQuery;
 import com.google.dataflow.sample.retail.dataobjects.Stock.StockEvent;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.WriteDisposition;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -32,6 +33,7 @@ import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.Duration;
 
+@Experimental
 public class StockProcessing extends PTransform<PCollection<String>, PCollection<StockEvent>> {
 
   @Override

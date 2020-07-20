@@ -25,6 +25,7 @@ import com.google.dataflow.sample.retail.businesslogic.externalservices.SlowMovi
 import com.google.dataflow.sample.retail.dataobjects.Dimensions.StoreLocation;
 import com.google.dataflow.sample.retail.dataobjects.Transaction.TransactionEvent;
 import java.util.Map;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.WriteDisposition;
 import org.apache.beam.sdk.schemas.transforms.Convert;
@@ -37,6 +38,7 @@ import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.beam.sdk.values.Row;
 import org.joda.time.Duration;
 
+@Experimental
 public class TransactionProcessing
     extends PTransform<PCollection<String>, PCollection<TransactionEvent>> {
 

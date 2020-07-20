@@ -18,9 +18,11 @@
 package com.google.dataflow.sample.retail.dataobjects;
 
 import com.google.auto.value.AutoValue;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 
+@Experimental
 public class Dimensions {
 
   @AutoValue

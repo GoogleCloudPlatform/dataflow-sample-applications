@@ -38,24 +38,15 @@ public class TransactionsAVRO {
   public @org.apache.avro.reflect.Nullable float price;
   public @org.apache.avro.reflect.Nullable StoreLocationAvro storeLocation;
 
-
   /** Used as part of utility for creation of JSON with {@link Gson}. */
   @DefaultCoder(AvroCoder.class)
   public class StoreLocationAvro {
-    public @Nullable
-    long timestamp;
-    public @org.apache.avro.reflect.Nullable
-    int getId;
-    public @org.apache.avro.reflect.Nullable
-    int getZip;
-    public @org.apache.avro.reflect.Nullable
-    String getCity;
-    public @org.apache.avro.reflect.Nullable
-    String getState;
-    public @org.apache.avro.reflect.Nullable
-    Double getLat;
-    public @org.apache.avro.reflect.Nullable
-    Double getLng;
+    public @Nullable long timestamp;
+    public @org.apache.avro.reflect.Nullable int getId;
+    public @org.apache.avro.reflect.Nullable int getZip;
+    public @org.apache.avro.reflect.Nullable String getCity;
+    public @org.apache.avro.reflect.Nullable String getState;
+    public @org.apache.avro.reflect.Nullable Double getLat;
+    public @org.apache.avro.reflect.Nullable Double getLng;
   }
-
 }

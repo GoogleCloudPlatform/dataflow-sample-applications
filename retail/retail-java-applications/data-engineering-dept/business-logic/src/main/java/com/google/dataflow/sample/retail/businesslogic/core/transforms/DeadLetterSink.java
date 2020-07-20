@@ -20,6 +20,7 @@ package com.google.dataflow.sample.retail.businesslogic.core.transforms;
 import com.google.dataflow.sample.retail.businesslogic.core.DeploymentAnnotations.NoPartialResultsOnDrain;
 import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
 import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineReportingOptions;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.CreateDisposition;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.WriteDisposition;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
  * <p>Errors are sent to {@link RetailPipelineReportingOptions#getDeadLetterTable()}
  */
 @NoPartialResultsOnDrain
+@Experimental
 public class DeadLetterSink extends PTransform<PCollection<ErrorMsg>, PDone> {
 
   private static final Logger LOG = LoggerFactory.getLogger(DeadLetterSink.class);

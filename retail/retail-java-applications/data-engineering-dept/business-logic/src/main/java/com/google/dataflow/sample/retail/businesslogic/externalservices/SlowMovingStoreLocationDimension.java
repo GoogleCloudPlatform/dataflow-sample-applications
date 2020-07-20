@@ -27,6 +27,7 @@ import com.google.dataflow.sample.retail.dataobjects.Dimensions.StoreLocation;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.coders.BigEndianIntegerCoder;
 import org.apache.beam.sdk.coders.Coder;
 import org.apache.beam.sdk.coders.MapCoder;
@@ -77,6 +78,7 @@ import org.slf4j.LoggerFactory;
  * can be removed once BigQueryIO is updated to use the newer client libraries.
  */
 @NoPartialResultsOnDrain
+@Experimental
 public class SlowMovingStoreLocationDimension {
 
   public static class StoreLocations

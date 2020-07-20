@@ -19,6 +19,7 @@ package com.google.dataflow.sample.retail.dataobjects;
 
 import com.google.auto.value.AutoValue;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
@@ -27,6 +28,7 @@ import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
  * A Inventory event is linked to a purchase, either in-store or via the website / mobile
  * application, or a delivery.
  */
+@Experimental
 public class Stock {
 
   @AutoValue

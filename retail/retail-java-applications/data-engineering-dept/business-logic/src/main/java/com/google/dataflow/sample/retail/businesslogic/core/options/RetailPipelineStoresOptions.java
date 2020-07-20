@@ -15,11 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.retail.businesslogic.externalservices;
+package com.google.dataflow.sample.retail.businesslogic.core.options;
 
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.PipelineOptions;
 
+@Experimental
 public interface RetailPipelineStoresOptions extends PipelineOptions {
 
   @Description("Store Location BigQuery TableReference")

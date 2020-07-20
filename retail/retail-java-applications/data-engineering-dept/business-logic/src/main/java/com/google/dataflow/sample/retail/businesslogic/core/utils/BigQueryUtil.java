@@ -27,6 +27,7 @@ import com.google.cloud.bigquery.TableResult;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +38,7 @@ import org.slf4j.LoggerFactory;
  * <p>TODO: Beam support a cleaner pattern for slow update sideinput, which once implemented in this
  * app will remove the need for this helper.
  */
+@Experimental
 public class BigQueryUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(BigQueryUtil.class);

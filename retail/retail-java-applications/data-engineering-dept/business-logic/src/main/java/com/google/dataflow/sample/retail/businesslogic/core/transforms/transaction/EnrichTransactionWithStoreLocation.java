@@ -21,12 +21,14 @@ import com.google.dataflow.sample.retail.dataobjects.Dimensions.StoreLocation;
 import com.google.dataflow.sample.retail.dataobjects.Transaction.TransactionEvent;
 import java.util.Map;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
 
+@Experimental
 public class EnrichTransactionWithStoreLocation
     extends PTransform<PCollection<TransactionEvent>, PCollection<TransactionEvent>> {
 

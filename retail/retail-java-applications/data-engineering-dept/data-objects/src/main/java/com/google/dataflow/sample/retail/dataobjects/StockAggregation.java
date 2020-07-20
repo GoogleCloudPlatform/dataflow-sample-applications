@@ -19,12 +19,14 @@ package com.google.dataflow.sample.retail.dataobjects;
 
 import com.google.auto.value.AutoValue;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
 
 @AutoValue
 @DefaultSchema(AutoValueSchema.class)
+@Experimental
 public abstract class StockAggregation {
 
   @Nullable

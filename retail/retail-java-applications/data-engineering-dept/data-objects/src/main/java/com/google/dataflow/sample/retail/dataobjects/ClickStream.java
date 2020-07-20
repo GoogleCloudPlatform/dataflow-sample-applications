@@ -19,6 +19,7 @@ package com.google.dataflow.sample.retail.dataobjects;
 
 import com.google.auto.value.AutoValue;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
@@ -27,6 +28,7 @@ import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
  * Objects used for dealing with clickstream within the pipeline and schemas for I/O of clickstream
  * events.
  */
+@Experimental
 public class ClickStream {
 
   @AutoValue

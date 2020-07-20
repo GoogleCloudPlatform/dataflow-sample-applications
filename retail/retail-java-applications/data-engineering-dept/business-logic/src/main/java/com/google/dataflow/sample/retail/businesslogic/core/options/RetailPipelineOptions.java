@@ -17,10 +17,11 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.options;
 
-import com.google.dataflow.sample.retail.businesslogic.externalservices.RetailPipelineStoresOptions;
 import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.options.Default;
 
+@Experimental
 public interface RetailPipelineOptions
     extends DataflowPipelineOptions,
         RetailPipelineAggregationOptions,

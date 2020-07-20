@@ -20,6 +20,7 @@ package com.google.dataflow.sample.retail.businesslogic.core.transforms.stock;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.CreateStockAggregatorMetadata;
 import com.google.dataflow.sample.retail.dataobjects.StockAggregation;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.Schema.FieldType;
 import org.apache.beam.sdk.schemas.transforms.AddFields;
 import org.apache.beam.sdk.schemas.transforms.Convert;
@@ -31,6 +32,7 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.joda.time.Duration;
 
+@Experimental
 public class CountGlobalStockUpdatePerProduct
     extends PTransform<PCollection<StockAggregation>, PCollection<StockAggregation>> {
 

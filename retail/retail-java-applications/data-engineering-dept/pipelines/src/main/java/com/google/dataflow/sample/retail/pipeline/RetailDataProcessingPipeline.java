@@ -34,6 +34,7 @@ import com.google.dataflow.sample.retail.dataobjects.Stock.StockEvent;
 import com.google.dataflow.sample.retail.dataobjects.StockAggregation;
 import com.google.dataflow.sample.retail.dataobjects.Transaction.TransactionEvent;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.Flatten;
@@ -49,6 +50,7 @@ import org.joda.time.Duration;
  * Primary pipeline using {@link ClickstreamProcessing}, {@link TransactionProcessing}, {@link
  * StockProcessing}.
  */
+@Experimental
 public class RetailDataProcessingPipeline {
 
   @VisibleForTesting public PCollection<String> testClickstreamEvents = null;

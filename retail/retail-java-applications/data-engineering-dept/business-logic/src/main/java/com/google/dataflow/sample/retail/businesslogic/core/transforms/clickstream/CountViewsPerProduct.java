@@ -20,6 +20,7 @@ package com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstr
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.PageViewAggregator;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.schemas.Schema.Field;
 import org.apache.beam.sdk.schemas.Schema.FieldType;
@@ -44,6 +45,7 @@ import org.joda.time.Instant;
  * anlaytics are done, the results are stored in an external system. The timestamp of the
  * aggregation
  */
+@Experimental
 public class CountViewsPerProduct
     extends PTransform<PCollection<ClickStreamEvent>, PCollection<PageViewAggregator>> {
 

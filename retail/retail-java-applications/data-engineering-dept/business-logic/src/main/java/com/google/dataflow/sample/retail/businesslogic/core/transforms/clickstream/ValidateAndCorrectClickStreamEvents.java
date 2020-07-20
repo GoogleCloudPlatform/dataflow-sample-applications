@@ -24,6 +24,7 @@ import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEven
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -44,6 +45,7 @@ import org.joda.time.Instant;
  *
  * <p>Check if lat / long are missing, if they are look up user in the user table.
  */
+@Experimental
 public class ValidateAndCorrectClickStreamEvents
     extends PTransform<PCollection<ClickStreamEvent>, PCollection<ClickStreamEvent>> {
 

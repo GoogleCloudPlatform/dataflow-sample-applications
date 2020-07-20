@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import org.apache.beam.sdk.annotations.Experimental;
 
 /**
  * This class represents a mock client to a microservice implemented by the Demo Retail company.
@@ -31,6 +32,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * <p>Real services will often take 10-100's of ms to respond, which cause back pressure within a
  * pipeline. This version of this mock does not cause push back.
  */
+@Experimental
 public class RetailCompanyServices {
 
   // TODO convert to a service which requires a few hundred ms to respond.

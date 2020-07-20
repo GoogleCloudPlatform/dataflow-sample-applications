@@ -17,6 +17,9 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core;
 
+import org.apache.beam.sdk.annotations.Experimental;
+
+@Experimental
 public class DeploymentAnnotations {
 
   /** Used to indicate a transform will have side effects in deployment life cycle events. */

@@ -17,10 +17,12 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.options;
 
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryOptions;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.Description;
 
+@Experimental
 public interface RetailPipelineAggregationOptions extends BigQueryOptions {
 
   @Default.String("aggregate-tables")

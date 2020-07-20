@@ -19,6 +19,7 @@ package com.google.dataflow.sample.retail.businesslogic.core.transforms;
 
 import com.google.auto.value.AutoValue;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.joda.time.Instant;
@@ -26,6 +27,7 @@ import org.joda.time.Instant;
 /** Error Objects for Dead Letter */
 @AutoValue
 @DefaultSchema(AutoValueSchema.class)
+@Experimental
 public abstract class ErrorMsg {
   public @Nullable abstract String getTransform();
 

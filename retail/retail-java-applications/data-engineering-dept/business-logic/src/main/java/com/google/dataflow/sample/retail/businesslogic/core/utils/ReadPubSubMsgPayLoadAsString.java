@@ -19,6 +19,7 @@ package com.google.dataflow.sample.retail.businesslogic.core.utils;
 
 import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -27,6 +28,7 @@ import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 
 /** Wrapper to ensure that timestamp attribute has been set for PubSub. */
+@Experimental
 public class ReadPubSubMsgPayLoadAsString extends PTransform<PBegin, PCollection<String>> {
 
   private String pubsubTopic;

@@ -22,6 +22,7 @@ import com.google.dataflow.sample.retail.businesslogic.core.transforms.DeadLette
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.DeadLetterSink.SinkType;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.ErrorMsg;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.metrics.Distribution;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.schemas.NoSuchSchemaException;
@@ -38,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import thirdparty.JsonToRow;
 import thirdparty.JsonToRow.ParseResult;
 
+@Experimental
 public class JSONUtils {
 
   /**

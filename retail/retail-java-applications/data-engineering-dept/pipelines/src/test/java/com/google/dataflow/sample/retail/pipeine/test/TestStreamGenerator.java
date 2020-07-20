@@ -166,7 +166,7 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
         click.event = "browse";
 
         pc.outputWithTimestamp(CLICKSTREAM, gson.toJson(click), clickTime);
-        LOG.debug(String.format("Genrating Msg: %s",gson.toJson(click)));
+        LOG.debug(String.format("Genrating Msg: %s", gson.toJson(click)));
 
         clickTime = clickTime.plus(Duration.standardSeconds(i + 2));
         pageReferrer = currentPage;

@@ -19,10 +19,12 @@ package com.google.dataflow.sample.retail.businesslogic.core.utils;
 
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.WriteAggregatesToBigTable.PrintMutation;
 import java.io.IOException;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Experimental
 public class Print<T> extends DoFn<T, String> {
 
   private static final Logger LOG = LoggerFactory.getLogger(PrintMutation.class);
