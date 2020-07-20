@@ -62,7 +62,7 @@ Implementation of the requirements using canonical patterns
 # To run the pipeline locally you can make use of the smoke test 
 gradlew :data-engineering-dept:pipelines:test --tests com.google.dataflow.sample.retail.pipeine.test.RetailDataProcessingPipelineSimpleSmokeTest --info --rerun-tasks
 
-# Running the sample application on Dataflow service
+# Setup required for running the sample application on Dataflow service
 
 Please note this application has many inputs and outputs.
 All of these will need to be enabled in your project. 
@@ -103,8 +103,7 @@ VALUES
 #### Create an instance
 * Create a BigTable instance within your project
 #### Create a table
-* Create the "PageView5MinAggregates" table 
-
+* Create the "PageView5MinAggregates" table with Column family "pageViewAgg"
 
 # Common Patterns
 There are some common patterns required to achieve the business requirements, these are highlighted here along with a link to the code.
