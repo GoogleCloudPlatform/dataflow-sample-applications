@@ -58,6 +58,13 @@ public class CreateClickStreamSessions
   }
 
   @Override
+  /**
+   * Returns a Row object in the format:
+   * <pre>{@code
+   * Field Name	    Field Type
+   * key	        ROW{sessionId:STRING}
+   * values	        ITERABLE[ROW[ClickstreamEvent]]}</pre>
+   */
   public PCollection<Row> expand(PCollection<ClickStreamEvent> input) {
     return input
         .apply(Window.into(Sessions.withGapDuration(sessionWindowGapDuration)))
