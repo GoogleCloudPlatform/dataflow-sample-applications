@@ -17,7 +17,6 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.utils.test.clickstream;
 
-import com.google.common.collect.ImmutableList;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.CreateClickStreamSessions;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
 import org.apache.beam.sdk.schemas.Schema;
@@ -29,6 +28,7 @@ import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.TimestampedValue;
+import org.apache.beam.vendor.grpc.v1p26p0.com.google.common.collect.ImmutableList;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.junit.Rule;
@@ -130,7 +130,7 @@ public class CreateClickStreamSessionsTest {
                         .build()))
             .build();
 
-    PAssert.that(sessions).containsInAnyOrder(ImmutableList.of(row1, row2));
+    PAssert.that(sessions).containsInAnyOrder(ImmutableList.of(row2, row1));
 
     pipeline.run();
   }
