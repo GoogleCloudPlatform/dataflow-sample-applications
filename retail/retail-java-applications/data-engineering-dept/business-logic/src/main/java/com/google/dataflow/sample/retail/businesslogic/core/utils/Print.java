@@ -28,10 +28,15 @@ import org.slf4j.LoggerFactory;
 public class Print<T> extends DoFn<T, String> {
 
   private static final Logger LOG = LoggerFactory.getLogger(PrintMutation.class);
+  String message;
+
+  public Print(String message) {
+    this.message = message;
+  }
 
   @ProcessElement
   public void process(@Element T row) throws IOException {
 
-    LOG.info("Aggregation to BigQuery is " + row.toString());
+    LOG.info(message + row.toString());
   }
 }

@@ -38,4 +38,9 @@ public interface RetailPipelineClickStreamOptions extends PubsubOptions {
   String getClickStreamBigQueryCleanTable();
 
   void setClickStreamBigQueryCleanTable(String clickStreamBigQueryCleanTable);
+
+  @Default.String("Retail_Store.sessionized_clickstream")
+  String getClickStreamSessionizedTable();
+
+  void setClickStreamSessionizedTable(String clickStreamSessionizedTable);
 }

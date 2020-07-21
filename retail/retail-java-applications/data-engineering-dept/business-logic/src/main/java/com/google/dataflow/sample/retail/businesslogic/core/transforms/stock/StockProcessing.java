@@ -58,11 +58,11 @@ public class StockProcessing extends PTransform<PCollection<String>, PCollection
 
     /**
      * **********************************************************************************************
-     * Write Cleaned Data to BigQuery
+     * Write Store Corrected Inventory Data To DW
      * **********************************************************************************************
      */
     if (options.getTestModeEnabled()) {
-      input.apply(ParDo.of(new Print<>()));
+      input.apply(ParDo.of(new Print<>("StoreCorrectedInventoryDataToDW")));
 
     } else {
       inventory.apply(
