@@ -80,8 +80,12 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
 
       for (int i = 0; i < 3; i++) {
 
+        String sessionId = UUID.randomUUID().toString();
+
         ClickStreamEventAVRO click = new ClickStreamEventAVRO();
+        click.sessionId = sessionId;
         click.timestamp = time.getMillis();
+        click.sessionId = UUID.randomUUID().toString();
         click.pageRef = String.format("P%s", pageReferrer);
         click.pageTarget = String.format("P%s", currentPage);
         click.lng = 43.726075;
@@ -100,6 +104,7 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
       }
 
       ClickStreamEventAVRO click = new ClickStreamEventAVRO();
+      click.sessionId = UUID.randomUUID().toString();
       click.timestamp = time.getMillis();
       click.pageRef = String.format("P%s", pageReferrer);
       click.pageTarget = String.format("P%s", currentPage);
@@ -137,16 +142,19 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
        */
       click.lat = null;
       click.lng = null;
+      click.sessionId = UUID.randomUUID().toString();
       pc.output(gson.toJson(click));
       LOG.debug(String.format("Genrating Msg: %s", gson.toJson(click)));
 
       /**
        * **********************************************************************************************
-       * Generate a non purchase sequence
+       * Generate a purchase sequence
        * **********************************************************************************************
        */
       pageReferrer = ThreadLocalRandom.current().nextInt(10);
       currentPage = ThreadLocalRandom.current().nextInt(10);
+
+      String sessionId = UUID.randomUUID().toString();
 
       List<String> clickstream = new ArrayList<>();
       Instant clickTime = time;
@@ -154,6 +162,7 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
       for (int i = 0; i < 3; i++) {
 
         click = new ClickStreamEventAVRO();
+        click.sessionId = sessionId;
         click.timestamp = clickTime.getMillis();
         click.pageRef = String.format("P%s", pageReferrer);
         click.pageTarget = String.format("P%s", currentPage);
@@ -176,6 +185,7 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
       clickTime = clickTime.plus(Duration.standardSeconds(1));
 
       ClickStreamEventAVRO addToCart = new ClickStreamEventAVRO();
+      addToCart.sessionId = sessionId;
       addToCart.timestamp = time.getMillis();
       addToCart.pageRef = String.format("P%s", pageReferrer);
       addToCart.pageTarget = String.format("P%s", currentPage);
@@ -194,6 +204,7 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
 
       ClickStreamEventAVRO purchase = new ClickStreamEventAVRO();
       purchase.timestamp = time.getMillis();
+      purchase.sessionId = sessionId;
       purchase.pageRef = String.format("P%s", pageReferrer);
       purchase.pageTarget = String.format("P%s", currentPage);
       purchase.lng = 43.726075;
@@ -232,6 +243,61 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
 
       pc.outputWithTimestamp(STOCK, gson.toJson(stock), clickTime);
       LOG.debug(String.format("Genrating Msg: %s", gson.toJson(stock)));
+
+      /**
+       * **********************************************************************************************
+       * Generate a non-purchase single session across air-gap sequence
+       * **********************************************************************************************
+       */
+      sessionId = UUID.randomUUID().toString();
+
+      for (int i = 0; i < 3; i++) {
+
+        click = new ClickStreamEventAVRO();
+        click.sessionId = sessionId;
+        click.timestamp = clickTime.getMillis();
+        click.pageRef = String.format("P%s", pageReferrer);
+        click.pageTarget = String.format("P%s", currentPage);
+        click.lng = 43.726075;
+        click.lng = -71.642508;
+        click.agent =
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
+        click.transaction = false;
+        click.uid = 1L;
+        click.event = "browse";
+
+        pc.outputWithTimestamp(CLICKSTREAM, gson.toJson(click), clickTime);
+        LOG.debug(String.format("Genrating Msg: %s", gson.toJson(click)));
+
+        clickTime = clickTime.plus(Duration.standardSeconds(i + 2));
+        pageReferrer = currentPage;
+        currentPage = ThreadLocalRandom.current().nextInt(10);
+      }
+
+      clickTime = clickTime.plus(Duration.standardMinutes(10));
+
+      for (int i = 0; i < 3; i++) {
+
+        click = new ClickStreamEventAVRO();
+        click.sessionId = sessionId;
+        click.timestamp = clickTime.getMillis();
+        click.pageRef = String.format("P%s", pageReferrer);
+        click.pageTarget = String.format("P%s", currentPage);
+        click.lng = 43.726075;
+        click.lng = -71.642508;
+        click.agent =
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
+        click.transaction = false;
+        click.uid = 1L;
+        click.event = "browse";
+
+        pc.outputWithTimestamp(CLICKSTREAM, gson.toJson(click), clickTime);
+        LOG.debug(String.format("Genrating Msg: %s", gson.toJson(click)));
+
+        clickTime = clickTime.plus(Duration.standardSeconds(i + 2));
+        pageReferrer = currentPage;
+        currentPage = ThreadLocalRandom.current().nextInt(10);
+      }
     }
   }
 }

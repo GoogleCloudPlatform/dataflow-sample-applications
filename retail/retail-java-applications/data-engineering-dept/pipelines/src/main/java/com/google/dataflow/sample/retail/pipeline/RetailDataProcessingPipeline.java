@@ -177,7 +177,7 @@ public class RetailDataProcessingPipeline {
             "ConvertToPubSub", MapElements.into(TypeDescriptors.strings()).via(Object::toString));
 
     if (options.getTestModeEnabled()) {
-      stockUpdates.apply(ParDo.of(new Print<>()));
+      stockUpdates.apply(ParDo.of(new Print<>("Inventory PubSub Message is: ")));
     } else {
       stockUpdates.apply(PubsubIO.writeStrings().to(options.getAggregateStockPubSubOutputTopic()));
     }

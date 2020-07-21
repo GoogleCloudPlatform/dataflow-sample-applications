@@ -100,7 +100,7 @@ public class WriteAggregationToBigQuery<T> extends PTransform<PCollection<T>, PD
 
     if (options.getTestModeEnabled()) {
 
-      input.apply(ParDo.of(new Print<T>()));
+      input.apply(ParDo.of(new Print<T>("Aggregation to BigQuery is: ")));
 
       return PDone.in(input.getPipeline());
     }

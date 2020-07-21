@@ -80,11 +80,11 @@ public class TransactionProcessing
 
     /**
      * **********************************************************************************************
-     * Write Cleaned Data to BigQuery
+     * Store Corrected Transaction Data To DW
      * **********************************************************************************************
      */
     if (options.getTestModeEnabled()) {
-      transactionWithStoreLoc.apply(ParDo.of(new Print<>()));
+      transactionWithStoreLoc.apply(ParDo.of(new Print<>("StoreCorrectedTransactionDataToDW:")));
 
     } else {
       transactionWithStoreLoc

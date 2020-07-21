@@ -32,6 +32,7 @@ import org.apache.beam.sdk.schemas.transforms.Filter;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.Row;
 import org.joda.time.Duration;
 
 /**
@@ -101,16 +102,46 @@ public class ClickstreamProcessing
 
     /**
      * *********************************************************************************************
-     * Write Cleaned Data to BigQuery
+     * Store Cleaned Data To DW
      *
      * <p>*********************************************************************************************
      */
     if (options.getTestModeEnabled()) {
-      cleanedData.apply(ParDo.of(new Print<>()));
+      cleanedData.apply(ParDo.of(new Print<>("StoreCleanedDataToDW: ")));
     } else {
       cleanedData.apply(
           "StoreCleanedDataToDW",
           BigQueryIO.<ClickStreamEvent>write()
+              .useBeamSchema()
+              .withWriteDisposition(WriteDisposition.WRITE_APPEND)
+              .withTimePartitioning(new TimePartitioning().setField("timestamp"))
+              .to(
+                  String.format(
+                      "%s:%s",
+                      options.getDataWarehouseOutputProject(),
+                      options.getClickStreamBigQueryCleanTable())));
+    }
+    /**
+     * *********************************************************************************************
+     * Sessionize the data using sessionid
+     *
+     * <p>*********************************************************************************************
+     */
+    PCollection<Row> sessionizedClickstream =
+        cleanedData.apply(CreateClickStreamSessions.create(Duration.standardMinutes(10)));
+
+    /**
+     * *********************************************************************************************
+     * Write sessionized clickstream to BigQuery
+     *
+     * <p>*********************************************************************************************
+     */
+    if (options.getTestModeEnabled()) {
+      sessionizedClickstream.apply(ParDo.of(new Print<>("Sessionized Data is: ")));
+    } else {
+      sessionizedClickstream.apply(
+          "sessionizedClickstream",
+          BigQueryIO.<Row>write()
               .useBeamSchema()
               .withWriteDisposition(WriteDisposition.WRITE_APPEND)
               .withTimePartitioning(new TimePartitioning().setField("timestamp"))
