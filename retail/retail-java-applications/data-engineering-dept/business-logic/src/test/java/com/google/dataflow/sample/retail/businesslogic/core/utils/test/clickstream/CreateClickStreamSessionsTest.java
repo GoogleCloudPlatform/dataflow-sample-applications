@@ -19,12 +19,15 @@ package com.google.dataflow.sample.retail.businesslogic.core.utils.test.clickstr
 
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.CreateClickStreamSessions;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
-import org.apache.beam.sdk.schemas.Schema;
-import org.apache.beam.sdk.schemas.Schema.FieldType;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import org.apache.beam.sdk.schemas.transforms.Select;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
-import org.apache.beam.sdk.transforms.SerializableFunction;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.TimestampedValue;
@@ -84,54 +87,36 @@ public class CreateClickStreamSessionsTest {
 
     Duration windowDuration = Duration.standardMinutes(5);
 
-    PCollection<Row> sessions =
+    PCollection<List<Long>> sessions =
         pipeline
             .apply(
                 Create.timestamped(
                     CLICK_STREAM_EVENT_0_MINS,
                     CLICK_STREAM_EVENT_3_MINS,
                     CLICK_STREAM_EVENT_10_MINS))
-            .apply(new CreateClickStreamSessions(windowDuration));
+            .apply(new CreateClickStreamSessions(windowDuration))
+            .apply(Select.fieldNames("value.timestamp"))
+            .apply(ParDo.of(new RowKVDoFn()));
 
-    Schema eventSchema = pipeline.getSchemaRegistry().getSchema(ClickStreamEvent.class);
-
-    Schema keySchema = Schema.builder().addStringField("sessionId").build();
-    Schema schema =
-        Schema.builder()
-            .addRowField("key", keySchema)
-            .addArrayField(
-                "values",
-                FieldType.row(pipeline.getSchemaRegistry().getSchema(ClickStreamEvent.class)))
-            .build();
-
-    SerializableFunction<ClickStreamEvent, Row> toRow =
-        pipeline.getSchemaRegistry().getToRowFunction(ClickStreamEvent.class);
-
-    Row row1 =
-        Row.withSchema(schema)
-            .addValues(Row.withSchema(keySchema).addValues("1").build())
-            .addIterable(
-                ImmutableList.of(
-                    Row.withSchema(eventSchema)
-                        .addValues(toRow.apply(CLICK_STREAM_EVENT_0_MINS.getValue()).getValues())
-                        .build(),
-                    Row.withSchema(eventSchema)
-                        .addValues(toRow.apply(CLICK_STREAM_EVENT_3_MINS.getValue()).getValues())
-                        .build()))
-            .build();
-
-    Row row2 =
-        Row.withSchema(schema)
-            .addValues(Row.withSchema(keySchema).addValues("1").build())
-            .addIterable(
-                ImmutableList.of(
-                    Row.withSchema(eventSchema)
-                        .addValues(toRow.apply(CLICK_STREAM_EVENT_10_MINS.getValue()).getValues())
-                        .build()))
-            .build();
-
-    PAssert.that(sessions).containsInAnyOrder(ImmutableList.of(row2, row1));
+    PAssert.that(sessions)
+        .containsInAnyOrder(
+            ImmutableList.of(
+                TIME, Instant.ofEpochMilli(TIME).plus(Duration.standardMinutes(3)).getMillis()),
+            ImmutableList.of(
+                Instant.ofEpochMilli(TIME).plus(Duration.standardMinutes(10)).getMillis()));
 
     pipeline.run();
+  }
+
+  private static class RowKVDoFn extends DoFn<Row, List<Long>> {
+
+    @ProcessElement
+    public void process(ProcessContext pc) {
+      List<Long> timestamps = new ArrayList<>();
+      pc.element().getArray("timestamp").forEach(x -> timestamps.add((Long) x));
+
+      Collections.sort(timestamps);
+      pc.output(timestamps);
+    }
   }
 }
