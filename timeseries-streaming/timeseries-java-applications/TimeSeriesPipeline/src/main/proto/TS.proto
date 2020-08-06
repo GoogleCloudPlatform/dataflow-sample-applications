@@ -1,0 +1,116 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
+syntax = "proto3";
+
+package protos;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+option java_outer_classname = "TimeSeriesData";
+option java_multiple_files = false;
+option java_package = "com.google.dataflow.sample.timeseriesflow";
+
+//	The TimeSeriesData proto type will be used as the internal representation of all time series within the the TS
+//	example library. The primary work for the developer making use of this library is to convert their time series into a
+//	TimeSeriesData point.
+
+message TSKey {
+    string major_key = 1;
+    string minor_key_string = 2;
+}
+
+// A Data point can only hold one data type.
+message Data {
+    oneof data_point {
+        // DT_FLOAT.
+        float float_val = 3;
+
+        // DT_DOUBLE.
+        double double_val = 4;
+
+        // DT_INT32, DT_INT16, DT_INT8, DT_UINT8.
+        int32 int_val = 5;
+
+        // Categorical features
+        string categorical_val = 6;
+
+        // DT_LONG
+        int64 long_val = 7;
+
+        // Allows the user to store number as String
+        string num_as_string = 8;
+    }
+}
+
+// The TSDataPoint holds both the metadata and the data about the time series data point
+message TSDataPoint {
+    TSKey key = 1;
+    Data data = 2;
+    google.protobuf.Timestamp timestamp = 3;
+    map<string, string> metadata = 4;
+    bool is_a_gap_fill_message = 5;
+}
+
+
+// TSAccum holds the derived data from a univariate time series.
+message TSAccum {
+
+    TSKey key = 1;
+
+    // Corresponds to beam window...
+    google.protobuf.Timestamp lower_window_boundary = 5;
+    google.protobuf.Timestamp upper_window_boundary = 6;
+    bool has_a_gap_fill_message = 7;
+
+    // Storage of all Data types.
+    map<string, Data> data_store = 11;
+
+}
+
+// Time Series Accum sequence holder
+message TSAccumSequence {
+    TSKey key = 1;
+
+    repeated TSAccum accums = 3;
+
+    google.protobuf.Timestamp lower_window_boundary = 4;
+    google.protobuf.Timestamp upper_window_boundary = 5;
+
+    google.protobuf.Duration duration = 6;
+
+    // Store any context values
+    // TODO Change this name , to metadata
+    map<string, Data> sequence_data = 7;
+
+    int64 count = 8 ;
+}
+
+// Time Series Accum sequence holder
+message TSDataPointSequence {
+    TSKey key = 1;
+
+    repeated TSDataPoint data_points = 3;
+
+    google.protobuf.Timestamp lower_window_boundary = 4;
+    google.protobuf.Timestamp upper_window_boundary = 5;
+
+    google.protobuf.Duration duration = 6;
+
+    // Store any context values
+    map<string, Data> sequence_data = 7;
+
+    int64 count = 8 ;
+}
+

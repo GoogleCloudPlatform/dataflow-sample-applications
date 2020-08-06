@@ -1,0 +1,52 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
+syntax = "proto3";
+
+package protos;
+
+option java_outer_classname = "DerivedAggregations";
+option java_multiple_files = false;
+option java_package = "com.google.dataflow.sample.timeseriesflow";
+
+/**
+This proto stores all of the keys used in the accum map.
+
+ */
+enum Indicators{
+
+  DATA_POINT_COUNT = 0;
+
+  SUM = 1;
+  MIN = 2;
+  MAX = 3;
+  FIRST = 4;
+  LAST = 5;
+
+  // First timestamp within a aggregation
+  FIRST_TIMESTAMP = 6;
+
+  // Last timestamp within a aggregation
+  LAST_TIMESTAMP = 7;
+
+  // Day Of Week . In TSAccum this will be from First Value seen. UTC
+  DOW = 8;
+  // Day of Month. In TSAccum this will be from First Value seen. UTC
+  DOM = 9;
+  // Year. In TSAccum this will be from First Value seen. UTC
+  YY = 10;
+  // Indication if a value is generated via GapFill routine
+  HB = 11;
+
+}
