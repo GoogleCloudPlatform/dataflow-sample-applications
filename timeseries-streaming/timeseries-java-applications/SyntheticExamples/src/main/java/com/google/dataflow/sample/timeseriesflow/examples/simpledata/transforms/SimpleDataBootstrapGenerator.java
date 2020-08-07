@@ -115,7 +115,6 @@ public class SimpleDataBootstrapGenerator {
      * We hard code a few of the options for this sample application.
      * ***********************************************************************************************************
      */
-
     options.setAppName("SimpleDataBootstrapProcessTSDataPoints");
     options.setTypeOneComputationsLengthInSecs(1);
     options.setTypeTwoComputationsLengthInSecs(5);
@@ -141,7 +140,7 @@ public class SimpleDataBootstrapGenerator {
         .apply(
             AllComputationsExamplePipeline.builder()
                 .setTimeseriesSourceName("SimpleExample")
-                .setOutputToBigQuery(false)
+                .setOutputToBigQuery(true)
                 .setGenerateComputations(generateComputations)
                 .build())
         .apply(OutPutTFExampleFromTSSequence.create().withEnabledSingeWindowFile(false));

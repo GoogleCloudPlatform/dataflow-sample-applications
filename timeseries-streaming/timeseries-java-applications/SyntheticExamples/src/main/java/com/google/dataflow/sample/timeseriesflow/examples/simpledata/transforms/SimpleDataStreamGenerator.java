@@ -17,6 +17,7 @@
  */
 package com.google.dataflow.sample.timeseriesflow.examples.simpledata.transforms;
 
+import com.google.common.base.Preconditions;
 import com.google.dataflow.sample.timeseriesflow.AllComputationsExamplePipeline;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
@@ -59,9 +60,26 @@ public class SimpleDataStreamGenerator {
 
     /**
      * ***********************************************************************************************************
-     * We want to ensure that there is always a value within each timestep. This is redundent for
+     * We hard code a few of the options for this sample application.
+     * ***********************************************************************************************************
+     */
+    SimpleDataOptions options = PipelineOptionsFactory.fromArgs(args).as(SimpleDataOptions.class);
+
+    Preconditions.checkNotNull(
+        options.getDemoMode(), "--demoMode must be set to one of example_1, example_2, example_3");
+
+    options.setAppName("SimpleDataStreamTSDataPoints");
+    options.setTypeOneComputationsLengthInSecs(1);
+    options.setTypeTwoComputationsLengthInSecs(5);
+    options.setSequenceLengthInSeconds(5);
+
+    Pipeline p = Pipeline.create(options);
+
+    /**
+     * ***********************************************************************************************************
+     * We want to ensure that there is always a value within each timestep. This is redundant for
      * this dataset as the generated data will always have a value. But we keep this configuration
-     * to ensure consistency accross the sample pipelines.
+     * to ensure consistency across the sample pipelines.
      * ***********************************************************************************************************
      */
     PerfectRectangles perfectRectangles =
@@ -73,8 +91,8 @@ public class SimpleDataStreamGenerator {
 
     /**
      * ***********************************************************************************************************
-     * The data has only one key, to allow the type 1 computations to be done in parrallal we set
-     * the {@link GenerateComputations#hotKeyFanOut()}
+     * The data has only one key, to allow the type 1 computations to be done in parallel we set the
+     * {@link GenerateComputations#hotKeyFanOut()}
      * ***********************************************************************************************************
      */
     GenerateComputations generateComputations =
@@ -87,26 +105,12 @@ public class SimpleDataStreamGenerator {
 
     /**
      * ***********************************************************************************************************
-     * We hard code a few of the options for this sample application.
+     * Generate trivial data points that follow a very simple pattern. Over 12 hours the value will
+     * cycle through 0 up and then back to 0. There will be a tick every 500 ms.
      * ***********************************************************************************************************
      */
-    SimpleDataOptions options = PipelineOptionsFactory.fromArgs(args).as(SimpleDataOptions.class);
-
-    options.setAppName("SimpleDataStreamTSDataPoints");
-    options.setTypeOneComputationsLengthInSecs(1);
-    options.setTypeTwoComputationsLengthInSecs(5);
-    options.setSequenceLengthInSeconds(5);
-
-    Pipeline p = Pipeline.create(options);
-
     TSKey key = TSKey.newBuilder().setMajorKey("timeseries_x").setMinorKeyString("value").build();
 
-    /**
-     * ***********************************************************************************************************
-     * Generate trivial data points that follow a very simple pattern. Over 12 hours the value will
-     * cycle through 0 to 120 and back to 0. There will be a tick every 500 ms.
-     * ***********************************************************************************************************
-     */
     PCollection<TSDataPoint> stream =
         p.apply(GenerateSequence.from(0).withRate(1, Duration.millis(500)))
             .apply(
@@ -152,6 +156,11 @@ public class SimpleDataStreamGenerator {
             .setGenerateComputations(generateComputations)
             .build();
 
+    if (options.getDemoMode().equals("example_3")) {
+      allComputationsExamplePipeline =
+          allComputationsExamplePipeline.toBuilder().setOutputToBigQuery(true).build();
+    }
+
     PCollection<KV<TSKey, Iterable<TSAccumSequence>>> metrics =
         stream.apply(allComputationsExamplePipeline);
 
@@ -190,10 +199,6 @@ public class SimpleDataStreamGenerator {
                   .withEnabledSingeWindowFile(true)
                   .setNumShards(2))
           .apply(new Print<Example>());
-    }
-
-    if (options.getDemoMode().equals("example_3")) {
-      allComputationsExamplePipeline.toBuilder().setOutputToBigQuery(true);
     }
 
     p.run();

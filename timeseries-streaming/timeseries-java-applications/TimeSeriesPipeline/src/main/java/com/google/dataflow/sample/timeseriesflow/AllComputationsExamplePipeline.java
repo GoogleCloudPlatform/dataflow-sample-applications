@@ -18,6 +18,7 @@
 package com.google.dataflow.sample.timeseriesflow;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
@@ -27,6 +28,7 @@ import com.google.dataflow.sample.timeseriesflow.transforms.CollapseAllTSMinorKe
 import com.google.dataflow.sample.timeseriesflow.transforms.ConvertAccumToSequence;
 import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.dataflow.sample.timeseriesflow.transforms.TSAccumToRow;
+import java.util.Optional;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.CreateDisposition;
@@ -82,6 +84,12 @@ public abstract class AllComputationsExamplePipeline
     ExampleTimeseriesPipelineOptions options =
         input.getPipeline().getOptions().as(ExampleTimeseriesPipelineOptions.class);
 
+    if (getOutputToBigQuery()) {
+      Preconditions.checkNotNull(
+          options.getBigQueryTableForTSAccumOutputLocation(),
+          "If OutputToBigQuery is true, --bigQueryTableForTSAccumOutputLocation option must be set.");
+    }
+
     // ----------------- Stage 1 create Computations
 
     PCollection<KV<TSKey, TSAccum>> computations = input.apply(getGenerateComputations());
@@ -100,10 +108,10 @@ public abstract class AllComputationsExamplePipeline
                   .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
                   .withWriteDisposition(WriteDisposition.WRITE_APPEND)
                   .to(
-                      String.format(
-                          "%s_%s_%s",
+                      String.join(
+                          "_",
                           options.getBigQueryTableForTSAccumOutputLocation(),
-                          getTimeseriesSourceName(),
+                          Optional.of(getTimeseriesSourceName()).orElse(""),
                           Instant.now().toString(formatter))));
     }
 

@@ -18,6 +18,7 @@
 package com.google.dataflow.sample.timeseriesflow.io.tfexample;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import com.google.dataflow.sample.timeseriesflow.TFXOptions;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
@@ -100,6 +101,9 @@ public abstract class OutPutTFExampleFromTSSequence
   public PCollection<Example> expand(PCollection<KV<TSKey, Iterable<TSAccumSequence>>> input) {
 
     TFXOptions options = input.getPipeline().getOptions().as(TFXOptions.class);
+    Preconditions.checkNotNull(
+        options.getInterchangeLocation(),
+        "If output to file is enabled, --interchangeLocation option must be set.");
 
     /** Convert each major key to a TF.Example */
     PCollection<KV<TSKey, Example>> results =
