@@ -18,49 +18,143 @@
 -->
 # Overview
 
+The e-commerce sample application illustrates common use cases and best practices for implementing streaming data analytics and real-time AI. Use it to learn how to dynamically respond to customer actions by analyzing and responding to events in real time, and also how to store, analyze and visualize that event data for longer-term insights.
+
+The application is implemented in Java, and uses the following products:
+
+* Pub/Sub
+* Dataflow
+* BigQuery
+* Cloud Bigtable
+
 This sample retail application, is intended to be used as an exemplar blueprint for similar applications. 
 
 For this first version of the application the following items are shown:  
  
 Processing and Analysis of:
 * Clickstream data being sent by online systems to Cloud PubSub.
-* Transaction data being sent by on-premise / saas systems to Cloud PubSub. 
-* Stock data being sent by on-premise / saas systems to Cloud PubSub.
+* Transaction data being sent by on-premise / SaaS systems to Cloud PubSub. 
+* Stock data being sent by on-premise / SaaS systems to Cloud PubSub.
 
 > Note: All data is sent as JSON, this is normal for clickstream data but not necessarily the norm for Transaction / Stock data. Different data formats (e.g xml)  will be shown in future versions.
 
-## Requirements
-* Requirement 1  
+# Goals
+The application was designed to address the following requirements:
 
-  The business has a requirement to process all of this incoming data and store it in our Data Warehouse, this allows for dashboards to be built using Looker. 
-* Requirement 2
+* Validate incoming data and apply corrections to it where possible.
+* Analyze clickstream data to keep a count of the number of views per product in a given time period. Store this information in a low latency store where the application can use it to provide 'number of people who viewed this product' messages to customers on the web site.
+* Use transaction data to inform inventory ordering:
 
-The business has a requirement to validate the data and apply corrections where possible to the data.
+    * Analyze transaction data to calculate the total number of sales for each item, both by store and globally, for a given period.
+    * Analyze inventory data to calculate the incoming inventory for each item.
+    * Pass this data to inventory systems on a continuous basis so it can be used for inventory purchasing decsions decisions.
+* Validate incoming data and apply corrections to it where possible. Write any uncorrectable data to a dead letter queue for additional analysis and processing. Make a metric that represents the percentage of incoming data that gets sent to the dead letter queue available for monitoring and alerting.
+* Process all incoming data into a standard format and store it in a data warehouse to use for future analysis and visualization.
+* Denormalize transaction data for in-store sales so that it can include information like the latitude and longitude of the store location. Provide the the store information through a slowly changing table in BigQuery, using the store ID as a key.
 
-* Requirement 3
+# Data
+The application processes the following types of data:
 
-The business has a requirement to keep any bad data in a deadletter area for future correction. A running metric of this value should be available for monitoring and alerting. 
+* Clickstream data being sent by Newkick's web interface.
+* Transaction data being sent by on-premise or software-as-a-service (SaaS) systems.
+* Inventory data being sent by on-premise or SaaS systems.
 
-* Requirement 4
-
-The business requires that the Transaction data for a store sale to be de-normalized to include lat lng positions of the store, this information is based upon a slow changing table in BigQuery which contains the store information driven off a store ID key. 
-
-* Requirement 5
-
-The business would like to compute the following analysis on the incoming data:
-
-* Clickstream
-
-Count the number of views per product in a given time period. 
-Store the views per product in a low latency store for usage by the application to show 'number of people who viewed this product' in the website.
-
-* Transactions & Stocks
-
-The total number of sales per store and globally per item for a given period is to be computed alongside the total number of incoming stocks. This information is to be sent onto the inventory systems on a continuous basis. The inventory department will make use of this information for stock decisions. 
-Implementation of the requirements using canonical patterns
-
+------
+    Note: All data used by the application is sent as JSON. 
+    This is a standard format for clickstream data, but real-world formats for transaction and inventory data vary.
+------
 # To run the pipeline locally you can make use of the smoke test 
+```
 gradlew :data-engineering-dept:pipelines:test --tests com.google.dataflow.sample.retail.pipeine.test.RetailDataProcessingPipelineSimpleSmokeTest --info --rerun-tasks
+```
+# Task patterns
+The application contains a number of task patterns that show the best way to accomplish Java programming tasks that are commonly needed to create this type of application.
+
+## Using Apache Beam schemas to work with structured data
+### Content
+We recommend using Apache Beam schemas to make processing structured data easier.
+
+Converting your objects to Rows lets you produce very clean Java code, which makes your directed acyclic graph (DAG) building exercise easier. You can also reference object properties as fields within the analytics statements that you create, instead of having to call methods.
+### Examples
+[CountViewsPerProduct](retail/retail-java-applications/data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/CountViewsPerProduct.java)
+## Using JsonToRow to convert JSON data
+### Content
+Processing JSON strings in Dataflow is a common need. For example, when processing clickstream information captured from web applications. To process JSON strings, you need to convert them into either Rows or plain old Java objects (POJOs) for the duration of the pipeline processing.
+
+The Apache Beam utility class JsonToRow is a good solution for converting JSON strings to Rows. The 2 considerations to take into account when using JsonToRow are:
+
+Read JSON -> Use JsonToRow to convert to Row -> Use Convert.fromRows() to convert to POJO
+
+If JsonToRow won't work with your data, Gson is a reasonable alternative. Gson is fairly relaxed in its default processing of data, which may require you to build more validation into the data conversion process.
+
+### Examples
+[ClickstreamProcessing.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/ClickstreamProcessing.java)
+
+[JSONUtils.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/utils/JSONUtils.java)
+
+## Using the AutoValue code generator to generate plain old Java objects (POJOs)
+### Content
+Apache Beam schemas are overall the best way to represent objects in a pipeline, because of the intuitive way the allow you to work with structured data. Today, however, there are still places where a POJO is needed, for example, when dealing with key-value objects or handling object state. Hand building POJOs requires you to code appropriate overrides for the equals() and hashcode() methods, which can be time-consuming and error-prone. You can end up with inconsistent application behavior or even data loss if you don't get it right.
+
+To avoid this, use the AutoValue class builder to generate POJOs. This ensures that the necessary overrides are covered and lets you avoid the potential errors introduced by hand-coding, though one minor downside is that it does introduce a fair amount of boilerplate code.
+
+AutoValue is also heavily used within the Apache Beam code base, so familiarity with it is useful if you want to develop Apache Beam pipelines on Dataflow using Java.
+
+For more information, see Why AutoValue? and the AutoValue docs.
+### Examples
+[Clickstream.java](/Users/rezarokni/public_code/dataflow-sample-applications/retail/retail-java-applications/data-engineering-dept/data-objects/src/main/java/com/google/dataflow/sample/retail/dataobjects/ClickStream.java)
+## Queuing unprocessable data for further analysis
+### Content
+In production systems, it is important to handle problematic data. You should validate and if possible correct data in-stream, but where correction isn't possible, we recommend logging the value to a queue (sometimes called a "dead letter" queue) for later analysis. A common place to see issues is when converting data from one format to another, for example when converting JSON strings to Rows.
+
+To address this, we recommend using a multi-output transform to shuttle the elements containing the problematic data into another PCollection for further processing. Since this is a common operation that you might want to use in many places in a pipeline, so you should make the transform generic enough to use in multiple places. To do this, first create an error object to wrap common properties, including the original data, then create a sink transform that has multiple options for the destination, as needed to meet your application requirements.
+### Examples
+[JSONUtils.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/utils/JSONUtils.java)
+
+[ErrorMsg.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/ErrorMsg.java)
+
+[DeadLetterSink.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/DeadLetterSink.java)
+
+## Applying data validation transforms serially
+### Content
+Data collected from external systems often needs cleaning. You should build your pipeline so that it can correct problematic data in-stream where possible, or send it to a queue for further analysis if it can't be corrected.
+
+Since a single message can suffer from multiple issues that need correction, think carefully about the directed acyclic graph (DAG) you'll need; if an element contains data with multiple defects, you must ensure that the element flows through all of the appropriate transforms.
+
+For example imagine a element with these properties, neither of which should be null:
+
+{"itemA": null,"itemB": null}
+
+You should make sure the element flows through transforms that correct both potential issues:
+
+badElements.apply(fixItemA).apply(fixItemB)
+
+This means that your pipeline might have more serial steps, but fusion should help minimize any processing overhead introduced by this.
+### Examples
+[ValidateAndCorrectClickStreamEvents.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/ValidateAndCorrectClickStreamEvents.java)
+
+## Using DoFn.StartBundle to micro-batch calls to external services
+
+### Contents
+Invoking external APIs as part of your pipeline is a common need. Because a pipeline distributes work across many compute resources, you can overwhelm an external service endpoint if you make a single call for each element flowing through the system, especially if you haven't applied any reducing functions.
+
+To avoid this, we recommend batching calls to external systems. There are several ways to achieve this, including using a GroupByKey transform or using the Apache Beam Timer API. However, these approaches both require shuffling, which introduces some processing overhead as well as the need for a magic number to determine the key space.
+
+Instead, we recommend that you use the StartBundle and FinishBundle lifecycle elements to batch your data since no shuffling is needed.
+
+One minor downside is that bundle sizes are dynamically determined by the implementation of the runner, based on what's currently happening inside the pipeline and its workers, and in stream mode will often be small in size. Dataflow bundling is influenced by backend factors like sharding usage, how much data is available for a particular key, and the throughput of the pipeline.
+### Examples
+[ValidateAndCorrectClickStreamEvents.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/ValidateAndCorrectClickStreamEvents.java)
+
+## Using an appropriate side-input pattern
+### Content
+In streaming analytics applications, it is common to enrich data with additional information that might be useful for further analysis. For example, if you have the storeId for a transaction, you might want to add information about the store location. You would typically add this additional information by taking an element and "denormalizing" it by bringing in information from a lookup table.
+
+For lookup tables that are both slowly changing and smaller in size, it works well to bring the table into the pipeline as a singleton class that implements the Map<K,V> interface. This lets you avoid having each element do an API call for its lookup. Once you include a copy of a table in the pipeline, you need to update it periodically to keep it fresh.
+
+We recommend using the Apache Beam Side input patterns to handle slow updating side inputs.
+### Examples
+[SlowMovingStoreLocationDimension.java](retail/retail-java-applications/data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/externalservices/SlowMovingStoreLocationDimension.java)
 
 # Setup required for running the sample application on Dataflow service
 
@@ -104,125 +198,3 @@ VALUES
 * Create a BigTable instance within your project
 #### Create a table
 * Create the "PageView5MinAggregates" table with Column family "pageViewAgg"
-
-# Common Patterns
-There are some common patterns required to achieve the business requirements, these are highlighted here along with a link to the code.
-## Best practices for POJO usage,  AutoValue.
-### Why needed?
-Although in the long term the intention is for schemas to be the way that objects are represented within a pipeline, today there are still areas where POJO are needed, for example when dealing with KV objects or the state API. Hand building POJO objects requires the user to ensure correct override of equals / hashCode. If you don't, weird things might go wrong - it might work most of the time, and then suddenly you get some weird behavior or data loss.
-### What is a good solution?
-While AutoValue provides a lot of boilerplate for the user, it takes care of the important items. AutoValue is also heavily used within Beam code base itself, so familiarity with it is useful for Beam java pipeline builders.
-### Example of usage:
-[ClickstreamProcessing](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/ClickstreamProcessing.java)
-## Parsing JSON strings to Row's and POJO's
-### Why needed?
-One of the very common data types that are processed via Dataflow is JSON strings, for example clickstream information coming from browsers. These JSON strings will need to be processed into either Row objects or POJO for the duration of the pipeline processing.
-### What is a good solution?
-There are many ways to process this data, one of the very common methods with Java is to use Gson, which many Dataflow users make use of. Gson by default is relaxed in its processing of data, which while can be very useful can lead to situations where issues are not picked up quickly, requiring a lot more validation and user code to be built around the parsing process.
-There is a utility class in Beam JsonToRow, while in 2.22.0 there are some limitations:
-* Nulls must be strictly serialized in the json
-* No easy way to build in deadletter pattern
-
-The Apache Beam community is working on these features.
-JsonToRow can be used for converting Json to Row and then onto Pojo objects. This makes use of the Convert utility class, which creates the flow:
-
-Read -> JsonToRow -> Convert.fromRows()
-### Example of usage
->Note: For v1.0 of the retail application we have created local copies of JsonToRow to incorporate some of the changes from Apache Beam master not available in 2.22.0. 
-
-[ClickstreamProcessing.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/ClickstreamProcessing.java)
-
-[JSONUtils.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/utils/JSONUtils.java)
-## Deadletter pattern
-
-### Why needed?
-In production systems, it is important to implement fail safes for problematic data points. If in-stream correction is not possible then at a minimum the value should be logged as an error, but more robustly the value should be sent intact to an external sync for later processing. An area where this is very common is when parsing data from one serialization format to another, for example the parsing of JSON objects. 
-
-### What is a good solution?
-The ideal situation is to use a multi-output transform to branch out the problematic elements into another PCollection for further processing. As this is a very common operation which you will make use of across many transforms within a pipeline, it is useful to create a generic transform that deals with problematic issues. 
-Steps to create:
-An error object, this can wrap common properties, including the original data.
-A DeadLetter sink transform that has multiple options for the destination, designated by the business.  
-
-### Example of usage
-[JSONUtils.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/utils/JSONUtils.java)
-
-[ErrorMsg.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/ErrorMsg.java)
-
-[DeadLetterSink.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/DeadLetterSink.java)
-
-## Data validation
-### Why needed?
-The data that is collected from external systems will not always be as clean as we would like, there could be errors in upstream systems, bugs etc ... The challenge of cleaning data is always an interesting one, in the traditional batch mode or stream, however in stream mode there are more considerations that we will need to take into account. We will not always be able to fix data as it comes into the system in real time. If it's not possible to fix, we should fall back to the standard deadletter pattern. However when the data is fixable we will want to branch the pipeline to send the 'bad' data to a correction transform(s). 
-### What is a good solution?
-Often there may be several different types of issues that a single message can suffer from, because of this we will need to think about the DAG that we construct to ensure that if we have elements that have multiple defects then the element can flow through all 'correct' transforms. 
-
-* Option 1
-
-For example imagine a element with these properties, which should never be null:
-{foo: null,bar: null}
-
-To fix this we can flow the element through to DoFn's, 
-
-badElements.apply(fixFoo).apply(fixBar).
-
-* Option 2
-
-If we had errors which are mutually exclusive, for example foo is never null if bar is null and vice versa then we can write:
-
-PCollectionTuple allBadElements = elements.apply(validateFooAndBar);
-allBadElements.get(badFooElements).apply(fixFoo)
-allBadElements.get(badBarElements).apply(fixBar)
-
-Option 1 is recommended as its correct for both cases also, in option 2 if in the future the errors stop being mutually exclusive the pipeline would have to be reconstructed with a different shape. 
-
-### Example of usage
-[ValidateAndCorrectClickStreamEvents.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/ValidateAndCorrectClickStreamEvents.java)
-
-## External service calls considerations
-### Why needed?
-Because a pipeline can distribute work amongst many thousands of cores, its very easy to overwhelm calls to an external service endpoint if we make a single call per element flowing through the system. Especially if these are values pre any reducing functions. To accommodate this, its best to create batches of calls to an external system. There are several ways that its possible to achieve this :
-### What is a good solution?
-#### Use a GroupByKey transform or the utility GroupIntoBatches transform 
-Allows for you to create a Iterable<element> which can be used to batch items into a single call within the DoFn.
-* Pros
-    1. No tech debt as its a Beam transform
-* Cons
-    1. Requires a shuffle
-Requires magic number to determine the key space
-#### Use State and Timer API to create our batches.
-* Pros
-    1. This has lots of control in the exact size of the batch that is created.
-* Cons
-    1. Requires a shuffle, which will be done on an arbitrary key space. Magic number time!
-#### Use bundle start and bundle finish lifecycle elements to create our batches of data. This has the advantage of not requiring any shuffle steps in the processing.
-* Pros
-    1. No Shuffle needed
-* Cons
-    1. bundle sizes are non-deterministic, they are based on the runners implementations and often in stream mode will be very small in size.
- 
->Note: In v1.0 of the sample application, option 3 is used. This may change in future version, or we may create another usecase which requires more fine grain control.
-
-## Enrichment via slow updating side input
-### Why needed?
-A very common use case for streaming is to enrich data with information from what would be considered a dimension table in traditional data warehouse terminology. Essentially taking an element and denormalizing it by bringing in information contained  in a lookup table. For example if we have storeId and want the lat lng of that store looking it up in the table of our stores. In that example there is another characteristic , which is the table is not being updated very often, we don't add new stores every minute! So it makes sense to bring that table into the pipeline without having each element do an API call for its lookup. However we want to somehow update that table periodically to keep it fresh. 
-### What is a good solution?
-This pattern is well known and is covered by : https://beam.apache.org/documentation/patterns/side-inputs/
-### Example of usage
-SlowMovingStoreLocationDimension.java
-
-## Using schemas for analytical calls
-### Why needed?
-Outside of the bread and butter work of a streaming pipeline;
-* Data transport
-* Data shaping
-* Data verification
-* Data enrichment
-
-## We want to make use of our streaming pipeline to do real time analytics on the data, for this there are many paths available. However since schemas have been added to Beam, the way we do this analytics has now become much easier.
-### What is a good solution?
-By converting our objects to Row's we can start to make very clean java code, which abbreviates the 'DAG' building exercise we used to have to do before when needing to do analytics. We can then reference object properties as fields within the analytics statements that we are creating. As an example using the Group operation:
- Group.<ClickStreamEvent>byFieldNames("pageRef")
-                .aggregateField("pageRef", Count.combineFn(), "count"))
-### Example of usage
-[CountViewsPerProduct.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/CountViewsPerProduct.java)
