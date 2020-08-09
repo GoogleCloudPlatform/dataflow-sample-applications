@@ -28,6 +28,7 @@ import com.google.dataflow.sample.timeseriesflow.metrics.utils.AllMetricsGenerat
 import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.dataflow.sample.timeseriesflow.transforms.PerfectRectangles;
 import com.google.protobuf.util.Timestamps;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.GenerateSequence;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -128,12 +129,34 @@ public class SimpleDataStreamGenerator {
                                     Data.newBuilder()
                                         .setDoubleVal(
                                             Math.round(
-                                                    ((Math.sin(Math.toRadians(input % 360)) * 100)
-                                                            + 100)
-                                                        * 100.0)
-                                                / 100.0))
+                                                    Math.sin(Math.toRadians(input % 360)) * 10000D)
+                                                / 100D))
                                 .setTimestamp(Timestamps.fromMillis(now.getMillis()))
                                 .build());
+                      }
+                    }));
+
+    PCollection<TSDataPoint> outliers =
+        p.apply(GenerateSequence.from(0).withRate(1, Duration.millis(500)))
+            .apply(
+                ParDo.of(
+                    new DoFn<Long, TSDataPoint>() {
+                      @ProcessElement
+                      public void process(
+                          @Element Long input,
+                          @Timestamp Instant now,
+                          OutputReceiver<TSDataPoint> o) {
+                        // 20% chance to send a very obvious outlier
+                        if (ThreadLocalRandom.current().nextInt(100) > 80) {
+                          o.output(
+                              TSDataPoint.newBuilder()
+                                  .setKey(key)
+                                  .setData(Data.newBuilder().setDoubleVal(10000))
+                                  .setTimestamp(Timestamps.fromMillis(now.getMillis()))
+                                  // This metadata is not reported in this version of the sample.
+                                  .putMetadata("Bad Data", "YES!")
+                                  .build());
+                        }
                       }
                     }));
 

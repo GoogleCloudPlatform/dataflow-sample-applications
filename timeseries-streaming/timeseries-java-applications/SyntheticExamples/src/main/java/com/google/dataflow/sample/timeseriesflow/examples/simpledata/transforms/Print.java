@@ -78,8 +78,8 @@ public class Print<T> extends PTransform<PCollection<T>, PDone> {
         Timestamps.toString(tsAccum.getUpperWindowBoundary()),
         "Metrics",
         tsAccum.getDataStoreMap().entrySet().stream()
-            .map(x -> String.join(":", x.getKey(), x.getValue().toString()))
-            .collect(Collectors.joining()));
+            .map(x -> String.join(":", x.getKey(), x.getValue().toString().replace("\n", "")))
+            .collect(Collectors.joining(":")));
   }
 
   public static String printTSAccumSequence(TSAccumSequence tsAccumSequence) {

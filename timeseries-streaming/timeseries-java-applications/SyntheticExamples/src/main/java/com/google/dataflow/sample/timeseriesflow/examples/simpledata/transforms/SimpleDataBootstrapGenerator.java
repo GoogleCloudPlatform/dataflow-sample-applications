@@ -71,8 +71,7 @@ public class SimpleDataBootstrapGenerator {
                   .setData(
                       Data.newBuilder()
                           .setDoubleVal(
-                              Math.round(((Math.sin(Math.toRadians(i % 360)) * 100) + 100) * 100.0)
-                                  / 100.0))
+                              Math.round(Math.sin(Math.toRadians(i % 360)) * 10000D) / 100D))
                   .setTimestamp(
                       Timestamps.fromMillis(now.plus(Duration.millis(i * 500)).getMillis()))
                   .build(),
