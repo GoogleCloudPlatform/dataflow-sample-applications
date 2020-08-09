@@ -38,6 +38,9 @@ Processing and Analysis of:
 
 > Note: All data is sent as JSON, this is normal for clickstream data but not necessarily the norm for Transaction / Stock data. Different data formats (e.g xml)  will be shown in future versions.
 
+### Version
+0.9.0
+
 # Goals
 The application was designed to address the following requirements:
 
