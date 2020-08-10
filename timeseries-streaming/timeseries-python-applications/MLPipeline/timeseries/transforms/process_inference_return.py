@@ -114,10 +114,12 @@ class CheckAnomalous(beam.DoFn):
 
         for k in element.keys():
             if k.endswith('-LAST') or k.endswith('-FIRST'):
+                span_start_timestamp = element['span_start_timestamp']
+                span_end_timestamp = element['span_end_timestamp']
                 input_value = element[k]['input_value']
                 output_value = element[k]['output_value']
                 raw_data = element[k]['raw_data_array']
                 diff = abs(input_value - output_value)
                 if diff > self.threshold:
-                    yield f'Outlier detected for {k} Difference was {diff} for value input {input_value} ' \
+                    yield f'Outlier detected for {k} at {span_start_timestamp} - {span_end_timestamp} Difference was {diff} for value input {input_value} ' \
                           f'output {output_value} with raw data {raw_data}'
