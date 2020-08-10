@@ -28,15 +28,19 @@ import com.google.dataflow.sample.timeseriesflow.metrics.utils.AllMetricsGenerat
 import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.dataflow.sample.timeseriesflow.transforms.PerfectRectangles;
 import com.google.protobuf.util.Timestamps;
+
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.GenerateSequence;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.Values;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionList;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.tensorflow.example.Example;
@@ -51,9 +55,11 @@ import org.tensorflow.example.Example;
  *
  * <p>example_1: In this mode the metrics are generated and output as logs.
  *
- * <p>example_2: In this mode the metrics are generated and output to BigQuery
+ * <p>example_2: In this mode the metrics are generated and output to the file system.
  *
- * <p>example_1: In this mode the metrics are generated and output as logs.
+ * <p>example_3: In this mode the metrics are generated and output to BigQuery.
+ *
+ * <p>example_4: In this mode the metrics are generated and output to PubSub.
  */
 public class SimpleDataStreamGenerator {
 
@@ -67,7 +73,7 @@ public class SimpleDataStreamGenerator {
     SimpleDataOptions options = PipelineOptionsFactory.fromArgs(args).as(SimpleDataOptions.class);
 
     Preconditions.checkNotNull(
-        options.getDemoMode(), "--demoMode must be set to one of example_1, example_2, example_3");
+        options.getDemoMode(), "--demoMode must be set to one of example_1, example_2, example_3, example_4");
 
     options.setAppName("SimpleDataStreamTSDataPoints");
     options.setTypeOneComputationsLengthInSecs(1);
@@ -136,29 +142,33 @@ public class SimpleDataStreamGenerator {
                       }
                     }));
 
-    PCollection<TSDataPoint> outliers =
-        p.apply(GenerateSequence.from(0).withRate(1, Duration.millis(500)))
-            .apply(
-                ParDo.of(
-                    new DoFn<Long, TSDataPoint>() {
-                      @ProcessElement
-                      public void process(
-                          @Element Long input,
-                          @Timestamp Instant now,
-                          OutputReceiver<TSDataPoint> o) {
-                        // 20% chance to send a very obvious outlier
-                        if (ThreadLocalRandom.current().nextInt(100) > 80) {
-                          o.output(
-                              TSDataPoint.newBuilder()
-                                  .setKey(key)
-                                  .setData(Data.newBuilder().setDoubleVal(10000))
-                                  .setTimestamp(Timestamps.fromMillis(now.getMillis()))
-                                  // This metadata is not reported in this version of the sample.
-                                  .putMetadata("Bad Data", "YES!")
-                                  .build());
-                        }
-                      }
-                    }));
+    if(Optional.ofNullable(options.getWithOutliers()).orElse(false)) {
+        PCollection<TSDataPoint> outliers =
+                p.apply(GenerateSequence.from(0).withRate(1, Duration.millis(500)))
+                        .apply(
+                                ParDo.of(
+                                        new DoFn<Long, TSDataPoint>() {
+                                            @ProcessElement
+                                            public void process(
+                                                    @Element Long input,
+                                                    @Timestamp Instant now,
+                                                    OutputReceiver<TSDataPoint> o) {
+                                                // 20% chance to send a very obvious outlier
+                                                if (ThreadLocalRandom.current().nextInt(100) > 80) {
+                                                    o.output(
+                                                            TSDataPoint.newBuilder()
+                                                                    .setKey(key)
+                                                                    .setData(Data.newBuilder().setDoubleVal(10000))
+                                                                    .setTimestamp(Timestamps.fromMillis(now.getMillis()))
+                                                                    // This metadata is not reported in this version of the sample.
+                                                                    .putMetadata("Bad Data", "YES!")
+                                                                    .build());
+                                                }
+                                            }
+                                        }));
+
+        stream = PCollectionList.of(stream).and(outliers).apply(Flatten.pCollections());
+    }
 
     /**
      * ***********************************************************************************************************
@@ -223,6 +233,20 @@ public class SimpleDataStreamGenerator {
                   .setNumShards(2))
           .apply(new Print<Example>());
     }
+
+
+      if (options.getDemoMode().equals("example_4")){
+          Preconditions.checkNotNull(options.getPubSubTopicForTSAccumOutputLocation(), "For this example you must set the --pubSubTopicForTSAccumOutputLocation option");
+          System.out.println(
+                  String.format(
+                          "Running Example 4, protos will be output to %s", options.getPubSubTopicForTSAccumOutputLocation()));
+          metrics
+                  .apply(
+                          OutPutTFExampleFromTSSequence.create()
+                                  .withPubSubTopic(options.getPubSubTopicForTSAccumOutputLocation())
+                                  .setNumShards(2))
+                  .apply(new Print<Example>());
+      }
 
     p.run();
   }
