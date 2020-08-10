@@ -38,6 +38,7 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.Values;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.vendor.grpc.v1p26p0.com.google.common.collect.ImmutableList;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.tensorflow.example.Example;
@@ -69,8 +70,9 @@ public class SimpleDataStreamGenerator {
      */
     SimpleDataOptions options = PipelineOptionsFactory.fromArgs(args).as(SimpleDataOptions.class);
 
-    Preconditions.checkNotNull(
-        options.getDemoMode(),
+    Preconditions.checkArgument(
+        ImmutableList.of("example_1", "example_2", "example_3", "example_4")
+            .contains(Optional.ofNullable(options.getDemoMode()).orElse("")),
         "--demoMode must be set to one of example_1, example_2, example_3, example_4");
 
     options.setAppName("SimpleDataStreamTSDataPoints");
@@ -215,6 +217,8 @@ public class SimpleDataStreamGenerator {
      * <p>***********************************************************************************************************
      */
     if (options.getDemoMode().equals("example_2")) {
+      Preconditions.checkNotNull(
+          options.getInterchangeLocation(), "For example_2 you must provide --interchangeLocation");
       System.out.println(
           String.format(
               "Running Example 2, files will be output to %s", options.getInterchangeLocation()));
