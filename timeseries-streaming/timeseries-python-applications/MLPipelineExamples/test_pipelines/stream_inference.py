@@ -65,7 +65,7 @@ if __name__ == '__main__':
             dest='pubsub_subscription',
             required=True,
             help=
-            'Location of the TFRecord files produced by the streaming pipeline')
+            'PubSub Subscription of the JSON samples produced by the streaming pipeline')
     parser.add_argument(
             '--saved_model_location',
             dest='saved_model_location',
