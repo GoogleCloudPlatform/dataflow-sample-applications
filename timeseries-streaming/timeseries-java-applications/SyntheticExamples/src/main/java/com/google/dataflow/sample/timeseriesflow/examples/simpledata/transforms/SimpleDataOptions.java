@@ -23,8 +23,13 @@ import org.apache.beam.sdk.options.Description;
 public interface SimpleDataOptions extends ExampleTimeseriesPipelineOptions {
 
   @Description(
-      "Set the demo mode for the app. Current modes are 'example_1', 'example_2', 'example_3' ")
+      "Set the demo mode for the app. Current modes are 'example_1', 'example_2', 'example_3' , 'example_4")
   String getDemoMode();
 
   void setDemoMode(String value);
+
+  @Description("Enable sending outliers with the stream of synthetic data.")
+  Boolean getWithOutliers();
+
+  void setWithOutliers(Boolean value);
 }
