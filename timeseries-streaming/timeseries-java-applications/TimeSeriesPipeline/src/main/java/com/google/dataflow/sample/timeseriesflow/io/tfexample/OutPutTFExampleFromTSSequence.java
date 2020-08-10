@@ -23,6 +23,8 @@ import com.google.dataflow.sample.timeseriesflow.TFXOptions;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesTFExampleKeys.ExampleMetadata;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
@@ -30,7 +32,9 @@ import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.io.TFRecordIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.transforms.Contextful;
+import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.Values;
 import org.apache.beam.sdk.transforms.windowing.FixedWindows;
 import org.apache.beam.sdk.transforms.windowing.Window;
@@ -113,7 +117,22 @@ public abstract class OutPutTFExampleFromTSSequence
 
     PCollection<Example> values = results.apply(Values.create());
     if (getPubSubTopic() != null) {
-      values.apply(PubsubIO.writeProtos(Example.class).to(getPubSubTopic()));
+      values
+          .apply(
+              ParDo.of(
+                  // TODO add to utility classes
+                  new DoFn<Example, String>() {
+                    @ProcessElement
+                    public void processElement(@Element Example example, OutputReceiver<String> o) {
+                      try {
+                        String jsonFormat = JsonFormat.printer().print(example);
+                        o.output(jsonFormat);
+                      } catch (InvalidProtocolBufferException e) {
+                        e.printStackTrace();
+                      }
+                    }
+                  }))
+          .apply(PubsubIO.writeStrings().to(getPubSubTopic()));
     }
 
     if (getEnableSingleWindowFile()) {
