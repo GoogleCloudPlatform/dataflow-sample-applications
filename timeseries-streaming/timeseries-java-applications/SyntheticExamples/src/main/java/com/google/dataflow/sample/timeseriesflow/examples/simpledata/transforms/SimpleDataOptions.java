@@ -28,8 +28,7 @@ public interface SimpleDataOptions extends ExampleTimeseriesPipelineOptions {
 
   void setDemoMode(String value);
 
-  @Description(
-          "Enable sending outliers with the stream of synthetic data.")
+  @Description("Enable sending outliers with the stream of synthetic data.")
   Boolean getWithOutliers();
 
   void setWithOutliers(Boolean value);
