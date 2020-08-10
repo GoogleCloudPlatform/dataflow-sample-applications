@@ -128,8 +128,8 @@ public class SimpleDataStreamGenerator {
                           @Element Long input,
                           @Timestamp Instant now,
                           OutputReceiver<TSDataPoint> o) {
-
-                        boolean outlier = (outlierEnabled && input % 50 == 0);
+                        // We use both 50 and 51 so LAST and FIRST values can become outliers
+                        boolean outlier = (outlierEnabled && (input % 50 == 0 || input % 51 == 0));
 
                         if (outlier) {
                           System.out.println(String.format("Outlier generated at %s", now));
