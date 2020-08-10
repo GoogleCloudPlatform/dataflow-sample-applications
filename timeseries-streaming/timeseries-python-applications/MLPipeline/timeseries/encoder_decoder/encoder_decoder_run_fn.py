@@ -23,6 +23,7 @@ from tfx.components.trainer.executor import TrainerFnArgs
 RunFn for auto encoder decoder sample.
 """
 
+
 def _input_fn(
         file_pattern: Text,
         tf_transform_output: tft.TFTransformOutput,

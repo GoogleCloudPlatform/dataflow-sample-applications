@@ -84,10 +84,13 @@ class ProcessReturn(beam.DoFn):
                     # Find the input value from the float list for this sample
                     input_value = features[label].float_list.value[
                             timestep_counter]
-
                     result[label] = {
                             'input_value': input_value,
                             'output_value': value,
+                            # Outliers will effect the head of their array, so we need to keep the array to show in
+                            # the outlier detection.
+                            'raw_data_array': str(
+                                    features[label].float_list.value),
                             'timestep': timestep_counter
                     }
                     feature_pos += 1
@@ -113,6 +116,8 @@ class CheckAnomalous(beam.DoFn):
             if k.endswith('-LAST') or k.endswith('-FIRST'):
                 input_value = element[k]['input_value']
                 output_value = element[k]['output_value']
+                raw_data = element[k]['raw_data_array']
                 diff = abs(input_value - output_value)
                 if diff > self.threshold:
-                    yield f'Difference was {diff} for value input {input_value} output {output_value} {element}'
+                    yield f'Outlier detected for {k} Difference was {diff} for value input {input_value} ' \
+                          f'output {output_value} with raw data {raw_data}'
