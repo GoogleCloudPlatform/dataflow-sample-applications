@@ -45,7 +45,7 @@ To start the demo with outlier data included in the stream, which is a value out
 The files will need a location to be output to, in the below example we use /tmp/simple-data/
 ```
 mkdir /<your-directory>/simple-data
-./gradle run_example --args='--demoMode=example_2, --interchangeLocation=/<your-directory>/simple-data/'
+./gradlew run_example --args='--demoMode=example_2 --interchangeLocation=/<your-directory>/simple-data/'
 ```
 
 Check the folder you specified in --interchangeLocation for new files.
@@ -53,7 +53,7 @@ Check the folder you specified in --interchangeLocation for new files.
 To start the demo with outlier data included in the stream, which is a value outside of the norm every 50 ticks.
 
 ```
-./gradle run_example --args='--demoMode=example_2, --interchangeLocation=/<your-directory>/simple-data/ --withOutliers=true'
+./gradlew run_example --args='--demoMode=example_2 --interchangeLocation=/<your-directory>/simple-data/ --withOutliers=true'
 ```
   
 ## Example 3 : Example Output of metrics to BigQuery
@@ -63,7 +63,11 @@ To start the demo with outlier data included in the stream, which is a value out
 The following examples will use resources on your Google Cloud Platform account, which will incur costs. 
 ---
 
-* In order to run this example you will need setup a BigQuery dataset that your local environment will send data to.
+* In order to run this example you will need setup a BigQuery [dataset](https://cloud.google.com/bigquery/docs/datasets-intro) that your local environment will send data to.
+* You will need to be authenticated as a user account to run this sample [BigQuery Authentication](https://cloud.google.com/bigquery/docs/authentication)
+
+In the command below, replace <project> with your projectid and give a table prefix which the code will use when creating the table. 
+
 
 ```
 ./gradlew run_example --args='--demoMode=example_3 --bigQueryTableForTSAccumOutputLocation=<project>:<dataset>.<table_prefix>'
