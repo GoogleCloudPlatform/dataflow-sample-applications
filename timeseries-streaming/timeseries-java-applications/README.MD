@@ -1,4 +1,4 @@
-#Quickstart
+# Quickstart
 
 In this section we will walk through downloading the sample and running through
 a few examples using gradle.
