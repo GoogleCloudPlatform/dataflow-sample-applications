@@ -17,6 +17,8 @@ but is not correct given the library aggregates all data using the type 1 comput
 to have two values per 'tick' so this works ok here. In future samples we will make use of MAX / MIN, and the other 
 aggregations with more complex data.   
 
+TODO explain outliers, bootstrapping and filling gaps with data examples
+
 ----
 
 ## Using TF.Example's using a Tensor Flow Extended (TFX) pipeline
@@ -49,20 +51,23 @@ The data is always repeating, which is a useful property for us to explore the d
 There are two versions which can be run;
 
 [batch_inference](timeseries-streaming/timeseries-python-applications/MLPipelineExamples/test_pipelines/batch_inference.py)
-* Step 1 - Change the values for the location of the ```--saved_model_location``` and the location of the ```--tfrecord_folder```. 
-* Step 2 - Follow the quick start on the Java README to run [SimpleDataStreamGenerator.java](timeseries-streaming/timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java) with example_2.
-* Step 3 - Run the command with the virtual-env activated
+* Step 1 - Uncompress the pre-built model
 ```
-python batch_inference.py
+tar -xvzf MLPipelineExamples/test_pipelines/saved_model_example/serving_model_dir.tarz
+```
+* Step 2 - Follow the quick start on the Java README to run [SimpleDataStreamGenerator.java](timeseries-streaming/timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java) with example_2.
+* Step 3 - Run the command with the virtual-env activated, providing values for the location of the ```--saved_model_location``` using the uncompressed provided model, and the location of the generated data from previous step with ```--tfrecord_folder```.
+```
+python MLPipelineExamples/test_pipelines/batch_inference.py --saved_model_location=serving_model_dir/ --tfrecord_folder=/<your-directory>/simple-data/data/timeseries*
 ```
 Dependent on how long you ran the ```SimpleDataStreamGenerator``` you will see outliers in the range of 120 to 300 being detected.
 
 [stream_inference](timeseries-streaming/timeseries-python-applications/MLPipelineExamples/test_pipelines/stream_inference.py)
-* Step 1 - Change the values for the location of the ```--saved_model_location``` and the location of the ```--pubsub_subscription```. 
-* Step 2 - Follow the quick start on the Java README to run [SimpleDataStreamGenerator.java](timeseries-streaming/timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java) with example_4.
-* Step 3 - Run the command with the virtual-env activated
+* Step 1 - Follow the quick start on the Java README to run [SimpleDataStreamGenerator.java](timeseries-streaming/timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java) with example_4.
+* Step 2 - Create a subscription in the topic, to the read events generated in previous step
+* Step 3 - Run the command with the virtual-env activated, providing values for the location of the ```--saved_model_location``` using the uncompressed provided model, and set the subscription to read events from ```--pubsub_subscription```.
 ```
-python stream_inference.py
+python MLPipelineExamples/test_pipelines/stream_inference.py --saved_model_location=serving_model_dir/ --pubsub_subscription=projects/<your-project>/subscriptions/<your-subscription>
 ``` 
 
 While both are running you will see outliers showing every 50 ticks.
@@ -72,7 +77,7 @@ While both are running you will see outliers showing every 50 ticks.
 In order to build the model you will need to first run the generator job [SimpleDataBootstrapGenerator.java](timeseries-streaming/timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataBootstrapGenerator.java).
 That job will generate 86400 data points, which will be aggregated to 43200 type 1 computations. ( It is recommended you run that job on a production runner like Dataflow rather than the DirectRunner.)
 
-Once that is done, change the information in the [config.py](timeseries-streaming/timeseries-python-applications/MLPipelineExamples/config.py) to match your local env.
+Once that is done, change the information in the [config.py](timeseries-streaming/timeseries-python-applications/MLPipelineExamples/test_pipelines/config.py) to match your local env.
 Run the command with the virtual-env activated:
 ```
 python MLPipelineExamples/test_pipelines/timeseries_local_simple_data.py
@@ -97,5 +102,5 @@ Epoch 30/30
 280/280 [==============================] - 5s 18ms/step - loss: 2.6756 - mean_absolute_error: 1.3105 - val_loss: 1.6916 - val_mean_absolute_error: 0.9970
 ```
 
-This will output a serving_model_dir under the location you specified for ```PIPELINE_ROOT``` in the config.py file. With this you can now follow the rest of the steps outlines in Option 1.
+This will output a serving_model_dir under the location you specified for ```PIPELINE_ROOT``` in the config.py file. With this you can now follow the rest of the steps outlines in Option 1 but using your own model.
 
