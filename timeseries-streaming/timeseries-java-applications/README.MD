@@ -111,6 +111,6 @@ To start the demo with outlier data included in the stream, which is a value out
 In this example the values are sent to PubSub and the interchangeLocation. The data sent to PubSub is parsed into JSON format.
 
 ```
-./gradlew run_example --args='--demoMode=example_4 --interchangeLocation=/tmp/simple-data/ --withOutliers=true --pubSubTopicForTSAccumOutputLocation=projects/<your-project>/topics/outlier-detection'
+./gradlew run_example --args='--demoMode=example_4 --interchangeLocation=<your-directory>/simple-data/ --withOutliers=true --pubSubTopicForTSAccumOutputLocation=projects/<your-project>/topics/outlier-detection'
 
 ```

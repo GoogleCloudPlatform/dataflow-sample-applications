@@ -56,9 +56,6 @@ if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
     import argparse
 
-    sys.argv.append("--saved_model_location=/tmp/serving_model_dir/")
-    sys.argv.append("--tfrecord_folder=/tmp/simple-data/data/timeseries*")
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
             '--tfrecord_folder',
