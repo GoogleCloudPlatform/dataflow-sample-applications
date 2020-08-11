@@ -22,7 +22,7 @@ from tfx.proto import trainer_pb2
 import timeseries.pipeline_templates.timeseries_pipeline as pipeline
 from tfx.orchestration import metadata
 
-from MLPipelineExamples import config
+import config
 
 PIPELINE_NAME = 'synthetic_data_pipeline'
 
