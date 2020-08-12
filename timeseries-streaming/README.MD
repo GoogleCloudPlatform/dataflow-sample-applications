@@ -26,7 +26,7 @@ the Last element in another window.
 ------
 
 ***NOTE*** 
-The samples are currently experimental, specially classes like [PerfectRectangles](time-series-streaming/time-series-java-applications/time-seriesPipeline/src/main/java/com/google/dataflow/sample/time-seriesflow/transforms/PerfectRectangles.java) use advanced techniques from the Apache Beam model. We expect to be hardening the samples over the next few iterations. 
+The samples are currently experimental, specially classes like [PerfectRectangles](timeseries-java-applications/TimeSeriesPipeline/src/main/java/com/google/dataflow/sample/timeseriesflow/transforms/PerfectRectangles.java) use advanced techniques from the Apache Beam model. We expect to be hardening the samples over the next few iterations. 
 
 Please do raise issues against the repo for any issues found when working with different datasets. 
 
@@ -40,9 +40,9 @@ Note, when exploring the examples, Type 1 aggregations are non-deterministic for
 There are two quickstart guides that can be followed that will spin up a demo of the samples.
 ## Apache Beam Java pipeline
 The java pipeline reads data from a stream and generates metrics from that data. 
-The simple-data used for illustration purposes can be seen in [SimpleDataStreamGenerator](time-series-streaming/time-series-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/time-seriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java). 
+The simple-data used for illustration purposes can be seen in [SimpleDataStreamGenerator](timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java). 
 
-Use quick start in [README.MD](time-series-streaming/time-series-java-applications/README.MD) for details.
+Use quick start in [README.MD](timeseries-java-applications/README.MD) for details.
 
 ##  The python samples have two components
 ### Apache Beam Python inference pipeline
@@ -59,7 +59,7 @@ The intent of this sample is to demonstrate the data engineering effort needed t
 The sample data is a simple repeating pattern, effectively making any train / eval / test void as the data is repeated across all samples.
 
 ----
-Use quick start in [README.MD](time-series-streaming/time-series-python-applications/README.MD) for details.
+Use quick start in [README.MD](timeseries-python-applications/README.MD) for details.
 
 # General Patterns
  
@@ -90,7 +90,7 @@ There are 4 cases to consider:
   * A simple example of this is an IOT device that is decommissioned and will never send data again. In this case if we have chosen to do gap-filling as described above, then we will need a way to signal a stop to the system.  
  
 #### Gap filling in the sample
-The experimental class [PerfectRectangles.java](time-seriesPipeline/src/main/java/com/google/dataflow/sample/time-seriesflow/transforms/PerfectRectangles.java)
+The experimental class [PerfectRectangles.java](timeseries-java-applications/TimeSeriesPipeline/src/main/java/com/google/dataflow/sample/timeseriesflow/transforms/PerfectRectangles.java)
 makes use of looping timers to deal with the problem of trying to gap fill in the absence of data. In terms of the data to use to fill the gap, there are two modes, zero values and last known value.  
 ## Aggregations
 * Type 1 - Transitive and associative computations
@@ -102,7 +102,7 @@ makes use of looping timers to deal with the problem of trying to gap fill in th
  
 # Data proto objects
 There are three core objects used within the time-series pipelines which are defined 
-in [TS.proto](time-seriesPipeline/src/main/proto/TS.proto)
+in [TS.proto](timeseries-java-applications/TimeSeriesPipeline/src/main/proto/TS.proto)
 * TSDatapoint
 * TSAccum
 * TSAccumSequence
