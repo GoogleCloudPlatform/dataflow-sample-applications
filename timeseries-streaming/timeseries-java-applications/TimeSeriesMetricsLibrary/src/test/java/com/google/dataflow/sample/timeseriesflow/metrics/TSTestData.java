@@ -80,6 +80,10 @@ public abstract class TSTestData implements Serializable {
       int length = messages.size();
       long intervalType1 = outputTSType1Window.getStandardSeconds();
       long intervalType2 = outputTSType2Window.getStandardSeconds();
+      if (intervalType1 % intervalType2 != 0) {
+        LOG.warn(
+            "Intervals are not divisible, result will be truncated cutting off the floating point");
+      }
       long interval = intervalType2 / intervalType1;
       for (int i = 0, j = 0; i < length; i++) {
         if (i % interval == 0 && i != 0) {
