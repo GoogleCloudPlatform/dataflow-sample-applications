@@ -36,9 +36,14 @@ import org.apache.beam.sdk.testing.TestStream;
 import org.apache.beam.sdk.values.KV;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @AutoValue
 public abstract class TSTestData implements Serializable {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TSTestData.class);
+
   @Experimental
   public @Nullable abstract TestStream<TSDataPoint> inputTSData();
 
