@@ -213,7 +213,7 @@ public class TSMetricsTests {
                     .setType2NumericComputations(
                         ImmutableList.of(
                             MA.toBuilder()
-                                .setAverageComputationMethod(MA.AverageComputationMethod.ALL)
+                                .setAverageComputationMethod(MA.AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
                                 .build()
                                 .create()))
                     .build());

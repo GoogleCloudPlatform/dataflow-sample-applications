@@ -78,11 +78,11 @@ public abstract class MA implements Serializable {
           input.apply(Values.create()).apply(ParDo.of(new ComputeSumWithCount()));
 
       // Part two compute the Moving Average MA
-      return sumComputation.apply(ParDo.of(new GenerateMovingAverageMA()));
+      return sumComputation.apply(ParDo.of(new GenerateMovingAverage()));
     }
   }
 
-  private static class GenerateMovingAverageMA extends DoFn<TSAccum, KV<TSKey, TSAccum>> {
+  private static class GenerateMovingAverage extends DoFn<TSAccum, KV<TSKey, TSAccum>> {
     @ProcessElement
     public void process(@Element TSAccum input, OutputReceiver<KV<TSKey, TSAccum>> o) {
 
@@ -100,9 +100,8 @@ public abstract class MA implements Serializable {
 
   /** Only one method supported for now. */
   public enum AverageComputationMethod {
-    //    MOVING_AVERAGE,
-    //    EXPONENTIAL_MOVING_AVERAGE,
-    //    WILDERS_MOVING_AVERAGE,
-    ALL
+    SIMPLE_MOVING_AVERAGE,
+    EXPONENTIAL_MOVING_AVERAGE,
+    WEIGHTED_MOVING_AVERAGE
   }
 }
