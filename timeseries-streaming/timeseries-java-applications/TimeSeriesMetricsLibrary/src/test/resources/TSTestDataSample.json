@@ -11,6 +11,15 @@
   {
     "key_": {
       "majorKey_": "Key-A",
+      "minorKeyString_": "MKey-a"
+    },
+    "data_": {"dataPointCase_":4,
+      "dataPoint_": 1.0
+    }
+  },
+  {
+    "key_": {
+      "majorKey_": "Key-A",
       "minorKeyString_": "MKey-b"
     },
     "data_": {"dataPointCase_":4,
@@ -38,6 +47,15 @@
   {
     "key_": {
       "majorKey_": "Key-A",
+      "minorKeyString_": "MKey-a"
+    },
+    "data_": {"dataPointCase_":4,
+      "dataPoint_": 3.0
+    }
+  },
+  {
+    "key_": {
+      "majorKey_": "Key-A",
       "minorKeyString_": "MKey-b"
     },
     "data_": {"dataPointCase_":4,
@@ -51,6 +69,15 @@
     },
     "data_": {"dataPointCase_":4,
       "dataPoint_": 12.0
+    }
+  },
+  {
+    "key_": {
+      "majorKey_": "Key-A",
+      "minorKeyString_": "MKey-a"
+    },
+    "data_": {"dataPointCase_":4,
+      "dataPoint_": 8.0
     }
   },
   {

@@ -247,7 +247,7 @@ public class TSMetricsTests {
 
     /*
     SMA Sum / Count
-    SMA Key_A_A = 1 + 3 + 8 / 3 = 4
+    SMA Key_A_A = 1 + 1 + 3 + 3 + 8 + 8 / 6 = 4
     SMA Key_A_B = 16 + 12 + 8 / 3 = 12
     SMA Key_A_C = 12 + 12 + 12 / 3 = 12
 
