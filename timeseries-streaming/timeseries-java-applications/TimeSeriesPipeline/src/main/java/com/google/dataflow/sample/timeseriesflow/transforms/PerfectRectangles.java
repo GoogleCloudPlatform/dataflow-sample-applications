@@ -321,12 +321,6 @@ public abstract class PerfectRectangles
         @TimerFamily("actionTimers") TimerMap timer,
         @StateId("lastKnownValue") ValueState<KV<TSKey, TSDataPoint>> lastKnownValue) {
 
-      newElementsBag.readLater();
-      currentTimerValue.readLater();
-      sortedList.readLater();
-      lastTimestampUpperBoundary.readLater();
-      lastKnownValue.readLater();
-
       // Check if we have more than one value in our list.
       // There are two important considerations why this memory loading should not ordinarily be a
       // factor for the library
