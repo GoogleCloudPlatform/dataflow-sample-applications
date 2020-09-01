@@ -36,11 +36,11 @@ class ComputeSumWithCount extends DoFn<TSAccumSequence, TSAccum> {
 
     AccumCoreNumericBuilder current = new AccumCoreNumericBuilder(it.next());
 
-    BigDecimal sum = TSDataUtils.getBigDecimalFromData(current.getLastOrNull());
+    BigDecimal sum = TSDataUtils.getBigDecimalFromData(current.getSumOrNull());
 
     while (it.hasNext()) {
       AccumCoreNumericBuilder next = new AccumCoreNumericBuilder(it.next());
-      BigDecimal nextLastValue = TSDataUtils.getBigDecimalFromData(next.getLastOrNull());
+      BigDecimal nextLastValue = TSDataUtils.getBigDecimalFromData(next.getSumOrNull());
 
       sum = sum.add(nextLastValue);
     }
