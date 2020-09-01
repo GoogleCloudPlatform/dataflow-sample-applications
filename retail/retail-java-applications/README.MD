@@ -79,7 +79,7 @@ We recommend using Apache Beam schemas to make processing structured data easier
 
 Converting your objects to Rows lets you produce very clean Java code, which makes your directed acyclic graph (DAG) building exercise easier. You can also reference object properties as fields within the analytics statements that you create, instead of having to call methods.
 ### Examples
-[CountViewsPerProduct](retail/retail-java-applications/data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/CountViewsPerProduct.java)
+[CountViewsPerProduct](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/CountViewsPerProduct.java)
 ## Using JsonToRow to convert JSON data
 ### Content
 Processing JSON strings in Dataflow is a common need. For example, when processing clickstream information captured from web applications. To process JSON strings, you need to convert them into either Rows or plain old Java objects (POJOs) for the duration of the pipeline processing.
@@ -105,7 +105,7 @@ AutoValue is also heavily used within the Apache Beam code base, so familiarity 
 
 For more information, see Why AutoValue? and the AutoValue docs.
 ### Examples
-[Clickstream.java](/Users/rezarokni/public_code/dataflow-sample-applications/retail/retail-java-applications/data-engineering-dept/data-objects/src/main/java/com/google/dataflow/sample/retail/dataobjects/ClickStream.java)
+[Clickstream.java](data-engineering-dept/data-objects/src/main/java/com/google/dataflow/sample/retail/dataobjects/ClickStream.java)
 ## Queuing unprocessable data for further analysis
 ### Content
 In production systems, it is important to handle problematic data. You should validate and if possible correct data in-stream, but where correction isn't possible, we recommend logging the value to a queue (sometimes called a "dead letter" queue) for later analysis. A common place to see issues is when converting data from one format to another, for example when converting JSON strings to Rows.
@@ -157,7 +157,7 @@ For lookup tables that are both slowly changing and smaller in size, it works we
 
 We recommend using the Apache Beam Side input patterns to handle slow updating side inputs.
 ### Examples
-[SlowMovingStoreLocationDimension.java](retail/retail-java-applications/data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/externalservices/SlowMovingStoreLocationDimension.java)
+[SlowMovingStoreLocationDimension.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/externalservices/SlowMovingStoreLocationDimension.java)
 
 # Setup required for running the sample application on Dataflow service
 
