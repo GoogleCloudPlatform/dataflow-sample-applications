@@ -46,7 +46,7 @@ import org.apache.beam.sdk.values.KV;
  * WeightedSum_n-1 WeightedCount_n = 1 + (1 - alpha) * WeightedCount_n-1
  *
  * <p>This formula avoids introducing calculation errors when initializing the first estimate, and
- * is equivalent to using Pandas EMA with input parameter adjust=False and span=# of periods.
+ * is equivalent to using Pandas EMA with input parameter adjust=True and span=# of periods.
  */
 public class ComputeExponentialMovingAverage extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>> {
   private final BigDecimal alpha;
