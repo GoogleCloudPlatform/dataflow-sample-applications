@@ -19,39 +19,49 @@ package com.google.dataflow.sample.timeseriesflow.metrics;
 
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.common.TSDataUtils;
 import com.google.dataflow.sample.timeseriesflow.datamap.AccumCoreNumericBuilder;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Iterator;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.values.KV;
 
 /** Sum the gain and loss of a sequence of {@link TSAccumSequence} */
-class ComputeSumWithCount extends DoFn<TSAccumSequence, TSAccum> {
+class ComputeSimpleMovingAverage extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>> {
 
   @ProcessElement
-  public void process(ProcessContext pc) {
+  public void process(ProcessContext pc, OutputReceiver<KV<TSKey, TSAccum>> o) {
 
     Iterator<TSAccum> it = pc.element().getAccumsList().iterator();
 
     AccumCoreNumericBuilder current = new AccumCoreNumericBuilder(it.next());
 
+    AccumMABuilder maBuilder =
+        new AccumMABuilder(TSAccum.newBuilder().setKey(pc.element().getKey()).build());
+
     BigDecimal sum = TSDataUtils.getBigDecimalFromData(current.getSumOrNull());
+    BigDecimal count = TSDataUtils.getBigDecimalFromData(current.getCountOrNull());
 
     while (it.hasNext()) {
       AccumCoreNumericBuilder next = new AccumCoreNumericBuilder(it.next());
-      BigDecimal nextLastValue = TSDataUtils.getBigDecimalFromData(next.getSumOrNull());
+      BigDecimal nextSumValue = TSDataUtils.getBigDecimalFromData(next.getSumOrNull());
+      BigDecimal nextCount = TSDataUtils.getBigDecimalFromData(next.getCountOrNull());
 
-      sum = sum.add(nextLastValue);
+      sum = sum.add(nextSumValue);
+      count = count.add(nextCount);
     }
 
-    AccumMABuilder builder =
-        new AccumMABuilder(TSAccum.newBuilder().setKey(pc.element().getKey()).build());
+    BigDecimal avg =
+        (count == BigDecimal.ZERO) ? BigDecimal.ZERO : sum.divide(count, RoundingMode.HALF_EVEN);
 
-    builder
+    maBuilder
         .setSum(CommonUtils.createNumData(sum.doubleValue()))
-        .setMovementCount(CommonUtils.createNumData(pc.element().getAccumsCount()));
+        .setMovementCount(CommonUtils.createNumData(pc.element().getAccumsCount()))
+        .setSimpleMovingAverage(CommonUtils.createNumData(avg.doubleValue()));
 
-    pc.output(builder.build());
+    o.output(KV.of(pc.element().getKey(), maBuilder.build()));
   }
 }

@@ -28,6 +28,7 @@ import com.google.gson.stream.JsonReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigDecimal;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
@@ -213,7 +214,8 @@ public class TSMetricsTests {
                     .setType2NumericComputations(
                         ImmutableList.of(
                             MA.toBuilder()
-                                .setAverageComputationMethod(MA.AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
+                                .setAverageComputationMethod(
+                                    MA.AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
                                 .build()
                                 .create()))
                     .build());
@@ -242,7 +244,7 @@ public class TSMetricsTests {
                             Math.floor(
                                 x.getValue()
                                     .getDataStoreOrThrow(
-                                        FsiTechnicalIndicators.ABS_MOVING_AVERAGE.name())
+                                        FsiTechnicalIndicators.SIMPLE_MOVING_AVERAGE.name())
                                     .getDoubleVal()))));
 
     /*
@@ -256,6 +258,84 @@ public class TSMetricsTests {
         .containsInAnyOrder(
             KV.of(TSTestDataBaseline.KEY_A_A, 4D),
             KV.of(TSTestDataBaseline.KEY_A_B, 12D),
+            KV.of(TSTestDataBaseline.KEY_A_C, 12D));
+
+    p.run();
+  }
+
+  @Test
+  /* Simple test to check Exponential Moving Average Technical is created correctly */
+  public void testCreateEMA() throws IOException {
+
+    String resourceName = "TSTestDataSample.json";
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource(resourceName).getFile());
+    String absolutePath = file.getAbsolutePath();
+
+    TSTestData tsTestData =
+        TSTestData.toBuilder()
+            .setInputTSDataFromJSON(
+                new JsonReader(new FileReader(absolutePath)),
+                Duration.standardSeconds(5),
+                Duration.standardSeconds(15))
+            .build();
+
+    TestStream<TSDataPoint> stream = tsTestData.inputTSData();
+
+    PCollection<KV<TSKey, TSAccum>> techAccum =
+        p.apply(stream)
+            .apply(
+                GenerateComputations.builder()
+                    .setType1FixedWindow(Duration.standardSeconds(5))
+                    .setType2SlidingWindowDuration(Duration.standardSeconds(15))
+                    .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
+                    .setType2NumericComputations(
+                        ImmutableList.of(
+                            MA.toBuilder()
+                                .setAverageComputationMethod(
+                                    MA.AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE)
+                                .setWeight(BigDecimal.valueOf(2D / (3D + 1D)))
+                                .build()
+                                .create()))
+                    .build());
+
+    // The sliding window will create partial values, to keep testing simple we just test
+    // correctness of SMA for the full value
+
+    PCollection<KV<TSKey, TSAccum>> fullAccum =
+        techAccum.apply(
+            Filter.by(
+                x ->
+                    x.getValue()
+                            .getDataStoreOrThrow(FsiTechnicalIndicators.SUM_MOVEMENT_COUNT.name())
+                            .getIntVal()
+                        == 3));
+
+    PCollection<KV<TSKey, Double>> ema =
+        fullAccum.apply(
+            "EMA",
+            MapElements.into(
+                    TypeDescriptors.kvs(TypeDescriptor.of(TSKey.class), TypeDescriptors.doubles()))
+                .via(
+                    x ->
+                        KV.of(
+                            x.getKey(),
+                            x.getValue()
+                                .getDataStoreOrThrow(
+                                    FsiTechnicalIndicators.EXPONENTIAL_MOVING_AVERAGE.name())
+                                .getDoubleVal())));
+
+    /*
+    EMA EMA_n = WeightedSum_n / WeightedCount_n
+    SMA Key_A_A = [1, 3, 8] = 5.571429
+    SMA Key_A_B = [16, 12, 8] = 10.285714
+    SMA Key_A_C = [12, 12, 12] = 12
+
+     */
+    PAssert.that(ema)
+        .containsInAnyOrder(
+            KV.of(TSTestDataBaseline.KEY_A_A, 5.571D),
+            KV.of(TSTestDataBaseline.KEY_A_B, 10.286D),
             KV.of(TSTestDataBaseline.KEY_A_C, 12D));
 
     p.run();

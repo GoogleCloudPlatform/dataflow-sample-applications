@@ -92,8 +92,7 @@ public abstract class TSTestData implements Serializable {
       }
       long interval = intervalType2 / intervalType1;
       if (length % interval != 0) {
-        throw new InvalidPropertiesFormatException(
-                "Length must be divisible by interval");
+        throw new InvalidPropertiesFormatException("Length must be divisible by interval");
       }
       for (int i = 0, j = 0; i < length; i++) {
         if (i % (length / interval) == 0 && i != 0) {

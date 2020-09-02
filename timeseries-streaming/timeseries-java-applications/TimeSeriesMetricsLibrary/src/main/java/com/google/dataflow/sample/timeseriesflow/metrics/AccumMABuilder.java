@@ -38,8 +38,16 @@ class AccumMABuilder extends AccumCoreMetadataBuilder {
     return getValueOrNull(FsiTechnicalIndicators.SUM_MOVEMENT_COUNT.name());
   }
 
-  public Data getABSMovingAverage() {
-    return getValueOrNull(FsiTechnicalIndicators.ABS_MOVING_AVERAGE.name());
+  public Data getSimpleMovingAverage() {
+    return getValueOrNull(FsiTechnicalIndicators.SIMPLE_MOVING_AVERAGE.name());
+  }
+
+  public Data getWeightedMovingAverage() {
+    return getValueOrNull(FsiTechnicalIndicators.WEIGHTED_MOVING_AVERAGE.name());
+  }
+
+  public Data getExponentialMovingAverage() {
+    return getValueOrNull(FsiTechnicalIndicators.EXPONENTIAL_MOVING_AVERAGE.name());
   }
 
   public AccumMABuilder setSum(Data data) {
@@ -52,8 +60,18 @@ class AccumMABuilder extends AccumCoreMetadataBuilder {
     return this;
   }
 
-  public AccumMABuilder setABSMovingAverage(Data data) {
-    setValue(FsiTechnicalIndicators.ABS_MOVING_AVERAGE.name(), data);
+  public AccumMABuilder setSimpleMovingAverage(Data data) {
+    setValue(FsiTechnicalIndicators.SIMPLE_MOVING_AVERAGE.name(), data);
+    return this;
+  }
+
+  public AccumMABuilder setWeightedMovingAverage(Data data) {
+    setValue(FsiTechnicalIndicators.WEIGHTED_MOVING_AVERAGE.name(), data);
+    return this;
+  }
+
+  public AccumMABuilder setExponentialMovingAverage(Data data) {
+    setValue(FsiTechnicalIndicators.EXPONENTIAL_MOVING_AVERAGE.name(), data);
     return this;
   }
 }

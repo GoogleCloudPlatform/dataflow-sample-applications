@@ -21,10 +21,9 @@ import com.google.auto.value.AutoValue;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
-import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import javax.annotation.Nullable;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.Values;
@@ -35,14 +34,18 @@ import org.apache.beam.sdk.values.PCollection;
 public abstract class MA implements Serializable {
   public abstract AverageComputationMethod getAverageComputationMethod();
 
+  public abstract BigDecimal getWeight();
+
   public static Builder toBuilder() {
-    return new AutoValue_MA.Builder();
+    return new AutoValue_MA.Builder().setWeight(BigDecimal.ZERO);
   }
 
   @AutoValue.Builder
   public abstract static class Builder {
 
-    public abstract Builder setAverageComputationMethod(AverageComputationMethod duration);
+    public abstract Builder setAverageComputationMethod(AverageComputationMethod method);
+
+    public abstract Builder setWeight(BigDecimal alpha);
 
     public abstract MA build();
   }
@@ -72,33 +75,23 @@ public abstract class MA implements Serializable {
 
     @Override
     public PCollection<KV<TSKey, TSAccum>> expand(PCollection<KV<TSKey, TSAccumSequence>> input) {
-
-      // Part one of computation, compute the Sum
-      PCollection<TSAccum> sumComputation =
-          input.apply(Values.create()).apply(ParDo.of(new ComputeSumWithCount()));
-
-      // Part two compute the Moving Average MA
-      return sumComputation.apply(ParDo.of(new GenerateMovingAverage()));
+      PCollection<KV<TSKey, TSAccum>> result;
+      if (this.ma.getAverageComputationMethod()
+          == AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE) {
+        result =
+            input
+                .apply(Values.create())
+                .apply(ParDo.of(new ComputeExponentialMovingAverage(this.ma.getWeight())));
+      } else if (this.ma.getAverageComputationMethod()
+          == AverageComputationMethod.WEIGHTED_MOVING_AVERAGE) {
+        result = input.apply(Values.create()).apply(ParDo.of(new ComputeWeightedMovingAverage()));
+      } else { // By default we compute SMA
+        result = input.apply(Values.create()).apply(ParDo.of(new ComputeSimpleMovingAverage()));
+      }
+      return result;
     }
   }
 
-  private static class GenerateMovingAverage extends DoFn<TSAccum, KV<TSKey, TSAccum>> {
-    @ProcessElement
-    public void process(@Element TSAccum input, OutputReceiver<KV<TSKey, TSAccum>> o) {
-
-      AccumMABuilder maBuilder = new AccumMABuilder(input);
-
-      Long count = (long) maBuilder.getMovementCount().getIntVal();
-      Double sum = maBuilder.getSum().getDoubleVal();
-
-      Double avg = (sum == 0) ? 0D : sum / count;
-      maBuilder.setABSMovingAverage(CommonUtils.createNumData(avg));
-
-      o.output(KV.of(input.getKey(), maBuilder.build()));
-    }
-  }
-
-  /** Only one method supported for now. */
   public enum AverageComputationMethod {
     SIMPLE_MOVING_AVERAGE,
     EXPONENTIAL_MOVING_AVERAGE,

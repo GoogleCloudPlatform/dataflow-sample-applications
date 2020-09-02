@@ -51,8 +51,9 @@ public class AllMetricsGeneratorWithDefaults {
                     .build()
                     .create(),
                 MA.toBuilder()
-                        .setAverageComputationMethod(AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE)
-                        .build()
-                        .create()));
+                    .setAverageComputationMethod(
+                        AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE)
+                    .build()
+                    .create()));
   }
 }
