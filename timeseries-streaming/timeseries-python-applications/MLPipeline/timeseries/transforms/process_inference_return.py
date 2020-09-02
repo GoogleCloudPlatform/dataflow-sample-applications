@@ -17,7 +17,7 @@
 from __future__ import absolute_import
 
 from datetime import datetime
-from typing import Dict, Text, Any
+from typing import Dict, Text, Any, Iterable
 
 import tensorflow as tf
 
@@ -110,7 +110,7 @@ class CheckAnomalous(beam.DoFn):
         beam.DoFn.__init__(self)
         self.threshold = threshold
 
-    def process(self, element: Dict[Text, Any], *unused_args, **unused_kwargs):
+    def process(self, element: Dict[Text, Any], *unused_args, **unused_kwargs) -> Iterable[str]:
 
         for k in element.keys():
             if k.endswith('-LAST') or k.endswith('-FIRST'):

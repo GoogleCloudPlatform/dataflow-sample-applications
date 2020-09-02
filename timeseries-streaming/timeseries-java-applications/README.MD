@@ -114,3 +114,11 @@ In this example the values are sent to PubSub and the interchangeLocation. The d
 ./gradlew run_example --args='--demoMode=example_4 --interchangeLocation=<your-directory>/simple-data/ --withOutliers=true --pubSubTopicForTSAccumOutputLocation=projects/<your-project>/topics/outlier-detection'
 
 ```
+
+# Cross language example
+## Setup job server
+*** Requires Beam Source ***
+./gradlew -p runners/flink/1.10/job-server runShadow
+
+## Setup expansion service
+python timeseries-python-applications/MLPipelineExamples/test_pipelines/xlang/expansion_service_run_inference.py -p 8899
