@@ -28,6 +28,7 @@ import com.google.protobuf.util.Timestamps;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.InvalidPropertiesFormatException;
 import java.util.List;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
@@ -85,13 +86,16 @@ public abstract class TSTestData implements Serializable {
       int length = messages.size();
       long intervalType1 = outputTSType1Window.getStandardSeconds();
       long intervalType2 = outputTSType2Window.getStandardSeconds();
-      if (intervalType1 % intervalType2 != 0) {
+      if (intervalType2 % intervalType1 != 0) {
         LOG.warn(
             "Intervals are not divisible, result will be truncated cutting off the floating point");
       }
       long interval = intervalType2 / intervalType1;
+      if (length % interval != 0) {
+        throw new InvalidPropertiesFormatException("Length must be divisible by interval");
+      }
       for (int i = 0, j = 0; i < length; i++) {
-        if (i % interval == 0 && i != 0) {
+        if (i % (length / interval) == 0 && i != 0) {
           j++;
           instant =
               Instant.ofEpochMilli(START)

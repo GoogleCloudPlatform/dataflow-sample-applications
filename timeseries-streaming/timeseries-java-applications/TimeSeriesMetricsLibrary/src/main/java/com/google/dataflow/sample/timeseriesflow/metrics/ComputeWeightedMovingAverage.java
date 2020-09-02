@@ -15,31 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-syntax = "proto3";
+package com.google.dataflow.sample.timeseriesflow.metrics;
 
-package protos;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.values.KV;
 
-option java_outer_classname = "FSITechnicalDerivedAggregations";
-option java_multiple_files = false;
-option java_package = "com.google.dataflow.sample.timeseriesflow";
-
-/**
-This proto stores all of the keys used in the accum map.
-
- */
-enum FsiTechnicalIndicators{
-SUM_UP_MOVEMENT = 0;
-SUM_DOWN_MOVEMENT = 1;
-SUM_MOVEMENT_COUNT = 12;
-
-// Always ABS but here to keep consistent with LOSS naming
-ABS_MOVING_AVERAGE_GAIN = 2;
-ABS_MOVING_AVERAGE_LOSS = 3;
-RELATIVE_STRENGTH = 4;
-RELATIVE_STRENGTH_INDICATOR = 5;
-SUM_MOVEMENT=6;
-SIMPLE_MOVING_AVERAGE=7;
-EXPONENTIAL_MOVING_AVERAGE=8;
-WEIGHTED_MOVING_AVERAGE=9;
-
+public class ComputeWeightedMovingAverage extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>> {
+  // TODO
 }
