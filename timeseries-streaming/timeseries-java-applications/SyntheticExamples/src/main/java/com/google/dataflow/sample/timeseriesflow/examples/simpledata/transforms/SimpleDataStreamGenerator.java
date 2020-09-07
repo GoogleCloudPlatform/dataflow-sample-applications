@@ -35,8 +35,6 @@ import org.apache.beam.sdk.io.GenerateSequence;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.Values;
-import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.vendor.grpc.v1p26p0.com.google.common.collect.ImmutableList;
 import org.joda.time.Duration;
@@ -188,8 +186,7 @@ public class SimpleDataStreamGenerator {
           allComputationsExamplePipeline.toBuilder().setOutputToBigQuery(true).build();
     }
 
-    PCollection<KV<TSKey, Iterable<TSAccumSequence>>> metrics =
-        stream.apply(allComputationsExamplePipeline);
+    PCollection<Iterable<TSAccumSequence>> metrics = stream.apply(allComputationsExamplePipeline);
 
     /**
      * ***********************************************************************************************************
@@ -200,7 +197,7 @@ public class SimpleDataStreamGenerator {
      * <p>***********************************************************************************************************
      */
     if (options.getDemoMode().equals("example_1")) {
-      metrics.apply(Values.create()).apply(new Print<>());
+      metrics.apply(new Print<>());
     }
 
     /**

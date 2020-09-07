@@ -47,8 +47,7 @@ import org.tensorflow.example.Example;
 /** Convert a TSAccum to a TFExample. */
 @Experimental
 public class TSAccumIterableToTFExample
-    extends PTransform<
-        PCollection<KV<TSKey, Iterable<TSAccumSequence>>>, PCollection<KV<TSKey, Example>>> {
+    extends PTransform<PCollection<Iterable<TSAccumSequence>>, PCollection<KV<TSKey, Example>>> {
 
   private static final Logger LOG = LoggerFactory.getLogger(TSAccumIterableToTFExample.class);
 
@@ -78,8 +77,7 @@ public class TSAccumIterableToTFExample
   }
 
   @Override
-  public PCollection<KV<TSKey, Example>> expand(
-      PCollection<KV<TSKey, Iterable<TSAccumSequence>>> input) {
+  public PCollection<KV<TSKey, Example>> expand(PCollection<Iterable<TSAccumSequence>> input) {
 
     Integer timesteps =
         CommonUtils.getNumOfSequenceTimesteps(
@@ -89,7 +87,6 @@ public class TSAccumIterableToTFExample
         input.apply(TSToTFExampleUtils.createFeaturesFromIterableAccum(timesteps));
 
     // Send Metadata file to output location
-    // Disabled for first sample
 
     if (enableMetadataOutput) {
       exampleAndMetadata

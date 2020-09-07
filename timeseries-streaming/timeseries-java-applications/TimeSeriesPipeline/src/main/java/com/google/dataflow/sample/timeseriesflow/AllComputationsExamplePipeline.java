@@ -24,9 +24,9 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
-import com.google.dataflow.sample.timeseriesflow.transforms.CollapseAllTSMinorKeyIntoMajorKey;
 import com.google.dataflow.sample.timeseriesflow.transforms.ConvertAccumToSequence;
 import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
+import com.google.dataflow.sample.timeseriesflow.transforms.GenerateMajorKeyWindowSnapshot;
 import com.google.dataflow.sample.timeseriesflow.transforms.TSAccumToRow;
 import java.util.Optional;
 import org.apache.beam.sdk.annotations.Experimental;
@@ -51,8 +51,7 @@ import org.joda.time.format.DateTimeFormatter;
 @Experimental
 @AutoValue
 public abstract class AllComputationsExamplePipeline
-    extends PTransform<
-        PCollection<TSDataPoint>, PCollection<KV<TSKey, Iterable<TSAccumSequence>>>> {
+    extends PTransform<PCollection<TSDataPoint>, PCollection<Iterable<TSAccumSequence>>> {
 
   public abstract GenerateComputations getGenerateComputations();
 
@@ -79,7 +78,7 @@ public abstract class AllComputationsExamplePipeline
   }
 
   @Override
-  public PCollection<KV<TSKey, Iterable<TSAccumSequence>>> expand(PCollection<TSDataPoint> input) {
+  public PCollection<Iterable<TSAccumSequence>> expand(PCollection<TSDataPoint> input) {
 
     ExampleTimeseriesPipelineOptions options =
         input.getPipeline().getOptions().as(ExampleTimeseriesPipelineOptions.class);
@@ -127,8 +126,10 @@ public abstract class AllComputationsExamplePipeline
                             .every(getGenerateComputations().type1FixedWindow())))
                 .build());
 
-    PCollection<KV<TSKey, Iterable<TSAccumSequence>>> multiVariateSpan =
-        sequences.apply(new CollapseAllTSMinorKeyIntoMajorKey());
+    // ----------------- Create a window snapshot of the all the values.
+
+    PCollection<Iterable<TSAccumSequence>> multiVariateSpan =
+        sequences.apply(GenerateMajorKeyWindowSnapshot.generateWindowSnapshot());
 
     return multiVariateSpan;
   }

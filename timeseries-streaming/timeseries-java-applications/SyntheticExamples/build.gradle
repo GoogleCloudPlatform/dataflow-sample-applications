@@ -40,9 +40,11 @@ spotless {
 task run_example(type: JavaExec) {
     classpath sourceSets.main.runtimeClasspath
     main = "com.google.dataflow.sample.timeseriesflow.examples.simpledata.transforms.SimpleDataStreamGenerator"
+    group = "samples"
 }
 
 task generate_bootstrap_data(type: JavaExec) {
     classpath sourceSets.main.runtimeClasspath
     main = "com.google.dataflow.sample.timeseriesflow.examples.simpledata.transforms.SimpleDataBootstrapGenerator"
+    group = "samples"
 }

@@ -54,7 +54,7 @@ import org.tensorflow.example.Example;
 @Experimental
 @AutoValue
 public abstract class OutPutTFExampleFromTSSequence
-    extends PTransform<PCollection<KV<TSKey, Iterable<TSAccumSequence>>>, PCollection<Example>> {
+    extends PTransform<PCollection<Iterable<TSAccumSequence>>, PCollection<Example>> {
 
   private static final Logger LOG = LoggerFactory.getLogger(OutPutTFExampleFromTSSequence.class);
 
@@ -102,7 +102,7 @@ public abstract class OutPutTFExampleFromTSSequence
   }
 
   @Override
-  public PCollection<Example> expand(PCollection<KV<TSKey, Iterable<TSAccumSequence>>> input) {
+  public PCollection<Example> expand(PCollection<Iterable<TSAccumSequence>> input) {
 
     TFXOptions options = input.getPipeline().getOptions().as(TFXOptions.class);
     Preconditions.checkNotNull(

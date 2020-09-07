@@ -39,4 +39,10 @@ public interface TimeseriesStreamingOptions extends DataflowPipelineOptions {
 
   public void setTypeTwoComputationsOffsetLengthInSecs(
       Integer typeTwoComputationsOffsetLengthInSecs);
+
+  @Description("Length of the Sequences, used in creation of TF.Examples")
+  public Integer getSequenceLengthInSeconds();
+
+  @Description("Length of the Sequences, used in creation of TF.Examples")
+  public void setSequenceLengthInSeconds(Integer sequenceLengthInSeconds);
 }
