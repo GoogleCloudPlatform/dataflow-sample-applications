@@ -88,7 +88,7 @@ public class SimpleDataBootstrapGenerator {
     PerfectRectangles perfectRectangles =
         PerfectRectangles.builder()
             .setEnableHoldAndPropogate(false)
-            .setFixedWindow(Duration.standardSeconds(1))
+            .setFixedWindowDuration(Duration.standardSeconds(1))
             .setTtlDuration(Duration.standardSeconds(5))
             .build();
 
