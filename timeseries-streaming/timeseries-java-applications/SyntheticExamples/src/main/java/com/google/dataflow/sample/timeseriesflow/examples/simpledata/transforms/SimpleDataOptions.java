@@ -18,15 +18,24 @@
 package com.google.dataflow.sample.timeseriesflow.examples.simpledata.transforms;
 
 import com.google.dataflow.sample.timeseriesflow.ExampleTimeseriesPipelineOptions;
+import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.Description;
 
 public interface SimpleDataOptions extends ExampleTimeseriesPipelineOptions {
 
   @Description(
-      "Set the demo mode for the app. Current modes are 'example_1', 'example_2', 'example_3' , 'example_4")
-  String getDemoMode();
+      "In order to see easy output of metrics for demos set this to true. This will result in all values being 'printed' to logs.")
+  @Default.Boolean(false)
+  Boolean getEnablePrintMetricsToLogs();
 
-  void setDemoMode(String value);
+  void setEnablePrintMetricsToLogs(Boolean value);
+
+  @Description(
+      "In order to see easy output of TF.Examples for demos set this to true. This will result in all values being 'printed' to logs.")
+  @Default.Boolean(false)
+  Boolean getEnablePrintTFExamplesToLogs();
+
+  void setEnablePrintTFExamplesToLogs(Boolean value);
 
   @Description("Enable sending outliers with the stream of synthetic data.")
   Boolean getWithOutliers();

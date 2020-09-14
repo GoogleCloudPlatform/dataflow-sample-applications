@@ -20,7 +20,7 @@ package com.google.dataflow.sample.timeseriesflow.test;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
-import com.google.dataflow.sample.timeseriesflow.io.tfexample.TSToTFExampleUtils;
+import com.google.dataflow.sample.timeseriesflow.io.tfexample.FeaturesFromIterableAccumSequence;
 import com.google.protobuf.util.Durations;
 import com.google.protobuf.util.Timestamps;
 import org.apache.beam.sdk.testing.PAssert;
@@ -99,9 +99,9 @@ public class GenerateTFExampleFromTSSequenceTest {
                             .build())))
             .apply(GroupByKey.create())
             .apply(Values.create())
-            .apply(TSToTFExampleUtils.createFeaturesFromIterableAccum(3));
+            .apply(new FeaturesFromIterableAccumSequence(3));
 
-    PAssert.that(examples.get(TSToTFExampleUtils.TIME_SERIES_EXAMPLES))
+    PAssert.that(examples.get(FeaturesFromIterableAccumSequence.TIME_SERIES_EXAMPLES))
         .containsInAnyOrder(
             Example.newBuilder()
                 .setFeatures(

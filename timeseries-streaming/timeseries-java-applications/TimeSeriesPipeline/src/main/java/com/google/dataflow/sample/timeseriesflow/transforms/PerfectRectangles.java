@@ -17,12 +17,14 @@
  */
 package com.google.dataflow.sample.timeseriesflow.transforms;
 
+import static org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.Lists;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
+import com.google.dataflow.sample.timeseriesflow.TimeseriesStreamingOptions;
 import com.google.dataflow.sample.timeseriesflow.common.TSDataUtils;
 import com.google.protobuf.util.Timestamps;
 import java.util.ArrayList;
@@ -80,7 +82,25 @@ import org.slf4j.LoggerFactory;
  * PerfectRectangles#getAbsoluteStopTime()} ()} if this is set then the gap filling will stop at
  * exactly this time. This is useful for bootstrap pipelines.
  *
- * <p>TODO: Create Side Output to capture late data
+ * <p>In order to do the gap filling we make use of known characteristics of the data coming into
+ * this transform
+ * <li>1- All data is downsampled during type 1 computations using a fixed window. There is no path
+ *     through the library which does not have this applied.
+ * <li>2- All data in the library is based on the TS.proto, which always has a timestamp as part of
+ *     the schema and is a hard requirement.
+ *
+ *     <p>Latest transform
+ * <li>The latest transform provides us with 1 value per fixed window when there is data. This
+ *     reduces the amount of work we will need to do downstream and makes use of a Combiner for nice
+ *     scaling. A modified version of the Latest transform in Beam was used for this purpose.
+ *
+ *     <p>Global Window
+ * <li>>This transform requires timers to be set in the 'next' fixed window, which is not supported
+ *     with the Apache Beam model. Timers can only be set within the current window. So to make this
+ *     possible we must make use of the Global Window. In the Global window order is not guaranteed.
+ *     So data will need to timestamp sorted.
+ *
+ *     <p>TODO: Create Side Output to capture late data
  */
 @Experimental
 @AutoValue
@@ -114,6 +134,32 @@ public abstract class PerfectRectangles
     public abstract Builder setAbsoluteStopTime(Instant value);
 
     public abstract PerfectRectangles build();
+  }
+
+  public static PerfectRectangles fromPipelineOptions(TimeseriesStreamingOptions options) {
+    checkNotNull(options);
+    checkArgument(
+        !(options.getTTLDurationSecs() == null && options.getAbsoluteStopTimeMSTimestamp() == null),
+        "Must set either TTL or absolute stop time.");
+
+    AutoValue_PerfectRectangles.Builder builder = new AutoValue_PerfectRectangles.Builder();
+
+    if (options.getTTLDurationSecs() != null) {
+
+      builder.setTtlDuration(Duration.standardSeconds(options.getTTLDurationSecs()));
+    }
+
+    if (options.getAbsoluteStopTimeMSTimestamp() != null) {
+      builder.setAbsoluteStopTime(Instant.ofEpochMilli(options.getAbsoluteStopTimeMSTimestamp()));
+    }
+
+    builder.setFixedWindowDuration(
+        Duration.standardSeconds(options.getTypeOneComputationsLengthInSecs()));
+
+    // Option has a default value of false.
+    builder.setEnableHoldAndPropogate(options.getEnableHoldAndPropogate());
+
+    return builder.build();
   }
 
   public static PerfectRectangles withWindowAndTTLDuration(
@@ -182,7 +228,38 @@ public abstract class PerfectRectangles
     return readyForProcessing;
   }
 
-  /** */
+  /**
+   * Once we see a key for the first time, we need to do some setup activity in ProcessElement().
+   *
+   * <p>Start Looping Timers
+   * <li>The timer needs to be set in the next intervalWindow that the trailingWM belongs to. This
+   *     data is not available to us in the GlobalWindow, however we can have access to this data
+   *     before we apply the GlobalWindow by using: Reify.windowsInValue() The first looping timer
+   *     to fire must be the fixed window after the minimum(BoundedWindow) seen. Timers do not
+   *     support an inbuilt setLowest() value, so we need to create a State to keep track of this
+   *     minimum. We use a State variable called trailingWWM to hold this value for us. When a new
+   *     element comes in we compare its value to the trailingWWM and if lower we replace the
+   *     trailingWWM value and set the timer. The OnProcess setting of timers should only be at the
+   *     first timers in the sequence for the looping timer. It should not override the timer value
+   *     which is being set within the OnTimer event. Therefore we will make use of Boolean State
+   *     isTimerEnabled
+   *
+   *     <p>OnTimer()
+   * <li>This is the class that does all the actual work.
+   * <li>High level: Move the values in the unsorted ElementBag into a list.This requires memory
+   *     space == the number of windows 'active' In stream mode this will be small and stream mode
+   *     does not store everything in memory . In batch mode this can be as big as (Max(timestamp of
+   *     all keys) - Min(timestamp of all keys) / FixedWindow size. For example if we have 6 months
+   *     of data and we we have fixed windows of 1 sec (6*30*86400) ~ 16M objects per key.
+   * <li>Sort the list based on the timestamp value of the objects. Determine if there is a data
+   *     point in this 'window'. Window is defined as current onTimer timestamp + Duration of the
+   *     fixed window. If there is a data point, reset the timer to fire in the next interval
+   *     window. Save the current TSDataPoint into State in case we need it for data propagation.
+   *     Carry out GC by remove the last known value from the Sorted list Store the sorted list into
+   *     a ValueState object, which we can reuse on the next timer firing. If there is no data in
+   *     this window, generate a GapFill object. Use the last known value or null dependent on the
+   *     config the user provided.
+   */
   @Experimental
   @AutoValue
   @VisibleForTesting

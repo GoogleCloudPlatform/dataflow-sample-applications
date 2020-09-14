@@ -23,6 +23,7 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
+import com.google.dataflow.sample.timeseriesflow.TimeseriesStreamingOptions;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.common.TupleTypes;
 import com.google.dataflow.sample.timeseriesflow.verifier.TSDataPointVerifier;
@@ -51,6 +52,7 @@ import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.TupleTagList;
 import org.apache.beam.sdk.values.ValueInSingleWindow;
+import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions;
 import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,7 +93,7 @@ public abstract class GenerateComputations
 
   public @Nullable abstract Integer hotKeyFanOut();
 
-  public abstract List<CombineFn<TSDataPoint, TSAccum, TSAccum>> type1NumericComputations();
+  abstract List<CombineFn<TSDataPoint, TSAccum, TSAccum>> type1NumericComputations();
 
   public @Nullable abstract List<
           PTransform<PCollection<KV<TSKey, TSAccumSequence>>, PCollection<KV<TSKey, TSAccum>>>>
@@ -138,6 +140,19 @@ public abstract class GenerateComputations
 
   public GenerateComputations withPerfectRectangles(PerfectRectangles perfectRectangles) {
     return this.toBuilder().setPerfectRectangles(perfectRectangles).build();
+  }
+
+  public static GenerateComputations.Builder fromPiplineOptions(
+      TimeseriesStreamingOptions options) {
+    Preconditions.checkArgument(
+        options.getTypeOneComputationsLengthInSecs() != null
+            && options.getTypeTwoComputationsLengthInSecs() != null,
+        "Both type 1 and type 2 durations must be set");
+
+    return new AutoValue_GenerateComputations.Builder()
+        .setType1FixedWindow(Duration.standardSeconds(options.getTypeOneComputationsLengthInSecs()))
+        .setType2SlidingWindowDuration(
+            Duration.standardSeconds(options.getTypeTwoComputationsLengthInSecs()));
   }
 
   @Override

@@ -20,7 +20,7 @@ package com.google.dataflow.sample.timeseriesflow.test;
 import com.google.dataflow.sample.timeseriesflow.TFXOptions;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
-import com.google.dataflow.sample.timeseriesflow.io.tfexample.TSToTFExampleUtils;
+import com.google.dataflow.sample.timeseriesflow.io.tfexample.FeaturesFromIterableAccumSequence;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.values.PCollection;
@@ -47,7 +47,7 @@ public class SnapShotScalability_1D_100M_1K_1FW_60SW_withTFExampleSerlization {
 
     Integer timesteps = CommonUtils.getNumOfSequenceTimesteps(p.getOptions().as(TFXOptions.class));
 
-    examples.apply(TSToTFExampleUtils.createFeaturesFromIterableAccum(timesteps));
+    examples.apply(new FeaturesFromIterableAccumSequence(timesteps));
 
     p.run();
   }

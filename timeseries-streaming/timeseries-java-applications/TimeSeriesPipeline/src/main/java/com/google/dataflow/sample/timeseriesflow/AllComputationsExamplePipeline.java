@@ -18,7 +18,6 @@
 package com.google.dataflow.sample.timeseriesflow;
 
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Preconditions;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
@@ -55,8 +54,6 @@ public abstract class AllComputationsExamplePipeline
 
   public abstract GenerateComputations getGenerateComputations();
 
-  public abstract Boolean getOutputToBigQuery();
-
   public abstract String getTimeseriesSourceName();
 
   public abstract Builder toBuilder();
@@ -70,8 +67,6 @@ public abstract class AllComputationsExamplePipeline
 
     public abstract Builder setGenerateComputations(GenerateComputations newGenerateComputations);
 
-    public abstract Builder setOutputToBigQuery(Boolean newOutputToBigQuery);
-
     public abstract Builder setTimeseriesSourceName(String newTimeseriesSourceName);
 
     public abstract AllComputationsExamplePipeline build();
@@ -83,12 +78,6 @@ public abstract class AllComputationsExamplePipeline
     ExampleTimeseriesPipelineOptions options =
         input.getPipeline().getOptions().as(ExampleTimeseriesPipelineOptions.class);
 
-    if (getOutputToBigQuery()) {
-      Preconditions.checkNotNull(
-          options.getBigQueryTableForTSAccumOutputLocation(),
-          "If OutputToBigQuery is true, --bigQueryTableForTSAccumOutputLocation option must be set.");
-    }
-
     // ----------------- Stage 1 create Computations
 
     PCollection<KV<TSKey, TSAccum>> computations = input.apply(getGenerateComputations());
@@ -97,7 +86,7 @@ public abstract class AllComputationsExamplePipeline
 
     DateTimeFormatter formatter = DateTimeFormat.forPattern("YYYY_MM_dd_HH_mm_ss");
 
-    if (getOutputToBigQuery()) {
+    if (options.getBigQueryTableForTSAccumOutputLocation() != null) {
       computations
           .apply(Values.create())
           .apply(new TSAccumToRow())

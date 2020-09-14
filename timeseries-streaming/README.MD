@@ -5,7 +5,11 @@ This repository comprises a reference pattern and accompanying sample code to pr
 In addition, this repository provides a set of time-series transforms that simplify developing Apache Beam pipelines for processing ***streaming*** time-series data.
 
 ### Sample Version
-0.3.0
+0.3.1  
+ - Options now passed through to all builders.
+ - Refactor [PerfectRectangles](timeseries-java-applications/TimeSeriesPipeline/src/main/java/com/google/dataflow/sample/timeseriesflow/transforms/PerfectRectangles.java)
+ - [Data Window Snapshot](timeseries-java-applications/TimeSeriesPipeline/src/main/java/com/google/dataflow/sample/timeseriesflow/transforms/GenerateMajorKeyWindowSnapshot.java)  
+0.3.0 - Archived to Branch.
 
 # Processing time-series data
 Apache Beam has rich support for streaming data, including support for State and Timers API which enable sophisticated processing of time-series data. In order to effectively process streaming time-series data, practitioners often need to perform time-series data preprocessing. This can involve introducing computed data to fill 'gaps' in the source time-series data. 
