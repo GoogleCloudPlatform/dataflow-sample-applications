@@ -17,13 +17,21 @@
  */
 package com.google.dataflow.sample.timeseriesflow.metrics;
 
+import static com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.Time.TimePointCase.ADVANCE_WATERMARK_EXPRESSION;
+import static com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.Time.TimePointCase.ADVANCE_WATERMARK_SECONDS;
+import static com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.Time.TimePointCase.TIMEPOINT_NOT_SET;
 import static com.google.dataflow.sample.timeseriesflow.metrics.TSTestDataBaseline.START;
 
 import com.google.auto.value.AutoValue;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
-import com.google.gson.Gson;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.AdvanceWatermarkExpression;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.TSTimePointTest;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
+import com.google.protobuf.util.JsonFormat;
 import com.google.protobuf.util.Timestamps;
 import java.io.IOException;
 import java.io.Serializable;
@@ -64,50 +72,117 @@ public abstract class TSTestData implements Serializable {
     public Builder setInputTSDataFromJSON(
         JsonReader input, Duration outputTSType1Window, Duration outputTSType2Window)
         throws IOException {
-      Gson gson = new Gson();
-      List<TSDataPoint> messages = new ArrayList<TSDataPoint>();
+
+      //      Gson gson =
+      //          new
+      // GsonBuilder().registerTypeAdapterFactory(AutoValueGsonFactory.create()).create();
+      //
+      //      Type type = new TypeToken<TSTestDataSchema>() {}.getType();
+
+      List<TSDataPoint> messages = new ArrayList<>();
       input.beginArray();
       Long instant = START;
       TestStream.Builder<TSDataPoint> stream =
           TestStream.create(ProtoCoder.of(TSDataPoint.class))
               .advanceWatermarkTo(Instant.ofEpochMilli(instant));
+
+      // Create a builder for the TSDataPoint message
+      TSDataPoint.Builder tsDataPointBuilder = TSDataPoint.newBuilder();
+
+      // Create a builder for the TSDataPoint message
+      TSTimePointTest.Builder tsTimePointTestBuilder = TSTimePointTest.newBuilder();
+
+      Boolean hintProvided = Boolean.FALSE;
+
+      TestStream<TSDataPoint> testStream = null;
+
       try {
         while (input.hasNext()) {
-          TSDataPoint element = gson.fromJson(input, TSDataPoint.class);
+          JsonElement element = JsonParser.parseReader(input);
+
+          // Parse to TSDataPoint
+          JsonFormat.parser()
+              .ignoringUnknownFields()
+              .merge(String.valueOf(element), tsDataPointBuilder);
           messages.add(
-              TSDataPoint.newBuilder(element).setTimestamp(Timestamps.fromMillis(instant)).build());
+              TSDataPoint.newBuilder(tsDataPointBuilder.build())
+                  .setTimestamp(Timestamps.fromMillis(instant))
+                  .build());
+          tsDataPointBuilder.clear();
+
+          // Parse to TSTimePointTest in case hints are provided
+          JsonFormat.parser()
+              .ignoringUnknownFields()
+              .merge(String.valueOf(element), tsTimePointTestBuilder);
+          tsTimePointTestBuilder.build();
+          TimeSeriesDataTest.Time.TimePointCase timePointCase =
+              tsTimePointTestBuilder.getTime().getTimePointCase();
+          // Skip processing hints while timestamp has not been set
+          if (timePointCase != TIMEPOINT_NOT_SET) {
+            hintProvided = Boolean.TRUE;
+            // Hint detected get all previous events and start creating stream
+            for (int i = 0; i < messages.size(); i++) {
+              stream = stream.addElements(messages.get(i));
+            }
+            // Clear messages to buffer until next hint
+            messages.clear();
+            switch (timePointCase) {
+              case ADVANCE_WATERMARK_SECONDS:
+                instant =
+                    Instant.ofEpochMilli(START)
+                        .plus(
+                            Duration.standardSeconds(
+                                tsTimePointTestBuilder.getTime().getAdvanceWatermarkSeconds()))
+                        .getMillis();
+                stream = stream.advanceWatermarkTo(Instant.ofEpochMilli(instant));
+                break;
+              case ADVANCE_WATERMARK_EXPRESSION:
+                AdvanceWatermarkExpression advanceWatermark_expression =
+                    tsTimePointTestBuilder.getTime().getAdvanceWatermarkExpression();
+                if (advanceWatermark_expression == AdvanceWatermarkExpression.INFINITY) {
+                  testStream = stream.advanceWatermarkToInfinity();
+                }
+            }
+          }
+          tsTimePointTestBuilder.clear();
         }
       } catch (IOException e) {
         e.printStackTrace();
       }
-      // Get length and calculate when to reset the watermark based on type1 and type2 durations
-      // e.g.: length = 9, Type1Window = 5s Type2Window = 15s -> Move watermark 5s every 3 data
-      // points
-      int length = messages.size();
-      long intervalType1 = outputTSType1Window.getStandardSeconds();
-      long intervalType2 = outputTSType2Window.getStandardSeconds();
-      if (intervalType2 % intervalType1 != 0) {
-        LOG.warn(
-            "Intervals are not divisible, result will be truncated cutting off the floating point");
-      }
-      long interval = intervalType2 / intervalType1;
-      if (length % interval != 0) {
-        throw new InvalidPropertiesFormatException("Length must be divisible by interval");
-      }
-      for (int i = 0, j = 0; i < length; i++) {
-        if (i % (length / interval) == 0 && i != 0) {
-          j++;
-          instant =
-              Instant.ofEpochMilli(START)
-                  .plus(Duration.standardSeconds(intervalType1 * j))
-                  .getMillis();
-          stream = stream.advanceWatermarkTo(Instant.ofEpochMilli(instant));
+
+      // Skip this section if hint about time is provided in JSON
+      if (!hintProvided) {
+        // If hints are not provided, get length and calculate when to reset the watermark based on
+        // type1 and type2 durations
+        // e.g.: length = 9, Type1Window = 5s Type2Window = 15s -> Move watermark 5s every 3 data
+        // points
+        int length = messages.size();
+        long intervalType1 = outputTSType1Window.getStandardSeconds();
+        long intervalType2 = outputTSType2Window.getStandardSeconds();
+        if (intervalType2 % intervalType1 != 0) {
+          LOG.warn(
+              "Intervals are not divisible, result will be truncated cutting off the floating point");
         }
-        stream = stream.addElements(messages.get(i));
+        long interval = intervalType2 / intervalType1;
+        if (length % interval != 0) {
+          throw new InvalidPropertiesFormatException("Length must be divisible by interval");
+        }
+        for (int i = 0, j = 0; i < length; i++) {
+          if (i % (length / interval) == 0 && i != 0) {
+            j++;
+            instant =
+                Instant.ofEpochMilli(START)
+                    .plus(Duration.standardSeconds(intervalType1 * j))
+                    .getMillis();
+            stream = stream.advanceWatermarkTo(Instant.ofEpochMilli(instant));
+          }
+          stream = stream.addElements(messages.get(i));
+        }
+        testStream = stream.advanceWatermarkToInfinity();
       }
       input.endArray();
       input.close();
-      this.setInputTSData(stream.advanceWatermarkToInfinity());
+      this.setInputTSData(testStream);
       return this;
     }
 
