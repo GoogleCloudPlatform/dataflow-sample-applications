@@ -189,7 +189,7 @@ public class TSMetricsTests {
   /* Simple test to check Simple Moving Average Technical is created correctly */
   public void testCreateSMA() throws IOException {
 
-    String resourceName = "TSTestDataSample.json";
+    String resourceName = "TSTestData.json";
     ClassLoader classLoader = getClass().getClassLoader();
     File file = new File(classLoader.getResource(resourceName).getFile());
     String absolutePath = file.getAbsolutePath();
@@ -267,7 +267,7 @@ public class TSMetricsTests {
   /* Simple test to check Exponential Moving Average Technical is created correctly */
   public void testCreateEMA() throws IOException {
 
-    String resourceName = "TSTestDataSample.json";
+    String resourceName = "TSTestDataHints.json";
     ClassLoader classLoader = getClass().getClassLoader();
     File file = new File(classLoader.getResource(resourceName).getFile());
     String absolutePath = file.getAbsolutePath();
