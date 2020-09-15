@@ -86,3 +86,21 @@ dependencies {
     testCompile group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
 
 }
+
+task scalability_1D_100M_1K_1FS_60SW(type: JavaExec) {
+    classpath sourceSets.test.runtimeClasspath
+    main = "com.google.dataflow.sample.timeseriesflow.test.SnapShotScalability_1D_100M_1K_1FW_60SW"
+    group = "scalability"
+}
+
+task scalability_1D_100M_1K_1FS_60SW_withTFExampleSerlization(type: JavaExec) {
+    classpath sourceSets.test.runtimeClasspath
+    main = "com.google.dataflow.sample.timeseriesflow.test.SnapShotScalability_1D_100M_1K_1FW_60SW_withTFExampleSerlization"
+    group = "scalability"
+}
+
+task scalability_1D_100M_100K_1FS_60SW_withTFExampleSerlization(type: JavaExec) {
+    classpath sourceSets.test.runtimeClasspath
+    main = "com.google.dataflow.sample.timeseriesflow.test.SnapShotScalability_1D_100M_100K_1FW_60SW_withTFExampleSerlization"
+    group = "scalability"
+}

@@ -25,11 +25,10 @@ The simple data usage is to demonstrate the end to end data engineering of the l
 
 ## Example 1 : Output of metrics to LOG
 
-This example will spin up a local pipeline using the Direct Runner. It will run 
- in exmaple_1 mode. 
+This example will spin up a local pipeline using the Direct Runner, the metrics will be output to log files.
    
 ```
-./gradlew run_example --args='--demoMode=example_1'
+./gradlew run_example --args='--enablePrintMetricsToLogs'
 ```
 
 You will see several messages about incomplete TSAccumSequences, once there is enough data, which is 5 secs of data, you will see values output to the logs. To stop you can use CTRL-C.
@@ -37,7 +36,7 @@ You will see several messages about incomplete TSAccumSequences, once there is e
 To start the demo with outlier data included in the stream, which is a value outside of the norm every 50 ticks.
 
 ```
-./gradlew run_example --args='--demoMode=example_1 --withOutliers=true'
+./gradlew run_example --args='--enablePrintMetricsToLogs --withOutliers=true'
 ```
 
 ## Example 2 : Creation of TF.Example's from a stream with output to files
@@ -45,7 +44,7 @@ To start the demo with outlier data included in the stream, which is a value out
 The files will need a location to be output to, in the below example we use /tmp/simple-data/
 ```
 mkdir /<your-directory>/simple-data
-./gradlew run_example --args='--demoMode=example_2 --interchangeLocation=/<your-directory>/simple-data/'
+./gradlew run_example --args='--enablePrintMetricsToLogs --interchangeLocation=/<your-directory>/simple-data/'
 ```
 
 Check the folder you specified in --interchangeLocation for new files.
@@ -53,7 +52,7 @@ Check the folder you specified in --interchangeLocation for new files.
 To start the demo with outlier data included in the stream, which is a value outside of the norm every 50 ticks.
 
 ```
-./gradlew run_example --args='--demoMode=example_2 --interchangeLocation=/<your-directory>/simple-data/ --withOutliers=true'
+./gradlew run_example --args='--enablePrintMetricsToLogs --interchangeLocation=/<your-directory>/simple-data/ --withOutliers=true'
 ```
   
 ## Example 3 : Example Output of metrics to BigQuery
@@ -70,7 +69,7 @@ In the command below, replace <project> with your projectid and give a table pre
 
 
 ```
-./gradlew run_example --args='--demoMode=example_3 --bigQueryTableForTSAccumOutputLocation=<project>:<dataset>.<table_prefix>'
+./gradlew run_example --args='--bigQueryTableForTSAccumOutputLocation=<project>:<dataset>.<table_prefix>'
 ```
 You can observe the results by running the following SQL command in BigQuery.
 ```
@@ -103,7 +102,7 @@ ORDER BY
 To start the demo with outlier data included in the stream, which is a value outside of the norm every 50 ticks.
 
 ```
-./gradlew run_example --args='--demoMode=example_3 --bigQueryTableForTSAccumOutputLocation=<project>:<dataset>.<table_prefix> --withOutliers=true'
+./gradlew run_example --args='--bigQueryTableForTSAccumOutputLocation=<project>:<dataset>.<table_prefix> --withOutliers=true'
 ```
 
 ## Example 4 : Sending a stream of examples to PubSub
@@ -111,6 +110,6 @@ To start the demo with outlier data included in the stream, which is a value out
 In this example the values are sent to PubSub and the interchangeLocation. The data sent to PubSub is parsed into JSON format.
 
 ```
-./gradlew run_example --args='--demoMode=example_4 --interchangeLocation=<your-directory>/simple-data/ --withOutliers=true --pubSubTopicForTSAccumOutputLocation=projects/<your-project>/topics/outlier-detection'
+./gradlew run_example --args='--withOutliers=true --pubSubTopicForTSAccumOutputLocation=projects/<your-project>/topics/outlier-detection'
 
 ```

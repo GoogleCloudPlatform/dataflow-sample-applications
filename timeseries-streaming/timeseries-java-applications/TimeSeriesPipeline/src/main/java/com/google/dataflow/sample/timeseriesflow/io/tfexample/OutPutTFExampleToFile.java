@@ -18,28 +18,21 @@
 package com.google.dataflow.sample.timeseriesflow.io.tfexample;
 
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Preconditions;
 import com.google.dataflow.sample.timeseriesflow.TFXOptions;
-import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
-import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesTFExampleKeys.ExampleMetadata;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
-import javax.annotation.Nullable;
+import com.google.dataflow.sample.timeseriesflow.io.tfexample.TSToTFExampleUtils.ExampleToKeyValue;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.io.TFRecordIO;
-import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.transforms.Contextful;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.Values;
 import org.apache.beam.sdk.transforms.windowing.FixedWindows;
 import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PDone;
 import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,16 +46,13 @@ import org.tensorflow.example.Example;
  */
 @Experimental
 @AutoValue
-public abstract class OutPutTFExampleFromTSSequence
-    extends PTransform<PCollection<KV<TSKey, Iterable<TSAccumSequence>>>, PCollection<Example>> {
+public abstract class OutPutTFExampleToFile extends PTransform<PCollection<Example>, PDone> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(OutPutTFExampleFromTSSequence.class);
+  private static final Logger LOG = LoggerFactory.getLogger(OutPutTFExampleToFile.class);
 
   public abstract boolean getEnableSingleWindowFile();
 
   public abstract int getNumShards();
-
-  public abstract @Nullable String getPubSubTopic();
 
   public abstract Builder toBuilder();
 
@@ -71,79 +61,46 @@ public abstract class OutPutTFExampleFromTSSequence
 
     public abstract Builder setEnableSingleWindowFile(boolean enableSingleWindowFile);
 
-    public abstract Builder setPubSubTopic(String pubSubTopic);
-
     public abstract Builder setNumShards(int numShards);
 
-    public abstract OutPutTFExampleFromTSSequence build();
+    public abstract OutPutTFExampleToFile build();
   }
 
-  public static OutPutTFExampleFromTSSequence create() {
-    return new AutoValue_OutPutTFExampleFromTSSequence.Builder()
+  public static OutPutTFExampleToFile create() {
+    return new AutoValue_OutPutTFExampleToFile.Builder()
         .setEnableSingleWindowFile(true)
         .setNumShards(5)
         .build();
   }
 
-  public OutPutTFExampleFromTSSequence withEnabledSingeWindowFile(boolean value) {
+  public OutPutTFExampleToFile withEnabledSingeWindowFile(boolean value) {
     return this.toBuilder().setEnableSingleWindowFile(value).build();
   }
 
-  public OutPutTFExampleFromTSSequence setNumShards(int value) {
+  public OutPutTFExampleToFile setNumShards(int value) {
     return this.toBuilder().setNumShards(value).build();
   }
 
-  public OutPutTFExampleFromTSSequence withPubSubTopic(String value) {
-    return this.toBuilder().setPubSubTopic(value).build();
-  }
-
   public static Builder builder() {
-    return new AutoValue_OutPutTFExampleFromTSSequence.Builder();
+    return new AutoValue_OutPutTFExampleToFile.Builder();
   }
 
   @Override
-  public PCollection<Example> expand(PCollection<KV<TSKey, Iterable<TSAccumSequence>>> input) {
+  public PDone expand(PCollection<Example> input) {
 
     TFXOptions options = input.getPipeline().getOptions().as(TFXOptions.class);
-    Preconditions.checkNotNull(
-        options.getInterchangeLocation(),
-        "If output to file is enabled, --interchangeLocation option must be set.");
 
-    /** Convert each major key to a TF.Example */
-    PCollection<KV<TSKey, Example>> results =
-        input.apply(
-            new TSAccumIterableToTFExample(
-                String.format("%s/metadata", options.getInterchangeLocation())));
-
-    PCollection<Example> values = results.apply(Values.create());
-    if (getPubSubTopic() != null) {
-      values
-          .apply(
-              ParDo.of(
-                  // TODO add to utility classes
-                  new DoFn<Example, String>() {
-                    @ProcessElement
-                    public void processElement(@Element Example example, OutputReceiver<String> o) {
-                      try {
-                        String jsonFormat = JsonFormat.printer().print(example);
-                        o.output(jsonFormat);
-                      } catch (InvalidProtocolBufferException e) {
-                        e.printStackTrace();
-                      }
-                    }
-                  }))
-          .apply(PubsubIO.writeStrings().to(getPubSubTopic()));
-    }
+    PCollection<KV<String, Example>> keyedExamples = input.apply(ParDo.of(new ExampleToKeyValue()));
 
     if (getEnableSingleWindowFile()) {
-      results.apply(
-          FileIO.<String, KV<TSKey, Example>>writeDynamic()
+      keyedExamples.apply(
+          FileIO.<String, KV<String, Example>>writeDynamic()
               .to(String.format("%s/data", options.getInterchangeLocation()))
               .by(
                   x ->
                       String.format(
                           "%s-%s-%s",
-                          x.getKey().getMajorKey().replace("/", "-"),
+                          x.getKey().replace("/", "-"),
                           x.getValue()
                               .getFeatures()
                               .getFeatureMap()
@@ -160,22 +117,22 @@ public abstract class OutPutTFExampleFromTSSequence
               .withNumShards(getNumShards())
               .withNaming(x -> FileIO.Write.defaultNaming(x, ".tfrecord"))
               .via(
-                  Contextful.<KV<TSKey, Example>, byte[]>fn((x -> x.getValue().toByteArray())),
+                  Contextful.<KV<String, Example>, byte[]>fn((x -> x.getValue().toByteArray())),
                   TFRecordIO.<byte[]>sink()));
     } else {
-      results
+      keyedExamples
           .apply(Window.into(FixedWindows.of(Duration.standardHours(1))))
           .apply(
-              FileIO.<KV<TSKey, Example>>write()
+              FileIO.<KV<String, Example>>write()
                   .to(String.format("%s/data", options.getInterchangeLocation()))
                   .withNumShards(getNumShards())
                   .withPrefix("Timeseries_TFExamples_")
                   .withSuffix(".tfrecord")
                   .via(
-                      Contextful.<KV<TSKey, Example>, byte[]>fn((x -> x.getValue().toByteArray())),
+                      Contextful.<KV<String, Example>, byte[]>fn((x -> x.getValue().toByteArray())),
                       TFRecordIO.<byte[]>sink()));
     }
 
-    return values;
+    return PDone.in(input.getPipeline());
   }
 }

@@ -22,8 +22,9 @@ import com.google.dataflow.sample.timeseriesflow.ExampleTimeseriesPipelineOption
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
-import com.google.dataflow.sample.timeseriesflow.io.tfexample.OutPutTFExampleFromTSSequence;
-import com.google.dataflow.sample.timeseriesflow.metrics.utils.AllMetricsGeneratorWithDefaults;
+import com.google.dataflow.sample.timeseriesflow.io.tfexample.OutPutTFExampleToFile;
+import com.google.dataflow.sample.timeseriesflow.io.tfexample.TSAccumIterableToTFExample;
+import com.google.dataflow.sample.timeseriesflow.metrics.utils.AllMetricsWithDefaults;
 import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.dataflow.sample.timeseriesflow.transforms.PerfectRectangles;
 import com.google.protobuf.util.Timestamps;
@@ -78,34 +79,6 @@ public class SimpleDataBootstrapGenerator {
               now.plus(Duration.millis(i * 500))));
     }
 
-    /**
-     * ***********************************************************************************************************
-     * We want to ensure that there is always a value within each timestep. This is redundent for
-     * this dataset as the generated data will always have a value. But we keep this configuration
-     * to ensure consistency accross the sample pipelines.
-     * ***********************************************************************************************************
-     */
-    PerfectRectangles perfectRectangles =
-        PerfectRectangles.builder()
-            .setEnableHoldAndPropogate(false)
-            .setFixedWindow(Duration.standardSeconds(1))
-            .setTtlDuration(Duration.standardSeconds(5))
-            .build();
-
-    /**
-     * ***********************************************************************************************************
-     * The data has only one key, to allow the type 1 computations to be done in parrallal we set
-     * the {@link GenerateComputations#hotKeyFanOut()}
-     * ***********************************************************************************************************
-     */
-    GenerateComputations generateComputations =
-        AllMetricsGeneratorWithDefaults.getGenerateComputationsWithAllKnownMetrics()
-            .setType1FixedWindow(Duration.standardSeconds(1))
-            .setType2SlidingWindowDuration(Duration.standardSeconds(5))
-            .setHotKeyFanOut(5)
-            .setPerfectRectangles(perfectRectangles)
-            .build();
-
     ExampleTimeseriesPipelineOptions options =
         PipelineOptionsFactory.fromArgs(args).as(ExampleTimeseriesPipelineOptions.class);
 
@@ -120,8 +93,47 @@ public class SimpleDataBootstrapGenerator {
     options.setSequenceLengthInSeconds(5);
     options.setRunner(DataflowRunner.class);
     options.setMaxNumWorkers(2);
+    options.setAbsoluteStopTimeMSTimestamp(now.plus(Duration.standardSeconds(43200)).getMillis());
 
     Pipeline p = Pipeline.create(options);
+
+    /**
+     * ***********************************************************************************************************
+     * The data has only one key, to allow the type 1 computations to be done in parallel we set the
+     * {@link GenerateComputations#hotKeyFanOut()}
+     * ***********************************************************************************************************
+     */
+    GenerateComputations.Builder generateComputations =
+        GenerateComputations.fromPiplineOptions(options)
+            .setType1NumericComputations(AllMetricsWithDefaults.getAllType1Combiners())
+            .setType2NumericComputations(AllMetricsWithDefaults.getAllType2Computations());
+
+    /**
+     * ***********************************************************************************************************
+     * We want to ensure that there is always a value within each timestep. This is redundant for
+     * this dataset as the generated data will always have a value. But we keep this configuration
+     * to ensure consistency across the sample pipelines.
+     * ***********************************************************************************************************
+     */
+    generateComputations.setPerfectRectangles(PerfectRectangles.fromPipelineOptions(options));
+
+    /**
+     * ***********************************************************************************************************
+     * All the metrics currently available will be processed for this dataset. The results will be
+     * sent to two difference locations: To Google BigQuery as defined by: {@link
+     * ExampleTimeseriesPipelineOptions#getBigQueryTableForTSAccumOutputLocation()} To a Google
+     * Cloud Storage Bucket as defined by: {@link
+     * ExampleTimeseriesPipelineOptions#getInterchangeLocation()} The TFExamples will be grouped
+     * into TFRecord files as {@link OutPutTFExampleFromTSSequence#enableSingleWindowFile} is set to
+     * false.
+     *
+     * <p>***********************************************************************************************************
+     */
+    AllComputationsExamplePipeline allComputationsExamplePipeline =
+        AllComputationsExamplePipeline.builder()
+            .setTimeseriesSourceName("SimpleExample")
+            .setGenerateComputations(generateComputations.build())
+            .build();
 
     /**
      * ***********************************************************************************************************
@@ -136,13 +148,9 @@ public class SimpleDataBootstrapGenerator {
      * <p>***********************************************************************************************************
      */
     p.apply(Create.timestamped(data))
-        .apply(
-            AllComputationsExamplePipeline.builder()
-                .setTimeseriesSourceName("SimpleExample")
-                .setOutputToBigQuery(true)
-                .setGenerateComputations(generateComputations)
-                .build())
-        .apply(OutPutTFExampleFromTSSequence.create().withEnabledSingeWindowFile(false));
+        .apply(allComputationsExamplePipeline)
+        .apply(new TSAccumIterableToTFExample())
+        .apply(OutPutTFExampleToFile.create().withEnabledSingeWindowFile(false));
 
     p.run();
   }

@@ -32,7 +32,10 @@ import org.apache.beam.sdk.values.TypeDescriptors;
 /**
  * Remove {@link TSKey#getMinorKeyString()} from Key, so that a Multi Variate time series can be
  * coalesced back into a single object.
+ *
+ * <p>Deprecated, use {@link GenerateMajorKeyWindowSnapshot#generateWindowSnapshot()}
  */
+@Deprecated
 public class CollapseAllTSMinorKeyIntoMajorKey
     extends PTransform<
         PCollection<KV<TSKey, TSAccumSequence>>,

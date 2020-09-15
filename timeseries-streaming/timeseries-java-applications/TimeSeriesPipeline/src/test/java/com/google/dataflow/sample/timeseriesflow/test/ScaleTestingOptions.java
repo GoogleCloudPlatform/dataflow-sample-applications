@@ -15,17 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.timeseriesflow;
+package com.google.dataflow.sample.timeseriesflow.test;
 
-import org.apache.beam.sdk.annotations.Experimental;
-import org.apache.beam.sdk.options.Description;
+import com.google.dataflow.sample.timeseriesflow.TimeseriesStreamingOptions;
 
-@Experimental
-public interface TFXOptions extends TimeseriesStreamingOptions {
+public interface ScaleTestingOptions extends TimeseriesStreamingOptions {
 
-  @Description("Metadata interchange location")
-  public String getInterchangeLocation();
+  public Integer getNumSecs();
 
-  @Description("Metadata interchange location")
-  public void setInterchangeLocation(String interchangeLocation);
+  public void setNumSecs(Integer typeOneComputationsLengthInSecs);
+
+  public Integer getNumFeatures();
+
+  public void setNumFeatures(Integer typeOneComputationsLengthInSecs);
+
+  public Integer getNumKeys();
+
+  public void setNumKeys(Integer numKeys);
+
+  public Boolean getWithFileOutput();
+
+  public void setWithFileOutput(Boolean withFileOutput);
 }

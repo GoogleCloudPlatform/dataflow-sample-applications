@@ -18,10 +18,6 @@
 package com.google.dataflow.sample.timeseriesflow.io.tfexample;
 
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
-import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data.DataPointCase;
-import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
-import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
-import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesTFExampleKeys.ExampleMetadata;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesTFExampleKeys.ExampleTypes;
 import com.google.protobuf.ByteString;
@@ -29,10 +25,8 @@ import com.google.protobuf.util.Timestamps;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -41,14 +35,11 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
-import org.apache.beam.sdk.util.WindowedValue;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.TupleTag;
 import org.apache.beam.sdk.values.TupleTagList;
-import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tensorflow.example.BytesList;
@@ -64,15 +55,6 @@ import org.tensorflow.example.Int64List;
 public class TSToTFExampleUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(TSToTFExampleUtils.class);
-
-  public static final TupleTag<Example> TIME_SERIES_FEATURE_METADATA = new TupleTag<Example>() {};
-  public static final TupleTag<Example> TIME_SERIES_EXAMPLES = new TupleTag<Example>() {};
-
-  public static FeaturesFromIterableAccumSequence createFeaturesFromIterableAccum(
-      Integer timesteps) {
-    return new FeaturesFromIterableAccumSequence(
-        TIME_SERIES_FEATURE_METADATA, TIME_SERIES_EXAMPLES, timesteps);
-  }
 
   public static Feature tfFeatureFromTSDataPoint(Data data) {
     Feature.Builder feature = Feature.newBuilder();
@@ -103,255 +85,6 @@ public class TSToTFExampleUtils {
         }
     }
     return feature.build();
-  }
-
-  /**
-   * Converts a Iterable of {@LINK TSAccum} object into a Example proto with the following structure
-   *
-   * <p>Metadata
-   *
-   * <p>{@link ExampleMetadata#METADATA_MAJOR_KEY} Corresponds to the major key provided by the
-   * {@LINK TSKey}
-   *
-   * <p>{@link ExampleMetadata#METADATA_SPAN_END_TS} Maximum timestamp of the span which the Example
-   * covers
-   *
-   * <p>{@link ExampleMetadata#METADATA_SPAN_START_TS} Minimum timestamp of the span which the
-   * Example covers
-   *
-   * <p>Features are added as MinorKey-Metric.
-   *
-   * <p>{ feature { key: "__CONFIG_TIMESTEPS-15" value { int64_list { value: 1 } } } feature { key:
-   * "value-ABS_MOVING_AVERAGE" value { float_list { value: 61.369998931884766 .... .... } } } }
-   *
-   * <p>The special internal key __CONFIG_ is a temporary solution that allows configuration to be
-   * sent to the TFX transform component. This will be replaced with the option that is coming to
-   * the TFX library soon.
-   */
-  public static class FeaturesFromIterableAccumSequence
-      extends PTransform<PCollection<KV<TSKey, Iterable<TSAccumSequence>>>, PCollectionTuple> {
-
-    public TupleTag<Example> names;
-    public TupleTag<Example> examples;
-    public Integer timesteps;
-
-    public FeaturesFromIterableAccumSequence(
-        TupleTag<Example> names, TupleTag<Example> examples, Integer timesteps) {
-      this.names = names;
-      this.examples = examples;
-      this.timesteps = timesteps;
-    }
-
-    public FeaturesFromIterableAccumSequence(
-        @Nullable String name,
-        TupleTag<Example> names,
-        TupleTag<Example> examples,
-        Integer timesteps) {
-      super(name);
-      this.names = names;
-      this.examples = examples;
-      this.timesteps = timesteps;
-    }
-
-    @Override
-    public PCollectionTuple expand(PCollection<KV<TSKey, Iterable<TSAccumSequence>>> input) {
-
-      return input.apply(
-          ParDo.of(new ConvertAllKeyFeaturesToSingleExample(this))
-              .withOutputTags(examples, TupleTagList.of(names)));
-    }
-
-    public static class ConvertAllKeyFeaturesToSingleExample
-        extends DoFn<KV<TSKey, Iterable<TSAccumSequence>>, Example> {
-
-      List<WindowedValue<Example>> featureNames;
-
-      FeaturesFromIterableAccumSequence featuresFromIterableAccumSequence;
-
-      public ConvertAllKeyFeaturesToSingleExample(
-          FeaturesFromIterableAccumSequence featuresFromIterableAccumSequence) {
-        this.featuresFromIterableAccumSequence = featuresFromIterableAccumSequence;
-      }
-
-      @StartBundle
-      public void startBundle() {
-        featureNames = new ArrayList<>();
-      }
-
-      @FinishBundle
-      public void finishBundle(FinishBundleContext c) {
-
-        // TODO The Bounded Window object is odd
-        featureNames.forEach(
-            x ->
-                c.output(
-                    TSToTFExampleUtils.TIME_SERIES_FEATURE_METADATA,
-                    x.getValue(),
-                    x.getTimestamp(),
-                    (BoundedWindow) x.getWindows().toArray()[0]));
-      }
-
-      @ProcessElement
-      public void process(
-          @Element KV<TSKey, Iterable<TSAccumSequence>> accumsSequence,
-          @Timestamp Instant timestamp,
-          BoundedWindow window,
-          ProcessContext pc,
-          MultiOutputReceiver o) {
-
-        try {
-          Example.Builder example = Example.newBuilder();
-
-          // Convert the data into a single TF.Example object
-          example.setFeatures(
-              convertAllKeyFeaturesToSingleExample(
-                  accumsSequence, featuresFromIterableAccumSequence.timesteps));
-
-          // Extract the feature names to output as metadata
-          for (String key : example.getFeatures().getFeatureMap().keySet()) {
-            featureNames.add(
-                WindowedValue.<Example>of(
-                    createMetadataFeature(
-                        key, getTypeFromData(example.getFeatures().getFeatureMap().get(key))),
-                    timestamp,
-                    window,
-                    pc.pane()));
-          }
-
-          o.get(featuresFromIterableAccumSequence.examples).output(example.build());
-
-        } catch (UnsupportedEncodingException e) {
-          LOG.error(e.getMessage());
-        }
-      }
-    }
-
-    /** Returns {@link Features} with order based on sequence time boundaries */
-    public static Features convertAllKeyFeaturesToSingleExample(
-        KV<TSKey, Iterable<TSAccumSequence>> accums, Integer timesteps)
-        throws UnsupportedEncodingException {
-
-      LOG.warn("Any double types will be coerced to Float feature.");
-
-      Builder features = Features.newBuilder();
-
-      Long upperBoundary = null;
-      Long lowerBoundary = null;
-
-      List<String> numericFeatureNames = new ArrayList<>();
-
-      // We have multi array of TSAccumSequence, every Sequence is 'feature' as its a different
-      // minor key Step We need to convert every TSAccumSequence to an array of [Feature[]]
-
-      for (TSAccumSequence accumSequence : accums.getValue()) {
-        String featureName = accumSequence.getKey().getMinorKeyString();
-
-        addNumericFeatures(featureName, features, accumSequence);
-        numericFeatureNames.addAll(storeKey(featureName, features, accumSequence));
-
-        // These values should be the same for all accums , if not there is an error
-        upperBoundary =
-            Optional.ofNullable(upperBoundary)
-                .orElse(Timestamps.toMillis(accumSequence.getUpperWindowBoundary()));
-        lowerBoundary =
-            Optional.ofNullable(lowerBoundary)
-                .orElse(Timestamps.toMillis(accumSequence.getLowerWindowBoundary()));
-      }
-
-      // Add all Metadata
-      features.putFeature(
-          ExampleMetadata.METADATA_MAJOR_KEY.name(),
-          Feature.newBuilder()
-              .setBytesList(
-                  BytesList.newBuilder()
-                      .addValue(ByteString.copyFrom(accums.getKey().getMajorKey(), "UTF-8")))
-              .build());
-
-      // Set these only once...
-      features.putFeature(
-          ExampleMetadata.METADATA_SPAN_START_TS.name(),
-          Feature.newBuilder()
-              .setInt64List(Int64List.newBuilder().addValue(lowerBoundary))
-              .build());
-
-      features.putFeature(
-          ExampleMetadata.METADATA_SPAN_END_TS.name(),
-          Feature.newBuilder()
-              .setInt64List(Int64List.newBuilder().addValue(upperBoundary))
-              .build());
-
-      // This is a workaround as we are not able to use SequenceExample, this workaround will be
-      // removed once SequenceExample is available within TFX.
-      features.putFeature(
-          String.format("__CONFIG_TIMESTEPS-%s", timesteps),
-          Feature.newBuilder().setInt64List(Int64List.newBuilder().addValue(1L)).build());
-
-      return features.build();
-    }
-
-    private static List<String> storeKey(
-        String featureName, Builder features, TSAccumSequence accum) {
-      List<String> numericFeatureNames = new ArrayList<>();
-
-      // TODO this should not happen, get rid of this for better vallidation
-      if (accum.getAccumsList().size() == 0) {
-        return numericFeatureNames;
-      }
-
-      numericFeatureNames.add(String.format("%s-COUNT", featureName));
-
-      // TODO BUG, if list changes midstream this will be wrong
-
-      for (String s : accum.getAccumsList().get(0).getDataStoreMap().keySet()) {
-
-        numericFeatureNames.add(String.format("%s-%s", featureName, s));
-      }
-
-      for (String s : accum.getSequenceDataMap().keySet()) {
-
-        if (!accum
-            .getSequenceDataMap()
-            .get(s)
-            .getDataPointCase()
-            .equals(DataPointCase.CATEGORICAL_VAL)) {
-          numericFeatureNames.add(String.format("%s-%s", featureName, s));
-        }
-      }
-
-      return numericFeatureNames;
-    }
-
-    public static Builder addNumericFeatures(
-        String featurePrefix, Builder features, TSAccumSequence accums) {
-      // TODO when TS moves to be all Map<String,Data> based this will simplify these pieces
-
-      // Each Accum has a custom Map
-      Map<String, List<Data>> customFeatures = new HashMap<>();
-
-      for (TSAccum tsAccum : accums.getAccumsList()) {
-        // Loop through Map
-        for (Entry<String, Data> map : tsAccum.getDataStoreMap().entrySet()) {
-          // Append the values from this Accum into the feature Map
-          customFeatures.putIfAbsent(map.getKey(), new ArrayList<>());
-          customFeatures.get(map.getKey()).add(map.getValue());
-        }
-      }
-
-      for (Entry<String, List<Data>> map : customFeatures.entrySet()) {
-        features.putFeature(
-            String.format("%s-%s", featurePrefix, map.getKey()),
-            tfFeatureFromTSData(map.getValue()));
-      }
-
-      // Add all Span wide features
-      for (String key : accums.getSequenceDataMap().keySet()) {
-        features.putFeature(
-            String.format("%s-%s", featurePrefix, key),
-            tfFeatureFromTSDataPoint(accums.getSequenceDataMap().get(key)));
-      }
-
-      return features;
-    }
   }
 
   public static Feature tfFeatureFromTSData(List<Data> data) {
@@ -449,9 +182,7 @@ public class TSToTFExampleUtils {
           .apply(GroupByKey.create())
           .apply(
               ParDo.of(new CoalesceSpanExamples())
-                  .withOutputTags(
-                      TSToTFExampleUtils.TIME_SERIES_EXAMPLES,
-                      TupleTagList.of(TSToTFExampleUtils.TIME_SERIES_FEATURE_METADATA)));
+                  .withOutputTags(examples, TupleTagList.of(names)));
     }
 
     /**
@@ -540,9 +271,9 @@ public class TSToTFExampleUtils {
           }
 
           featureNameType.forEach(
-              x -> o.get(TSToTFExampleUtils.TIME_SERIES_FEATURE_METADATA).output(x));
+              x -> o.get(FeaturesFromIterableAccumSequence.TIME_SERIES_FEATURE_METADATA).output(x));
 
-          o.get(TSToTFExampleUtils.TIME_SERIES_EXAMPLES)
+          o.get(FeaturesFromIterableAccumSequence.TIME_SERIES_EXAMPLES)
               .output(Example.newBuilder().setFeatures(builder).build());
 
         } catch (UnsupportedEncodingException ex) {
@@ -590,88 +321,31 @@ public class TSToTFExampleUtils {
         .build();
   }
 
-  /**
-   * Convert a set of {@link TSKey#getMinorKeyString() } for a single Major-Key to a Single {@link
-   * Example}
-   */
-  @Experimental
-  public static class ColoaseMajorKeyDataPointsToSingleTFExample
-      extends PTransform<
-          PCollection<KV<TSKey, Iterable<TSAccumSequence>>>, PCollection<KV<TSKey, Example>>> {
+  public static class ExampleToKeyValue extends DoFn<Example, KV<String, Example>> {
 
-    private static final Logger LOG =
-        LoggerFactory.getLogger(ColoaseMajorKeyDataPointsToSingleTFExample.class);
+    @ProcessElement
+    public void processElement(ProcessContext c, @Element Example example) {
 
-    String fileBase;
-    Integer timesteps;
+      // Generate TSKey
 
-    public ColoaseMajorKeyDataPointsToSingleTFExample(String fileBase, Integer timesteps) {
-      this.fileBase = fileBase;
-      this.timesteps = timesteps;
-    }
+      Map<String, Feature> featureMap = example.getFeatures().getFeatureMap();
 
-    public ColoaseMajorKeyDataPointsToSingleTFExample(
-        @Nullable String name, String fileBase, Integer timesteps) {
-      super(name);
-      this.fileBase = fileBase;
-      this.timesteps = timesteps;
-    }
-
-    @Override
-    public PCollection<KV<TSKey, Example>> expand(
-        PCollection<KV<TSKey, Iterable<TSAccumSequence>>> input) {
-
-      PCollectionTuple exampleAndMetadata = input.apply(createFeaturesFromIterableAccum(timesteps));
-
-      //     Send Metadata file to output location
-
-      exampleAndMetadata
-          .get(TIME_SERIES_FEATURE_METADATA)
-          .apply(new CreateTFRecordMetadata(fileBase));
-
-      // Process Example
-      return exampleAndMetadata.get(TIME_SERIES_EXAMPLES).apply(ParDo.of(new ExampleToKeyValue()));
-    }
-
-    public static class ExampleToKeyValue extends DoFn<Example, KV<TSKey, Example>> {
-
-      @ProcessElement
-      public void processElement(ProcessContext c, @Element Example example) {
-
-        try {
-
-          // Generate TSKey
-
-          Map<String, Feature> featureMap = example.getFeatures().getFeatureMap();
-
-          com.google.protobuf.Timestamp startSpan =
-              Timestamps.fromMillis(
-                  featureMap
-                      .get(ExampleMetadata.METADATA_SPAN_START_TS.name())
-                      .getInt64List()
-                      .getValue(0));
-          com.google.protobuf.Timestamp endSpan =
-              Timestamps.fromMillis(
-                  featureMap
-                      .get(ExampleMetadata.METADATA_SPAN_END_TS.name())
-                      .getInt64List()
-                      .getValue(0));
-          String majorKey =
+      com.google.protobuf.Timestamp startSpan =
+          Timestamps.fromMillis(
               featureMap
-                  .get(ExampleMetadata.METADATA_MAJOR_KEY.name())
-                  .getBytesList()
-                  .getValue(0)
-                  .toString("UTF-8");
+                  .get(ExampleMetadata.METADATA_SPAN_START_TS.name())
+                  .getInt64List()
+                  .getValue(0));
+      com.google.protobuf.Timestamp endSpan =
+          Timestamps.fromMillis(
+              featureMap
+                  .get(ExampleMetadata.METADATA_SPAN_END_TS.name())
+                  .getInt64List()
+                  .getValue(0));
 
-          TSKey key = TSKey.newBuilder().setMajorKey(majorKey).build();
+      String key = String.format("%s-%s", startSpan.toString(), endSpan.toString());
 
-          c.output(KV.of(key, example));
-
-        } catch (UnsupportedEncodingException e) {
-
-          LOG.error("Unable to convert string to UTF-8", e);
-        }
-      }
+      c.output(KV.of(key, example));
     }
   }
 }

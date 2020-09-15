@@ -15,8 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.timeseriesflow;
+package com.google.dataflow.sample.timeseriesflow.test;
 
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
@@ -24,7 +26,7 @@ import org.joda.time.Duration;
 import org.joda.time.Instant;
 
 public class TSDataTestUtils {
-  public static final TimeSeriesData.TSKey KEY_A_A =
+  public static final TSKey KEY_A_A =
       TimeSeriesData.TSKey.newBuilder().setMajorKey("Key-A").setMinorKeyString("MKey-a").build();
   public static final TimeSeriesData.TSKey KEY_A_B =
       TimeSeriesData.TSKey.newBuilder().setMajorKey("Key-A").setMinorKeyString("MKey-b").build();

@@ -17,13 +17,14 @@
  */
 package com.google.dataflow.sample.timeseriesflow.transforms;
 
+import static org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.Lists;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
-import com.google.dataflow.sample.timeseriesflow.common.LatestEventTimeDataPoint;
+import com.google.dataflow.sample.timeseriesflow.TimeseriesStreamingOptions;
 import com.google.dataflow.sample.timeseriesflow.common.TSDataUtils;
 import com.google.protobuf.util.Timestamps;
 import java.util.ArrayList;
@@ -31,13 +32,16 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.coders.BigEndianLongCoder;
+import org.apache.beam.sdk.coders.BooleanCoder;
 import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.ListCoder;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
 import org.apache.beam.sdk.state.BagState;
+import org.apache.beam.sdk.state.CombiningState;
 import org.apache.beam.sdk.state.StateSpec;
 import org.apache.beam.sdk.state.StateSpecs;
 import org.apache.beam.sdk.state.TimeDomain;
@@ -45,6 +49,7 @@ import org.apache.beam.sdk.state.TimerMap;
 import org.apache.beam.sdk.state.TimerSpec;
 import org.apache.beam.sdk.state.TimerSpecs;
 import org.apache.beam.sdk.state.ValueState;
+import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -54,6 +59,7 @@ import org.apache.beam.sdk.transforms.windowing.AfterProcessingTime;
 import org.apache.beam.sdk.transforms.windowing.DefaultTrigger;
 import org.apache.beam.sdk.transforms.windowing.FixedWindows;
 import org.apache.beam.sdk.transforms.windowing.GlobalWindows;
+import org.apache.beam.sdk.transforms.windowing.IntervalWindow;
 import org.apache.beam.sdk.transforms.windowing.Repeatedly;
 import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.KV;
@@ -71,12 +77,30 @@ import org.slf4j.LoggerFactory;
  * on options the transform is also able to : - fill any gaps in the data - propagate the previous
  * fixed window value into a generated value for the fixed window.
  *
- * <p>{@link PerfectRectangles#ttlDuration()} is the duration after the last value for a key is seen
- * that the gap filling will be completed for. {@link PerfectRectangles#absoluteStopTime()} if this
- * is set then the gap filling will stop at exactly this time. This is useful for bootstrap
- * pipelines.
+ * <p>{@link PerfectRectangles#getTtlDuration()} ()} is the duration after the last value for a key
+ * is seen that the gap filling will be completed for. {@link
+ * PerfectRectangles#getAbsoluteStopTime()} ()} if this is set then the gap filling will stop at
+ * exactly this time. This is useful for bootstrap pipelines.
  *
- * <p>TODO: Create Side Output to capture late data
+ * <p>In order to do the gap filling we make use of known characteristics of the data coming into
+ * this transform
+ * <li>1- All data is downsampled during type 1 computations using a fixed window. There is no path
+ *     through the library which does not have this applied.
+ * <li>2- All data in the library is based on the TS.proto, which always has a timestamp as part of
+ *     the schema and is a hard requirement.
+ *
+ *     <p>Latest transform
+ * <li>The latest transform provides us with 1 value per fixed window when there is data. This
+ *     reduces the amount of work we will need to do downstream and makes use of a Combiner for nice
+ *     scaling. A modified version of the Latest transform in Beam was used for this purpose.
+ *
+ *     <p>Global Window
+ * <li>>This transform requires timers to be set in the 'next' fixed window, which is not supported
+ *     with the Apache Beam model. Timers can only be set within the current window. So to make this
+ *     possible we must make use of the Global Window. In the Global window order is not guaranteed.
+ *     So data will need to timestamp sorted.
+ *
+ *     <p>TODO: Create Side Output to capture late data
  */
 @Experimental
 @AutoValue
@@ -85,13 +109,13 @@ public abstract class PerfectRectangles
 
   private static final Logger LOG = LoggerFactory.getLogger(PerfectRectangles.class);
 
-  abstract Duration fixedWindow();
+  abstract Duration getFixedWindowDuration();
 
-  abstract @Nullable Duration ttlDuration();
+  abstract Boolean getEnableHoldAndPropogate();
 
-  abstract @Nullable Instant absoluteStopTime();
+  abstract @Nullable Duration getTtlDuration();
 
-  abstract Boolean enableHoldAndPropogate();
+  abstract @Nullable Instant getAbsoluteStopTime();
 
   abstract Builder toBuilder();
 
@@ -101,22 +125,48 @@ public abstract class PerfectRectangles
 
   @AutoValue.Builder
   public abstract static class Builder {
-    public abstract Builder setFixedWindow(Duration value);
+    public abstract Builder setFixedWindowDuration(Duration value);
+
+    public abstract Builder setEnableHoldAndPropogate(Boolean value);
 
     public abstract Builder setTtlDuration(Duration value);
 
     public abstract Builder setAbsoluteStopTime(Instant value);
 
-    public abstract Builder setEnableHoldAndPropogate(Boolean value);
-
     public abstract PerfectRectangles build();
+  }
+
+  public static PerfectRectangles fromPipelineOptions(TimeseriesStreamingOptions options) {
+    checkNotNull(options);
+    checkArgument(
+        !(options.getTTLDurationSecs() == null && options.getAbsoluteStopTimeMSTimestamp() == null),
+        "Must set either TTL or absolute stop time.");
+
+    AutoValue_PerfectRectangles.Builder builder = new AutoValue_PerfectRectangles.Builder();
+
+    if (options.getTTLDurationSecs() != null) {
+
+      builder.setTtlDuration(Duration.standardSeconds(options.getTTLDurationSecs()));
+    }
+
+    if (options.getAbsoluteStopTimeMSTimestamp() != null) {
+      builder.setAbsoluteStopTime(Instant.ofEpochMilli(options.getAbsoluteStopTimeMSTimestamp()));
+    }
+
+    builder.setFixedWindowDuration(
+        Duration.standardSeconds(options.getTypeOneComputationsLengthInSecs()));
+
+    // Option has a default value of false.
+    builder.setEnableHoldAndPropogate(options.getEnableHoldAndPropogate());
+
+    return builder.build();
   }
 
   public static PerfectRectangles withWindowAndTTLDuration(
       Duration windowDuration, Duration ttlDuration) {
     checkNotNull(windowDuration);
     return new AutoValue_PerfectRectangles.Builder()
-        .setFixedWindow(windowDuration)
+        .setFixedWindowDuration(windowDuration)
         .setTtlDuration(ttlDuration)
         .setEnableHoldAndPropogate(false)
         .build();
@@ -126,7 +176,7 @@ public abstract class PerfectRectangles
       Duration windowDuration, Instant absoluteStop) {
     checkNotNull(windowDuration);
     return new AutoValue_PerfectRectangles.Builder()
-        .setFixedWindow(windowDuration)
+        .setFixedWindowDuration(windowDuration)
         .setAbsoluteStopTime(absoluteStop)
         .setEnableHoldAndPropogate(false)
         .build();
@@ -142,13 +192,14 @@ public abstract class PerfectRectangles
     // Apply fixed window domain and combine to get the last known value in Event time.
 
     PCollection<KV<TSKey, TSDataPoint>> windowedInput =
-        input.apply(Window.into(FixedWindows.of(fixedWindow())));
+        input.apply(Window.into(FixedWindows.of(getFixedWindowDuration())));
 
     PCollection<KV<TSKey, TSDataPoint>> lastValueInWindow =
         windowedInput.apply(LatestEventTimeDataPoint.perKey());
 
     // Move into Global Time Domain, this allows Keyed State to retain its value across windows.
-    // Late Data is dropped at this stage.
+    // Late Data is dropped at this stage. Before we apply the Global Window we need to retain the
+    // IntervalWindow information for the element. This is done using Reify.
 
     PCollection<KV<TSKey, ValueInSingleWindow<TSDataPoint>>> globalWindow =
         lastValueInWindow
@@ -166,7 +217,7 @@ public abstract class PerfectRectangles
         globalWindow
             .apply(ParDo.of(FillGaps.create(this)))
             .apply(
-                Window.<KV<TSKey, TSDataPoint>>into(FixedWindows.of(fixedWindow()))
+                Window.<KV<TSKey, TSDataPoint>>into(FixedWindows.of(getFixedWindowDuration()))
                     .triggering(DefaultTrigger.of()));
 
     // Add back the filled gap items with the main flows
@@ -178,27 +229,36 @@ public abstract class PerfectRectangles
   }
 
   /**
-   * This class expects a single data point per key per window from the processing before the Global
-   * Window.
+   * Once we see a key for the first time, we need to do some setup activity in ProcessElement().
    *
-   * <p>New Data
+   * <p>Start Looping Timers
+   * <li>The timer needs to be set in the next intervalWindow that the trailingWM belongs to. This
+   *     data is not available to us in the GlobalWindow, however we can have access to this data
+   *     before we apply the GlobalWindow by using: Reify.windowsInValue() The first looping timer
+   *     to fire must be the fixed window after the minimum(BoundedWindow) seen. Timers do not
+   *     support an inbuilt setLowest() value, so we need to create a State to keep track of this
+   *     minimum. We use a State variable called trailingWWM to hold this value for us. When a new
+   *     element comes in we compare its value to the trailingWWM and if lower we replace the
+   *     trailingWWM value and set the timer. The OnProcess setting of timers should only be at the
+   *     first timers in the sequence for the looping timer. It should not override the timer value
+   *     which is being set within the OnTimer event. Therefore we will make use of Boolean State
+   *     isTimerEnabled
    *
-   * <p>--------
-   *
-   * <p>New data is added to a bag state. When a value is seen for first time, this will initiate a
-   * event time looping timer for that key. This will cause a Event timer to fire at the lower
-   * boundary of every fixed window, even though we are in a Global Window. The Processing time
-   * trigger will allow elements to be sent out of the window On the timer firing the Bag state is
-   * checked for an event within the current_event_time - Duration value. If there are no values
-   * then a new TSDataPoint is created and sent out. If there is a value, nothing is done other than
-   * GC.
-   *
-   * <p>GC
-   *
-   * <p>----
-   *
-   * <p>The current GC is a naive implementation which is known to be in-efficient. TODO use Start
-   * Bundle / Finish Bindle to make this more efficent.
+   *     <p>OnTimer()
+   * <li>This is the class that does all the actual work.
+   * <li>High level: Move the values in the unsorted ElementBag into a list.This requires memory
+   *     space == the number of windows 'active' In stream mode this will be small and stream mode
+   *     does not store everything in memory . In batch mode this can be as big as (Max(timestamp of
+   *     all keys) - Min(timestamp of all keys) / FixedWindow size. For example if we have 6 months
+   *     of data and we we have fixed windows of 1 sec (6*30*86400) ~ 16M objects per key.
+   * <li>Sort the list based on the timestamp value of the objects. Determine if there is a data
+   *     point in this 'window'. Window is defined as current onTimer timestamp + Duration of the
+   *     fixed window. If there is a data point, reset the timer to fire in the next interval
+   *     window. Save the current TSDataPoint into State in case we need it for data propagation.
+   *     Carry out GC by remove the last known value from the Sorted list Store the sorted list into
+   *     a ValueState object, which we can reuse on the next timer firing. If there is no data in
+   *     this window, generate a GapFill object. Use the last known value or null dependent on the
+   *     config the user provided.
    */
   @Experimental
   @AutoValue
@@ -219,7 +279,8 @@ public abstract class PerfectRectangles
 
     static FillGaps create(PerfectRectangles perfectRectangles) {
 
-      if (perfectRectangles.absoluteStopTime() == null && perfectRectangles.ttlDuration() == null) {
+      if (perfectRectangles.getAbsoluteStopTime() == null
+          && perfectRectangles.getTtlDuration() == null) {
         throw new IllegalArgumentException(" Must set one of Absolute Stop Time or TTL Duration");
       }
       return new AutoValue_PerfectRectangles_FillGaps.Builder()
@@ -227,14 +288,38 @@ public abstract class PerfectRectangles
           .build();
     }
 
-    // Setup our state objects
+    // Place holder for items that will be processed in the OnProcess calls.
+    @StateId("newElementsBag")
+    private final StateSpec<BagState<KV<TSKey, TSDataPoint>>> newElementsBag =
+        StateSpecs.bag(KvCoder.of(ProtoCoder.of(TSKey.class), ProtoCoder.of(TSDataPoint.class)));
 
-    @StateId("lastKnownValue")
-    private final StateSpec<ValueState<KV<TSKey, TSDataPoint>>> lastKnownValue =
+    // trailingVM is the minimum timer seen. This value can only be moved forward in OnTimer().
+    @StateId("trailingWWM")
+    private final StateSpec<CombiningState<Long, long[], Long>> trailingWM =
+        StateSpecs.combining(
+            new Combine.BinaryCombineLongFn() {
+              @Override
+              public long apply(long left, long right) {
+                // If current value is 0 then always use the first non null value.
+                if (left == 0) {
+                  return right;
+                }
+                int x = Long.compare(left, right);
+                return (x < 0) ? left : right;
+              }
+
+              @Override
+              public long identity() {
+                return 0;
+              }
+            });
+
+    @StateId("lastStoredValue")
+    private final StateSpec<ValueState<KV<TSKey, TSDataPoint>>> lastStoredValue =
         StateSpecs.value(KvCoder.of(ProtoCoder.of(TSKey.class), ProtoCoder.of(TSDataPoint.class)));
 
-    @StateId("lastTimestampUpperBoundary")
-    private final StateSpec<ValueState<Long>> lastTimestampUpperBoundary =
+    @StateId("gapStartingTimestamp")
+    private final StateSpec<ValueState<Long>> gapStartingTimestamp =
         StateSpecs.value(BigEndianLongCoder.of());
 
     @StateId("sortedValueList")
@@ -242,220 +327,256 @@ public abstract class PerfectRectangles
         StateSpecs.value(
             ListCoder.of(KvCoder.of(ProtoCoder.of(TSKey.class), ProtoCoder.of(TSDataPoint.class))));
 
-    @StateId("currentTimerValue")
-    private final StateSpec<ValueState<Long>> currentTimerValue =
-        StateSpecs.value(BigEndianLongCoder.of());
-
-    @StateId("newElementsBag")
-    private final StateSpec<BagState<KV<TSKey, TSDataPoint>>> newElementsBag =
-        StateSpecs.bag(KvCoder.of(ProtoCoder.of(TSKey.class), ProtoCoder.of(TSDataPoint.class)));
+    @StateId("isTimerActive")
+    private final StateSpec<ValueState<Boolean>> isTimerActive =
+        StateSpecs.value(BooleanCoder.of());
 
     @TimerFamily("actionTimers")
     private final TimerSpec timer = TimerSpecs.timerMap(TimeDomain.EVENT_TIME);
 
-    /**
-     * This is the simple path... A new element is here so we add it to the list of elements and set
-     * a timer. Timers are expected to be set for every interval window defined by the fixed window
-     * duration. As this DoFn is normally within a Global window we use the information in {@link
-     * ValueInSingleWindow}.
-     *
-     * <p>As order is not guaranteed in a global window, we will need to ensure that we do not rest
-     * the timer if the elements timestamp is > the current timer.
-     */
+    /** */
     @ProcessElement
     public void processElement(
         ProcessContext c,
         @StateId("newElementsBag") BagState<KV<TSKey, TSDataPoint>> newElementsBag,
-        @StateId("lastTimestampUpperBoundary") ValueState<Long> lastTimestampUpperBoundary,
-        @StateId("currentTimerValue") ValueState<Long> currentTimerValue,
+        @StateId("trailingWWM") CombiningState<Long, long[], Long> trailingWWM,
+        @StateId("isTimerActive") ValueState<Boolean> isTimerActive,
         @TimerFamily("actionTimers") TimerMap timers) {
 
-      lastTimestampUpperBoundary.readLater();
-      currentTimerValue.readLater();
-
-      // Add the new TSDataPoint to list of things to be processed on next timer to fire
+      // Add the new TSDataPoint to our holding queue
       newElementsBag.add(KV.of(c.element().getKey(), c.element().getValue().getValue()));
 
-      // Set the timer if it has not already been set
-      // The timer needs to fire in the lowest upper window boundary for elements in the Bag
-      Instant upperWindowBoundary = c.element().getValue().getWindow().maxTimestamp();
-      Long currentAlarm =
-          Optional.ofNullable(currentTimerValue.read()).orElse(upperWindowBoundary.getMillis());
+      // Update our trailingWWM, this value can never be NULL.
+      trailingWWM.add(c.element().getValue().getWindow().maxTimestamp().getMillis());
 
-      if (currentAlarm >= upperWindowBoundary.getMillis()) {
-        timers.set("tick", upperWindowBoundary);
-        currentTimerValue.write(upperWindowBoundary.getMillis());
-      }
-
-      // Set the value for the highest observed upper boundary timestamp , this will be used to
-      // check the TTL on the timer
-      Long obeservedTimestamp = c.element().getValue().getWindow().maxTimestamp().getMillis();
-
-      if (Optional.ofNullable(lastTimestampUpperBoundary.read()).orElse(0L) < obeservedTimestamp) {
-        lastTimestampUpperBoundary.write(obeservedTimestamp);
+      // If the timer is enabled we differ to OnTimer processing for its setting.
+      if (!Optional.ofNullable(isTimerActive.read()).orElse(false)) {
+        // Set the timer to fire at the end of the trailingWM window, this allows the system to init
+        // with a real value.
+        timers.set("tick", Instant.ofEpochMilli(trailingWWM.read()));
       }
     }
 
-    /**
-     * This one is a little more complex...
-     *
-     * <p>There are two activities that happen in the OnTimer event
-     *
-     * <p>- Processing All current TSAccums in the BagState are read, ordered and added to the
-     * processedTimeseriesList. The first item in the list is added to the the lastKnownValue. As
-     * long as we have not exceeded the TTL for heartbeats we will set a timer one
-     * downsample.duration away from timer.timestamp()
-     *
-     * <p>- Output We check to see if a processed TSAccum with
-     * lowerWindowBoundary==timer.timestamp() exists. If it does exist we will set the previous
-     * value to be lastKnownValue and then emit the TSAccum. The lastKnownValue is set to the
-     * current value. If no TSAccum exists then we will emit a heartbeat value.
-     */
+    /** */
     @OnTimerFamily("actionTimers")
     public void onTimer(
         OnTimerContext c,
         @StateId("newElementsBag") BagState<KV<TSKey, TSDataPoint>> newElementsBag,
-        @StateId("currentTimerValue") ValueState<Long> currentTimerValue,
-        @StateId("sortedValueList") ValueState<List<KV<TSKey, TSDataPoint>>> sortedList,
-        @StateId("lastTimestampUpperBoundary") ValueState<Long> lastTimestampUpperBoundary,
-        @TimerFamily("actionTimers") TimerMap timer,
-        @StateId("lastKnownValue") ValueState<KV<TSKey, TSDataPoint>> lastKnownValue) {
+        @StateId("sortedValueList") ValueState<List<KV<TSKey, TSDataPoint>>> sortedValueList,
+        @StateId("lastStoredValue") ValueState<KV<TSKey, TSDataPoint>> lastStoredValue,
+        @StateId("isTimerActive") ValueState<Boolean> isTimerActive,
+        @StateId("gapStartingTimestamp") ValueState<Long> gapStartingTimestamp,
+        @StateId("trailingWWM") CombiningState<Long, long[], Long> trailingWWM,
+        @TimerFamily("actionTimers") TimerMap timer) {
 
-      // Check if we have more than one value in our list.
-      // There are two important considerations why this memory loading should not ordinarily be a
-      // factor for the library
-      // 1- We only use the Latest values within a window.
-      // 2- The norm is for the library to be running in stream mode.
-      // This does however mean in batch mode this value will have size == bytesPerElement * Total
-      // windows
-      List<KV<TSKey, TSDataPoint>> newElements =
-          Optional.ofNullable(sortedList.read()).orElse(new ArrayList<>());
+      // Move elements in the sortedElements queue to a List and sort.
 
-      newElements.addAll(Lists.newArrayList(newElementsBag.read()));
+      List<KV<TSKey, TSDataPoint>> sortedElements =
+          loadAndSortElements(newElementsBag, sortedValueList);
+
+      // Determine what our current interval window is
+      IntervalWindow currentWindowBoundary =
+          new IntervalWindow(
+              c.timestamp().minus(perfectRectangles().getFixedWindowDuration()),
+              perfectRectangles().getFixedWindowDuration());
+
+      // Check if there is a value within the current window
+      KV<TSKey, TSDataPoint> lastValueInCurrentWindow =
+          checkIfValueInBoundary(sortedElements, currentWindowBoundary);
+
+      // If there is no Gap then we set the timer to fire in the next window. And ensure the
+      // LastValue is updated.
+
+      if (lastValueInCurrentWindow != null) {
+        // Store the current value into State
+        lastStoredValue.write(lastValueInCurrentWindow);
+        // Set a timer in the next window
+        timer.set(
+            "tick", currentWindowBoundary.end().plus(perfectRectangles().getFixedWindowDuration()));
+        isTimerActive.write(true);
+        // Clear any previous gap timestamps
+        gapStartingTimestamp.clear();
+        // Garbage collection
+        garbageCollect(sortedElements, currentWindowBoundary.end().getMillis());
+      }
+
+      // If there is a gap then we will gap fill, using the last known value
+
+      if (lastValueInCurrentWindow == null) {
+
+        // Load the last known value, this value can be NULL if this is the init state
+        KV<TSKey, TSDataPoint> lastValue = lastStoredValue.read();
+
+        if (lastValue == null) {
+          // This is a state check, we should never have a situation where lastValue == null and the
+          // first value in the sorted lists timestamp is > then current window.
+          if (Timestamps.toMillis(sortedElements.get(0).getValue().getTimestamp())
+              > currentWindowBoundary.end().getMillis()) {
+            throw new IllegalStateException(
+                String.format(
+                    "There is no known last value and the current list first value %s timestamp is > the timer window %s.",
+                    Timestamps.toString(sortedElements.get(0).getValue().getTimestamp()),
+                    currentWindowBoundary.end()));
+          }
+          lastValue = sortedElements.get(0);
+        }
+
+        // Store the last known value in state
+        lastStoredValue.write(lastValue);
+
+        // Before we output we need to check if we are within TTL
+
+        boolean withinTTL = checkWithinTT(c, gapStartingTimestamp);
+
+        if (withinTTL) {
+
+          // Output a GapFill TSDataPoint
+          outputGapFill(lastValue, c);
+
+          // GC the old TSDataPoint
+          garbageCollect(sortedElements, currentWindowBoundary.end().getMillis());
+
+          // If this is the first window in which a gap happens set the gap starting timestamp
+          if (gapStartingTimestamp.read() == null) {
+            gapStartingTimestamp.write(currentWindowBoundary.end().getMillis());
+          }
+
+          // Set timer to fire again as we are within TTL Absolute end time
+          Instant nextAlarm =
+              new Instant(c.timestamp()).plus(perfectRectangles().getFixedWindowDuration());
+          timer.set("tick", nextAlarm);
+          isTimerActive.write(true);
+        } else {
+          // We stop the looping timer & clear all state and end the OnTimer()
+          isTimerActive.clear();
+          sortedValueList.clear();
+          lastStoredValue.clear();
+          gapStartingTimestamp.clear();
+          trailingWWM.clear();
+
+          return;
+        }
+      }
+
+      // Store the sorted list for next window
+      sortedValueList.write(sortedElements);
+    }
+
+    private List<KV<TSKey, TSDataPoint>> loadAndSortElements(
+        BagState<KV<TSKey, TSDataPoint>> newElementsBag,
+        ValueState<List<KV<TSKey, TSDataPoint>>> sortedValueList) {
+
+      List<KV<TSKey, TSDataPoint>> sortedElements =
+          Optional.ofNullable(sortedValueList.read()).orElse(new ArrayList<>());
+
+      sortedElements.addAll(Lists.newArrayList(newElementsBag.read()));
 
       // Clear the elements now that they have been added to memory.
       newElementsBag.clear();
 
       // Sort the values
-      newElements.sort(Comparator.comparing(x -> Timestamps.toMillis(x.getValue().getTimestamp())));
+      sortedElements.sort(
+          Comparator.comparing(x -> Timestamps.toMillis(x.getValue().getTimestamp())));
 
-      // Check if there are any values within the current timers search range
+      return sortedElements;
+    }
 
-      // Alarms are set to fire at the end of a boundary window, so the duration is our range
-      Long lowerBoundarySearchWindow =
-          c.timestamp().minus(perfectRectangles().fixedWindow()).getMillis();
+    /** Return true if we find a value within the IntervalWindow provided */
+    private KV<TSKey, TSDataPoint> checkIfValueInBoundary(
+        List<KV<TSKey, TSDataPoint>> sortedElements, IntervalWindow currentWindowBoundary) {
 
-      Long upperBoundarySearchWindow = c.timestamp().getMillis();
+      // If the list is empty return false;
+      if (sortedElements.isEmpty()) {
+        return null;
+      }
 
-      KV<TSKey, TSDataPoint> lastDatePointSeenInEventTime = null;
-      boolean valueWithinSearchWindow = false;
+      long start = currentWindowBoundary.start().getMillis();
+      long end = currentWindowBoundary.end().getMillis();
 
-      List<KV<TSKey, TSDataPoint>> keepList = new ArrayList<>();
+      // Get an iterator to loop through our sorted list
+      Iterator<KV<TSKey, TSDataPoint>> it = sortedElements.iterator();
 
-      lastDatePointSeenInEventTime = lastKnownValue.read();
-
-      Iterator<KV<TSKey, TSDataPoint>> iterator = newElements.iterator();
-
-      while (iterator.hasNext()) {
-        KV<TSKey, TSDataPoint> data = iterator.next();
-
-        int compareToLowerWindow =
-            Long.compare(
-                Timestamps.toMillis(data.getValue().getTimestamp()), lowerBoundarySearchWindow);
-
-        LOG.debug("Lower Window " + Instant.ofEpochMilli(lowerBoundarySearchWindow));
-
-        int compareToUpperWindow =
-            Long.compare(
-                Timestamps.toMillis(data.getValue().getTimestamp()), upperBoundarySearchWindow);
-
-        LOG.debug("Upper Window " + Instant.ofEpochMilli(upperBoundarySearchWindow));
-
-        // If the value is larger than search lower boundary of window, add the value back for
-        // later.
-        if (compareToUpperWindow >= 0) {
-          LOG.debug("Got one bigger! " + Timestamps.toString(data.getValue().getTimestamp()));
-          keepList.add(data);
-          break;
+      while (it.hasNext()) {
+        KV<TSKey, TSDataPoint> next = it.next();
+        long timestamp = Timestamps.toMillis(next.getValue().getTimestamp());
+        // If the timestamp is > then our window then we can stop
+        if (timestamp > end) {
+          return null;
         }
-
-        if (compareToLowerWindow >= 0) {
-          LOG.debug(
-              "Yup there is a value in the window ! "
-                  + Timestamps.toString(data.getValue().getTimestamp()));
-
-          // Set current to last value seen
-          lastDatePointSeenInEventTime = data;
-          valueWithinSearchWindow = true;
-          break;
+        // If value is bigger than start then its a valid value for this window.
+        if (timestamp >= start) {
+          return next;
         }
       }
+      return null;
+    }
 
-      iterator.forEachRemaining(keepList::add);
+    private boolean checkWithinTT(OnTimerContext c, ValueState<Long> gapStartingTimestamp) {
 
-      lastKnownValue.write(lastDatePointSeenInEventTime);
+      // Either absolute time or ttl duration are always set
 
-      // If there was no match, then we will create a new tick of the correct type.
-
-      if (!valueWithinSearchWindow) {
-
-        LOG.debug("Yup making one up now..");
-
-        if (perfectRectangles().enableHoldAndPropogate()) {
-          c.output(
-              KV.of(
-                  lastDatePointSeenInEventTime.getKey(),
-                  lastDatePointSeenInEventTime
-                      .getValue()
-                      .toBuilder()
-                      .setIsAGapFillMessage(true)
-                      .setTimestamp(Timestamps.fromMillis(c.timestamp().getMillis()))
-                      .build()));
-
-        } else {
-
-          c.output(
-              KV.of(
-                  lastDatePointSeenInEventTime.getKey(),
-                  lastDatePointSeenInEventTime
-                      .getValue()
-                      .toBuilder()
-                      .setIsAGapFillMessage(true)
-                      .setData(
-                          TSDataUtils.getZeroValueForType(
-                              lastDatePointSeenInEventTime.getValue().getData()))
-                      .setTimestamp(Timestamps.fromMillis(c.timestamp().getMillis()))
-                      .build()));
-        }
+      if (perfectRectangles().getAbsoluteStopTime() != null) {
+        return c.timestamp().isBefore(perfectRectangles().getAbsoluteStopTime());
       }
 
-      sortedList.write(keepList);
+      // If this is the first time a gap value has been created, check if TTL is > 0
 
-      boolean setNewTimer = false;
+      Long gapStart = gapStartingTimestamp.read();
 
-      // Either absolute time or ttl duration must be set
-
-      if (perfectRectangles().absoluteStopTime() != null) {
-        setNewTimer = c.timestamp().isBefore(perfectRectangles().absoluteStopTime());
+      if (gapStart == null) {
+        return perfectRectangles().getTtlDuration().getMillis() > 0;
       }
 
-      // Check if this timer has already passed the time to live duration since the last call.
-      if (perfectRectangles().ttlDuration() != null) {
+      return c.timestamp()
+          .isBefore(new Instant(gapStart).plus(perfectRectangles().getTtlDuration()));
+    }
 
-        Instant ttlEnd =
-            new Instant(lastTimestampUpperBoundary.read()).plus(perfectRectangles().ttlDuration());
-        setNewTimer = c.timestamp().isBefore(ttlEnd);
-      }
+    private void outputGapFill(KV<TSKey, TSDataPoint> lastValue, OnTimerContext c) {
 
-      if (setNewTimer) {
-        Instant nextAlarm =
-            new Instant(currentTimerValue.read()).plus(perfectRectangles().fixedWindow());
-        LOG.debug("Setting a new timer at " + nextAlarm);
-        timer.set("tick", nextAlarm);
-        currentTimerValue.write(nextAlarm.getMillis());
+      // Check if we have a last known value, if its Null, then the first value from our sorted list
+      // is the value.
+
+      if (perfectRectangles().getEnableHoldAndPropogate()) {
+        c.output(
+            KV.of(
+                lastValue.getKey(),
+                lastValue
+                    .getValue()
+                    .toBuilder()
+                    .setIsAGapFillMessage(true)
+                    .setTimestamp(Timestamps.fromMillis(c.timestamp().getMillis()))
+                    .build()));
+
       } else {
-        currentTimerValue.clear();
+
+        c.output(
+            KV.of(
+                lastValue.getKey(),
+                lastValue
+                    .getValue()
+                    .toBuilder()
+                    .setIsAGapFillMessage(true)
+                    .setData(TSDataUtils.getZeroValueForType(lastValue.getValue().getData()))
+                    .setTimestamp(Timestamps.fromMillis(c.timestamp().getMillis()))
+                    .build()));
       }
+    }
+
+    private void garbageCollect(List<KV<TSKey, TSDataPoint>> sortedList, long windowEnd) {
+
+      // Remove all entries up to and including the current window
+      Iterator<KV<TSKey, TSDataPoint>> it = sortedList.iterator();
+      int i = 0;
+      while (it.hasNext()) {
+        KV<TSKey, TSDataPoint> next = it.next();
+        if (Timestamps.toMillis(next.getValue().getTimestamp()) > windowEnd) {
+          break;
+        }
+        i++;
+      }
+
+      // GC the list
+      IntStream.range(0, i).forEach(sortedList::remove);
     }
   }
 }

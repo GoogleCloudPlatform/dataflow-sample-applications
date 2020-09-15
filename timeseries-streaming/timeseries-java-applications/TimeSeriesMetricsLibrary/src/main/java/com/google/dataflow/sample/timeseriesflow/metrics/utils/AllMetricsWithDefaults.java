@@ -17,12 +17,20 @@
  */
 package com.google.dataflow.sample.timeseriesflow.metrics.utils;
 
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSNumericCombiner;
 import com.google.dataflow.sample.timeseriesflow.metrics.MA;
 import com.google.dataflow.sample.timeseriesflow.metrics.MA.AverageComputationMethod;
 import com.google.dataflow.sample.timeseriesflow.metrics.RSI;
-import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
+import java.util.List;
 import org.apache.beam.sdk.annotations.Experimental;
+import org.apache.beam.sdk.transforms.Combine.CombineFn;
+import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 
 /**
@@ -33,27 +41,27 @@ import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.Immutabl
  * <p>Type 2 {@link RSI},{@link MA}
  */
 @Experimental
-public class AllMetricsGeneratorWithDefaults {
+public class AllMetricsWithDefaults {
 
-  /** @return {@link GenerateComputations.Builder} */
-  public static GenerateComputations.Builder getGenerateComputationsWithAllKnownMetrics() {
+  public static List<CombineFn<TSDataPoint, TSAccum, TSAccum>> getAllType1Combiners() {
+    return ImmutableList.of(new TSNumericCombiner());
+  }
 
-    return GenerateComputations.builder()
-        .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
-        .setType2NumericComputations(
-            ImmutableList.of(
-                RSI.toBuilder()
-                    .setAverageComputationMethod(RSI.AverageComputationMethod.ALL)
-                    .build()
-                    .create(),
-                MA.toBuilder()
-                    .setAverageComputationMethod(AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
-                    .build()
-                    .create(),
-                MA.toBuilder()
-                    .setAverageComputationMethod(
-                        AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE)
-                    .build()
-                    .create()));
+  public static ImmutableList<
+          PTransform<PCollection<KV<TSKey, TSAccumSequence>>, PCollection<KV<TSKey, TSAccum>>>>
+      getAllType2Computations() {
+    return ImmutableList.of(
+        RSI.toBuilder()
+            .setAverageComputationMethod(RSI.AverageComputationMethod.ALL)
+            .build()
+            .create(),
+        MA.toBuilder()
+            .setAverageComputationMethod(AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
+            .build()
+            .create(),
+        MA.toBuilder()
+            .setAverageComputationMethod(AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE)
+            .build()
+            .create());
   }
 }

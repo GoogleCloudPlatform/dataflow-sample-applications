@@ -15,13 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.timeseriesflow;
+package com.google.dataflow.sample.timeseriesflow.test;
 
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
-import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
-import com.google.dataflow.sample.timeseriesflow.transforms.TSDataPointToRow;
-import com.google.protobuf.Timestamp;
+import com.google.dataflow.sample.timeseriesflow.transforms.TSAccumSequenceToRow;
 import com.google.protobuf.util.Timestamps;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.extensions.protobuf.ProtoMessageSchema;
@@ -36,29 +35,30 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class TSDataPointToRowTest {
+public class TSAccumSequenceToRowTest {
 
   @Test
   public void testToRow() {
 
     Instant instant = Instant.parse("2000-01-01T00:00:00");
-    Timestamp timeA = Timestamps.fromMillis(instant.getMillis());
 
     Pipeline p = Pipeline.create(PipelineOptionsFactory.create());
     TSKey key = TSKey.newBuilder().setMajorKey("Major").setMajorKey("Minor").build();
-    TSDataPoint a =
-        TSDataPoint.newBuilder()
+    Data data = Data.newBuilder().setCategoricalVal("a").build();
+    TSAccumSequence a =
+        TSAccumSequence.newBuilder()
             .setKey(key)
-            .setTimestamp(timeA)
-            .setData(Data.newBuilder().setIntVal(1))
+            .setLowerWindowBoundary(Timestamps.fromMillis(instant.getMillis()))
+            .setUpperWindowBoundary(Timestamps.fromMillis(instant.getMillis()))
+            .putSequenceData("a", data)
             .build();
 
-    p.getSchemaRegistry().registerSchemaProvider(TSDataPoint.class, new ProtoMessageSchema());
+    p.getSchemaRegistry().registerSchemaProvider(TSAccumSequence.class, new ProtoMessageSchema());
 
-    PCollection<TSDataPoint> row =
+    PCollection<TSAccumSequence> row =
         p.apply(Create.of(a))
-            .apply(new TSDataPointToRow())
-            .apply(Convert.fromRows(TSDataPoint.class));
+            .apply(new TSAccumSequenceToRow())
+            .apply(Convert.fromRows(TSAccumSequence.class));
 
     PAssert.that(row).containsInAnyOrder(a);
 
