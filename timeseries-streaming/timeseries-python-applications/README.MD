@@ -51,12 +51,8 @@ The data is always repeating, which is a useful property for us to explore the d
 There are two versions which can be run;
 
 [batch_inference](MLPipelineExamples/test_pipelines/batch_inference.py)
-* Step 1 - Uncompress the pre-built model
-```
-tar -xvzf MLPipelineExamples/test_pipelines/saved_model_example/serving_model_dir.tarz
-```
-* Step 2 - Follow the quick start on the Java README to run [SimpleDataStreamGenerator.java](../timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java) with example_2.
-* Step 3 - Run the command with the virtual-env activated, providing values for the location of the ```--saved_model_location``` using the uncompressed provided model, and the location of the generated data from previous step with ```--tfrecord_folder```.
+* Step 1 - Follow the quick start on the Java README to run [SimpleDataStreamGenerator.java](../timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java) with example_2.
+* Step 2 - Run the command with the virtual-env activated, providing values for the location of the ```--saved_model_location``` using the uncompressed provided model, and the location of the generated data from previous step with ```--tfrecord_folder```.
 ```
 python MLPipelineExamples/test_pipelines/batch_inference.py --saved_model_location=serving_model_dir/ --tfrecord_folder=/<your-directory>/simple-data/data/timeseries*
 ```
