@@ -46,7 +46,7 @@ public class GenerateTFExampleFromTSSequenceTest {
   @Rule public final transient TestPipeline p = TestPipeline.create();
 
   @Test
-  /* Simple test to check values are processed from TSAccum -> TSAccumeSequence Correctly */
+  /* Simple test to check values are processed from TSAccumSequence -> TF.Example Correctly */
   public void testCreateTSExampleFromTSAccumSequence() {
 
     TSAccum first =
@@ -107,7 +107,11 @@ public class GenerateTFExampleFromTSSequenceTest {
                 .setFeatures(
                     Features.newBuilder()
                         .putFeature(
-                            TSDataTestUtils.KEY_A_A.getMinorKeyString() + "-feature_a",
+                            String.join(
+                                "-",
+                                TSDataTestUtils.KEY_A_A.getMajorKey(),
+                                TSDataTestUtils.KEY_A_A.getMinorKeyString(),
+                                "feature_a"),
                             Feature.newBuilder()
                                 .setFloatList(
                                     FloatList.newBuilder()

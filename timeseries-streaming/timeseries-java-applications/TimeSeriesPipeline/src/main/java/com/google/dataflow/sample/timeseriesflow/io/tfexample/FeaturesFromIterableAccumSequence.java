@@ -180,7 +180,12 @@ public class FeaturesFromIterableAccumSequence
     // minor key Step We need to convert every TSAccumSequence to an array of [Feature[]]
 
     for (TSAccumSequence accumSequence : accums) {
-      String featureName = accumSequence.getKey().getMinorKeyString();
+
+      // The feature name is a combined key of MajorKey-MinorKey-Metric
+      // For example iotdevice001-batterylevel-MIN
+      String timeseriesName = accumSequence.getKey().getMajorKey();
+      String featureName =
+          String.join("-", timeseriesName, accumSequence.getKey().getMinorKeyString());
 
       addNumericFeatures(featureName, features, accumSequence);
       numericFeatureNames.addAll(storeKey(featureName, features, accumSequence));

@@ -99,12 +99,12 @@ public class TSAccumIterableToTFExampleTest {
                 .setFeatures(
                     Features.newBuilder()
                         .putFeature(
-                            "MKey-a-MAX",
+                            "Key-A-MKey-a-MAX",
                             Feature.newBuilder()
                                 .setFloatList(FloatList.newBuilder().addValue(1F).addValue(2F))
                                 .build())
                         .putFeature(
-                            "MKey-a-FIRST_TIMESTAMP",
+                            "Key-A-MKey-a-FIRST_TIMESTAMP",
                             Feature.newBuilder()
                                 .setInt64List(
                                     Int64List.newBuilder()
@@ -112,7 +112,7 @@ public class TSAccumIterableToTFExampleTest {
                                         .addValue(TSDataTestUtils.PLUS_FIVE_SECS))
                                 .build())
                         .putFeature(
-                            "MKey-a-LAST_TIMESTAMP",
+                            "Key-A-MKey-a-LAST_TIMESTAMP",
                             Feature.newBuilder()
                                 .setInt64List(
                                     Int64List.newBuilder()
@@ -173,12 +173,12 @@ public class TSAccumIterableToTFExampleTest {
                 .setFeatures(
                     Features.newBuilder()
                         .putFeature(
-                            "MKey-a-MAX",
+                            "Key-A-MKey-a-MAX",
                             Feature.newBuilder()
                                 .setFloatList(FloatList.newBuilder().addValue(1F).addValue(2F))
                                 .build())
                         .putFeature(
-                            "MKey-a-FIRST_TIMESTAMP",
+                            "Key-A-MKey-a-FIRST_TIMESTAMP",
                             Feature.newBuilder()
                                 .setInt64List(
                                     Int64List.newBuilder()
@@ -186,7 +186,115 @@ public class TSAccumIterableToTFExampleTest {
                                         .addValue(TSDataTestUtils.PLUS_FIVE_SECS))
                                 .build())
                         .putFeature(
-                            "MKey-a-LAST_TIMESTAMP",
+                            "Key-A-MKey-a-LAST_TIMESTAMP",
+                            Feature.newBuilder()
+                                .setInt64List(
+                                    Int64List.newBuilder()
+                                        .addValue(TSDataTestUtils.PLUS_FIVE_SECS)
+                                        .addValue(TSDataTestUtils.PLUS_TEN_SECS))
+                                .build())
+                        .putFeature(
+                            "METADATA_SPAN_START_TS",
+                            Feature.newBuilder()
+                                .setInt64List(
+                                    Int64List.newBuilder().addValue(TSDataTestUtils.START))
+                                .build())
+                        .putFeature(
+                            "METADATA_SPAN_END_TS",
+                            Feature.newBuilder()
+                                .setInt64List(
+                                    Int64List.newBuilder()
+                                        .addValue(
+                                            Timestamps.toMillis(
+                                                Timestamps.add(
+                                                    Timestamps.fromMillis(TSDataTestUtils.START),
+                                                    Durations.fromSeconds(10)))))
+                                .build())
+                        .putFeature(
+                            "__CONFIG_TIMESTEPS-2",
+                            Feature.newBuilder()
+                                .setInt64List(Int64List.newBuilder().addValue(1L))
+                                .build()))
+                .build());
+
+    p.run();
+  }
+
+  @Test
+  /* Simple test to check TF Example output from SnapShot TSAccum */
+  public void testTSIterableAccumeToTFExampleTwoKeys() {
+    KV<TSKey, TSAccumSequence> sequenceA =
+        KV.of(
+            TSDataTestUtils.KEY_A_A,
+            TSAccumSequence.newBuilder()
+                .setKey(TSDataTestUtils.KEY_A_A)
+                .addAccums(FIRST_ACCUM)
+                .addAccums(SECOND_ACCUM)
+                .setLowerWindowBoundary(TSDataTestUtils.START_TIMESTAMP)
+                .setUpperWindowBoundary(TSDataTestUtils.PLUS_TEN_SECS_TIMESTAMP)
+                .setDuration(Durations.fromSeconds(10))
+                .setCount(2)
+                .build());
+
+    KV<TSKey, TSAccumSequence> sequenceB =
+        KV.of(
+            TSDataTestUtils.KEY_B_A,
+            TSAccumSequence.newBuilder()
+                .setKey(TSDataTestUtils.KEY_B_A)
+                .addAccums(FIRST_ACCUM)
+                .addAccums(SECOND_ACCUM)
+                .setLowerWindowBoundary(TSDataTestUtils.START_TIMESTAMP)
+                .setUpperWindowBoundary(TSDataTestUtils.PLUS_TEN_SECS_TIMESTAMP)
+                .setDuration(Durations.fromSeconds(10))
+                .setCount(2)
+                .build());
+
+    PCollectionTuple examples =
+        p.apply(Create.of(sequenceA, sequenceB))
+            .apply(GenerateMajorKeyWindowSnapshot.generateWindowSnapshot())
+            .apply(new FeaturesFromIterableAccumSequence(2));
+
+    PAssert.that(examples.get(FeaturesFromIterableAccumSequence.TIME_SERIES_EXAMPLES))
+        .containsInAnyOrder(
+            Example.newBuilder()
+                .setFeatures(
+                    Features.newBuilder()
+                        .putFeature(
+                            "Key-A-MKey-a-MAX",
+                            Feature.newBuilder()
+                                .setFloatList(FloatList.newBuilder().addValue(1F).addValue(2F))
+                                .build())
+                        .putFeature(
+                            "Key-A-MKey-a-FIRST_TIMESTAMP",
+                            Feature.newBuilder()
+                                .setInt64List(
+                                    Int64List.newBuilder()
+                                        .addValue(TSDataTestUtils.START)
+                                        .addValue(TSDataTestUtils.PLUS_FIVE_SECS))
+                                .build())
+                        .putFeature(
+                            "Key-A-MKey-a-LAST_TIMESTAMP",
+                            Feature.newBuilder()
+                                .setInt64List(
+                                    Int64List.newBuilder()
+                                        .addValue(TSDataTestUtils.PLUS_FIVE_SECS)
+                                        .addValue(TSDataTestUtils.PLUS_TEN_SECS))
+                                .build())
+                        .putFeature(
+                            "Key-B-MKey-a-MAX",
+                            Feature.newBuilder()
+                                .setFloatList(FloatList.newBuilder().addValue(1F).addValue(2F))
+                                .build())
+                        .putFeature(
+                            "Key-B-MKey-a-FIRST_TIMESTAMP",
+                            Feature.newBuilder()
+                                .setInt64List(
+                                    Int64List.newBuilder()
+                                        .addValue(TSDataTestUtils.START)
+                                        .addValue(TSDataTestUtils.PLUS_FIVE_SECS))
+                                .build())
+                        .putFeature(
+                            "Key-B-MKey-a-LAST_TIMESTAMP",
                             Feature.newBuilder()
                                 .setInt64List(
                                     Int64List.newBuilder()
