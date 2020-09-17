@@ -62,50 +62,30 @@ public class GenerateMajorKeyWindowSnapshot {
       }
 
       return input
-          .apply(new CollapseToWindowMajorKey<>())
+          .apply(new CollapseToWindowKey<>())
           .apply(GroupByKey.create())
           .apply(Values.create());
     }
   }
 
   /** Given a KV<TSKey,T> set the TSKey to window context. */
-  private static class CollapseToWindowMajorKey<T>
+  private static class CollapseToWindowKey<T>
       extends PTransform<PCollection<KV<TSKey, T>>, PCollection<KV<TSKey, T>>> {
 
     @Override
     public PCollection<KV<TSKey, T>> expand(PCollection<KV<TSKey, T>> input) {
-      return input.apply(Reify.windowsInValue()).apply(ParDo.of(new ReplaceMajorKeyWithWindow<>()));
+      return input.apply(Reify.windowsInValue()).apply(ParDo.of(new ReplaceKeyWithWindow<>()));
     }
   }
 
-  private static class ReplaceMajorKeyWithWindow<T>
+  private static class ReplaceKeyWithWindow<T>
       extends DoFn<KV<TSKey, ValueInSingleWindow<T>>, KV<TSKey, T>> {
     @ProcessElement
     public void process(
         @Element KV<TSKey, ValueInSingleWindow<T>> input, OutputReceiver<KV<TSKey, T>> o) {
       o.output(
           KV.of(
-              input
-                  .getKey()
-                  .toBuilder()
-                  .setMajorKey(input.getValue().getWindow().toString())
-                  .build(),
-              input.getValue().getValue()));
-    }
-  }
-
-  private static class ReplaceMinorKeyWithWindow<T>
-      extends DoFn<KV<TSKey, ValueInSingleWindow<T>>, KV<TSKey, T>> {
-    @ProcessElement
-    public void process(
-        @Element KV<TSKey, ValueInSingleWindow<T>> input, OutputReceiver<KV<TSKey, T>> o) {
-      o.output(
-          KV.of(
-              input
-                  .getKey()
-                  .toBuilder()
-                  .setMinorKeyString(input.getValue().getWindow().toString())
-                  .build(),
+              TSKey.newBuilder().setMajorKey(input.getValue().getWindow().toString()).build(),
               input.getValue().getValue()));
     }
   }
