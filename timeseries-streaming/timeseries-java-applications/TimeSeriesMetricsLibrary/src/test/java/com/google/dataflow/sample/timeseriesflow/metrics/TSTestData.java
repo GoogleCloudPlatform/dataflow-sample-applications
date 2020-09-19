@@ -73,12 +73,6 @@ public abstract class TSTestData implements Serializable {
         JsonReader input, Duration outputTSType1Window, Duration outputTSType2Window)
         throws IOException {
 
-      //      Gson gson =
-      //          new
-      // GsonBuilder().registerTypeAdapterFactory(AutoValueGsonFactory.create()).create();
-      //
-      //      Type type = new TypeToken<TSTestDataSchema>() {}.getType();
-
       List<TSDataPoint> messages = new ArrayList<>();
       input.beginArray();
       Long instant = START;

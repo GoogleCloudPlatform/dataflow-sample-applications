@@ -29,6 +29,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
@@ -300,7 +302,7 @@ public class TSMetricsTests {
                     .build());
 
     // The sliding window will create partial values, to keep testing simple we just test
-    // correctness of SMA for the full value
+    // correctness of EMA for the full value
 
     PCollection<KV<TSKey, TSAccum>> fullAccum =
         techAccum.apply(
@@ -327,9 +329,9 @@ public class TSMetricsTests {
 
     /*
     EMA EMA_n = WeightedSum_n / WeightedCount_n
-    SMA Key_A_A = [1, 3, 8] = 5.571429
-    SMA Key_A_B = [16, 12, 8] = 10.285714
-    SMA Key_A_C = [12, 12, 12] = 12
+    EMA Key_A_A = [1, 3, 8] = 5.571429
+    EMA Key_A_B = [16, 12, 8] = 10.285714
+    EMA Key_A_C = [12, 12, 12] = 12
 
      */
     PAssert.that(ema)
@@ -337,6 +339,99 @@ public class TSMetricsTests {
             KV.of(TSTestDataBaseline.KEY_A_A, 5.571D),
             KV.of(TSTestDataBaseline.KEY_A_B, 10.286D),
             KV.of(TSTestDataBaseline.KEY_A_C, 12D));
+
+    p.run();
+  }
+
+  @Test
+  /* Simple test to check Exponential Moving Average Technical is created correctly */
+  public void testCreateBB() throws IOException {
+
+    String resourceName = "TSTestDataHints.json";
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource(resourceName).getFile());
+    String absolutePath = file.getAbsolutePath();
+
+    TSTestData tsTestData =
+        TSTestData.toBuilder()
+            .setInputTSDataFromJSON(
+                new JsonReader(new FileReader(absolutePath)),
+                Duration.standardSeconds(5),
+                Duration.standardSeconds(15))
+            .build();
+
+    TestStream<TSDataPoint> stream = tsTestData.inputTSData();
+
+    PCollection<KV<TSKey, TSAccum>> techAccum =
+        p.apply(stream)
+            .apply(
+                GenerateComputations.builder()
+                    .setType1FixedWindow(Duration.standardSeconds(5))
+                    .setType2SlidingWindowDuration(Duration.standardSeconds(15))
+                    .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
+                    .setType2NumericComputations(
+                        ImmutableList.of(
+                            BB.toBuilder()
+                                .setAverageComputationMethod(
+                                    BB.AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
+                                .setDevFactor(2)
+                                .build()
+                                .create()))
+                    .build());
+
+    // The sliding window will create partial values, to keep testing simple we just test
+    // correctness of BB for the full value
+
+    PCollection<KV<TSKey, TSAccum>> fullAccum =
+        techAccum.apply(
+            Filter.by(
+                x ->
+                    x.getValue()
+                            .getDataStoreOrThrow(FsiTechnicalIndicators.SUM_MOVEMENT_COUNT.name())
+                            .getIntVal()
+                        == 3));
+
+    PCollection<KV<TSKey, List<Double>>> bollingerBand =
+        fullAccum.apply(
+            "BB",
+            MapElements.into(
+                    TypeDescriptors.kvs(
+                        TypeDescriptor.of(TSKey.class),
+                        TypeDescriptors.lists(TypeDescriptors.doubles())))
+                .via(
+                    x ->
+                        KV.of(
+                            x.getKey(),
+                            Arrays.asList(
+                                x.getValue()
+                                    .getDataStoreOrThrow(
+                                        FsiTechnicalIndicators.BB_MIDDLE_BAND_SMA.name())
+                                    .getDoubleVal(),
+                                x.getValue()
+                                    .getDataStoreOrThrow(
+                                        FsiTechnicalIndicators.BB_UPPER_BAND_SMA.name())
+                                    .getDoubleVal(),
+                                x.getValue()
+                                    .getDataStoreOrThrow(
+                                        FsiTechnicalIndicators.BB_BOTTOM_BAND_SMA.name())
+                                    .getDoubleVal()))));
+
+    /*
+    BB MIDDLE_BAND = SMA or EMA, UPPER_BAND = MIDDLE_BAND + dev_factor * STDDEV, BOTTOM_BAND = MIDDLE_BAND - dev_factor * STDDEV
+    BB SMA Key_A_A = [1, 3, 8] = [4.0, 9.8878405776, -1.8878405776]
+    BB SMA Key_A_B = [16, 12, 8] = [12.0, 18.5319726474, 5.4680273526]
+    BB SMA Key_A_C = [12, 12, 12] = [12, 12, 12]
+
+     */
+    PAssert.that(bollingerBand)
+        .containsInAnyOrder(
+            KV.of(
+                TSTestDataBaseline.KEY_A_A,
+                Arrays.asList(4.0D, 9.8878405776, -1.8878405776D)),
+            KV.of(
+                TSTestDataBaseline.KEY_A_B,
+                Arrays.asList(12.0D, 18.5319726474D, 5.4680273526D)),
+            KV.of(TSTestDataBaseline.KEY_A_C, Arrays.asList(12D, 12D, 12D)));
 
     p.run();
   }

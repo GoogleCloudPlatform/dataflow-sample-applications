@@ -17,14 +17,14 @@
  */
 package com.google.dataflow.sample.timeseriesflow.metrics;
 
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
-import com.google.dataflow.sample.timeseriesflow.common.TSDataUtils;
 import com.google.dataflow.sample.timeseriesflow.datamap.AccumCoreNumericBuilder;
+import com.google.dataflow.sample.timeseriesflow.metrics.utils.StatisticalFormulas;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Iterator;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
@@ -48,50 +48,22 @@ import org.apache.beam.sdk.values.KV;
  * <p>This formula avoids introducing calculation errors when initializing the first estimate, and
  * is equivalent to using Pandas EMA with input parameter adjust=True and span=# of periods.
  */
-public class ComputeExponentialMovingAverage extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>> {
+public class ComputeExponentialMovingAverageDoFn extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>> {
   private final BigDecimal alpha;
 
-  public ComputeExponentialMovingAverage(BigDecimal alpha) {
+  public ComputeExponentialMovingAverageDoFn(BigDecimal alpha) {
     this.alpha = alpha;
   }
 
   @ProcessElement
   public void process(ProcessContext pc, OutputReceiver<KV<TSKey, TSAccum>> o) {
-
-    Iterator<TSAccum> it = pc.element().getAccumsList().iterator();
-
+    Iterator<TimeSeriesData.TSAccum> it = pc.element().getAccumsList().iterator();
     AccumCoreNumericBuilder current;
 
+    BigDecimal ema = StatisticalFormulas.ComputeExponentialMovingAverage(it, this.alpha);
     AccumMABuilder maBuilder =
-        new AccumMABuilder(TSAccum.newBuilder().setKey(pc.element().getKey()).build());
-
-    BigDecimal currentWeightedSum = BigDecimal.valueOf(0);
-    BigDecimal currentWeightedCount = BigDecimal.valueOf(0);
-    BigDecimal previousWeightedSum = BigDecimal.valueOf(0);
-    BigDecimal previousWeightedCount = BigDecimal.valueOf(0);
-    BigDecimal ema;
-
-    while (it.hasNext()) {
-      current = new AccumCoreNumericBuilder(it.next());
-      BigDecimal currentLastValue = TSDataUtils.getBigDecimalFromData(current.getLastOrNull());
-      // WeightedSum_n = value_n + (1 - alpha) * WeightedSum_n-1
-      currentWeightedSum =
-          currentLastValue.add(
-              BigDecimal.valueOf(1).subtract(this.alpha).multiply(previousWeightedSum));
-
-      // WeightedCount_n = 1 + (1 - alpha) * WeightedCount_n-1
-      currentWeightedCount =
-          BigDecimal.valueOf(1)
-              .add(BigDecimal.valueOf(1).subtract(this.alpha).multiply(previousWeightedCount));
-
-      previousWeightedSum = currentWeightedSum;
-      previousWeightedCount = currentWeightedCount;
-    }
-    // EMA_n = WeightedSum_n / WeightedCount_n
-    ema =
-        (currentWeightedCount == BigDecimal.ZERO)
-            ? BigDecimal.ZERO
-            : currentWeightedSum.divide(currentWeightedCount, RoundingMode.HALF_EVEN);
+        new AccumMABuilder(
+            TimeSeriesData.TSAccum.newBuilder().setKey(pc.element().getKey()).build());
     maBuilder
         .setExponentialMovingAverage(CommonUtils.createNumData(ema.doubleValue()))
         .setMovementCount(CommonUtils.createNumData(pc.element().getAccumsCount()));

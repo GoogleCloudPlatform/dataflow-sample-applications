@@ -23,6 +23,6 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
 
-public class ComputeWeightedMovingAverage extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>> {
+public class ComputeWeightedMovingAverageDoFn extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>> {
   // TODO
 }
