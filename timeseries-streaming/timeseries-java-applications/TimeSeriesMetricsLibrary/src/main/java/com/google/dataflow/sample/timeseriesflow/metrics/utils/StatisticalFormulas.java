@@ -82,6 +82,7 @@ public class StatisticalFormulas {
   }
 
   public static final String SQRT_METHOD = "BABYLONIAN"; // NEWTON
+  public static final Integer SCALE = 10; //How many decimal points of precision to calculate stdDev
 
   private static final BigDecimal SQRT_DIG = new BigDecimal(150);
   private static final BigDecimal SQRT_PRE = new BigDecimal(10).pow(SQRT_DIG.intValue());
@@ -132,16 +133,17 @@ public class StatisticalFormulas {
 
     AccumCoreNumericBuilder current = new AccumCoreNumericBuilder(it.next());
 
-    BigDecimal sum = TSDataUtils.getBigDecimalFromData(current.getLastOrNull()).setScale(130);
+    BigDecimal sum = TSDataUtils.getBigDecimalFromData(current.getLastOrNull()).setScale(SCALE);
     BigDecimal sumPow =
-        TSDataUtils.getBigDecimalFromData(current.getLastOrNull()).pow(2).setScale(130);
-    BigDecimal count = TSDataUtils.getBigDecimalFromData(current.getCountOrNull()).setScale(130);
+        TSDataUtils.getBigDecimalFromData(current.getLastOrNull()).pow(2).setScale(SCALE);
+    // BigDecimal count = TSDataUtils.getBigDecimalFromData(current.getCountOrNull()).setScale(130);
+    BigDecimal count = BigDecimal.ONE;
 
     while (it.hasNext()) {
       AccumCoreNumericBuilder next = new AccumCoreNumericBuilder(it.next());
       BigDecimal nextSumValue = TSDataUtils.getBigDecimalFromData(next.getLastOrNull());
       BigDecimal nextSumPowValue = TSDataUtils.getBigDecimalFromData(next.getLastOrNull()).pow(2);
-      BigDecimal nextCount = TSDataUtils.getBigDecimalFromData(next.getCountOrNull());
+      BigDecimal nextCount = BigDecimal.ONE.setScale(SCALE);
 
       sum = sum.add(nextSumValue);
       sumPow = sumPow.add(nextSumPowValue);
@@ -163,12 +165,17 @@ public class StatisticalFormulas {
 
     if (SQRT_METHOD == "NEWTON") {
       stdDev =
-          sqrtNewtonRaphson(
-              meanSquared.subtract(squaredMean),
-              new BigDecimal(1),
-              new BigDecimal(1).divide(SQRT_PRE));
+          (count == BigDecimal.ZERO)
+              ? BigDecimal.ZERO
+              : sqrtNewtonRaphson(
+                  meanSquared.subtract(squaredMean),
+                  new BigDecimal(1),
+                  new BigDecimal(1).divide(SQRT_PRE));
     } else { // By default use Babylonian sqrt method, perf and precision are similar to Newton
-      stdDev = sqrt(meanSquared.subtract(squaredMean), SQRT_DIG.intValue());
+      stdDev =
+          (count == BigDecimal.ZERO)
+              ? BigDecimal.ZERO
+              : sqrt(meanSquared.subtract(squaredMean), SCALE);
     }
 
     return stdDev;

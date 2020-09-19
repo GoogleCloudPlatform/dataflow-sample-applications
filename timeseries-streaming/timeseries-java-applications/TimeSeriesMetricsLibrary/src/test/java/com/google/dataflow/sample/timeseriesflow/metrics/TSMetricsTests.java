@@ -418,8 +418,8 @@ public class TSMetricsTests {
 
     /*
     BB MIDDLE_BAND = SMA or EMA, UPPER_BAND = MIDDLE_BAND + dev_factor * STDDEV, BOTTOM_BAND = MIDDLE_BAND - dev_factor * STDDEV
-    BB SMA Key_A_A = [1, 3, 8] = [4.0, 9.773502691896258, -1.7735026918962578]
-    BB SMA Key_A_B = [16, 12, 8] = [12.0, 18.531972647421806, 5.468027352578192]
+    BB SMA Key_A_A = [1, 3, 8] = [4.0, 9.8878405776, -1.8878405776]
+    BB SMA Key_A_B = [16, 12, 8] = [12.0, 18.5319726474, 5.4680273526]
     BB SMA Key_A_C = [12, 12, 12] = [12, 12, 12]
 
      */
@@ -427,10 +427,10 @@ public class TSMetricsTests {
         .containsInAnyOrder(
             KV.of(
                 TSTestDataBaseline.KEY_A_A,
-                Arrays.asList(4.0D, 9.773502691896258D, -1.7735026918962578D)),
+                Arrays.asList(4.0D, 9.8878405776, -1.8878405776D)),
             KV.of(
                 TSTestDataBaseline.KEY_A_B,
-                Arrays.asList(12.0D, 18.531972647421806D, 5.468027352578192D)),
+                Arrays.asList(12.0D, 18.5319726474D, 5.4680273526D)),
             KV.of(TSTestDataBaseline.KEY_A_C, Arrays.asList(12D, 12D, 12D)));
 
     p.run();
