@@ -21,44 +21,26 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
-import com.google.dataflow.sample.timeseriesflow.common.TSDataUtils;
-import com.google.dataflow.sample.timeseriesflow.datamap.AccumCoreNumericBuilder;
+import com.google.dataflow.sample.timeseriesflow.metrics.utils.StatisticalFormulas;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Iterator;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
 
 /** Sum the gain and loss of a sequence of {@link TSAccumSequence} */
-class ComputeSimpleMovingAverage extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>> {
+class ComputeSimpleMovingAverageDoFn extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>> {
 
   @ProcessElement
   public void process(ProcessContext pc, OutputReceiver<KV<TSKey, TSAccum>> o) {
 
     Iterator<TSAccum> it = pc.element().getAccumsList().iterator();
 
-    AccumCoreNumericBuilder current = new AccumCoreNumericBuilder(it.next());
+    BigDecimal avg = StatisticalFormulas.ComputeSimpleMovingAverage(it);
 
     AccumMABuilder maBuilder =
         new AccumMABuilder(TSAccum.newBuilder().setKey(pc.element().getKey()).build());
 
-    BigDecimal sum = TSDataUtils.getBigDecimalFromData(current.getSumOrNull());
-    BigDecimal count = TSDataUtils.getBigDecimalFromData(current.getCountOrNull());
-
-    while (it.hasNext()) {
-      AccumCoreNumericBuilder next = new AccumCoreNumericBuilder(it.next());
-      BigDecimal nextSumValue = TSDataUtils.getBigDecimalFromData(next.getSumOrNull());
-      BigDecimal nextCount = TSDataUtils.getBigDecimalFromData(next.getCountOrNull());
-
-      sum = sum.add(nextSumValue);
-      count = count.add(nextCount);
-    }
-
-    BigDecimal avg =
-        (count == BigDecimal.ZERO) ? BigDecimal.ZERO : sum.divide(count, RoundingMode.HALF_EVEN);
-
     maBuilder
-        .setSum(CommonUtils.createNumData(sum.doubleValue()))
         .setMovementCount(CommonUtils.createNumData(pc.element().getAccumsCount()))
         .setSimpleMovingAverage(CommonUtils.createNumData(avg.doubleValue()));
 

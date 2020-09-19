@@ -22,9 +22,10 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSNumericCombiner;
+import com.google.dataflow.sample.timeseriesflow.metrics.BB;
 import com.google.dataflow.sample.timeseriesflow.metrics.MA;
-import com.google.dataflow.sample.timeseriesflow.metrics.MA.AverageComputationMethod;
 import com.google.dataflow.sample.timeseriesflow.metrics.RSI;
+import java.math.BigDecimal;
 import java.util.List;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.Combine.CombineFn;
@@ -38,7 +39,7 @@ import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.Immutabl
  *
  * <p>Type 1 {@link TSNumericCombiner}
  *
- * <p>Type 2 {@link RSI},{@link MA}
+ * <p>Type 2 {@link RSI},{@link MA},{@link BB}
  */
 @Experimental
 public class AllMetricsWithDefaults {
@@ -56,11 +57,23 @@ public class AllMetricsWithDefaults {
             .build()
             .create(),
         MA.toBuilder()
-            .setAverageComputationMethod(AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
+            .setAverageComputationMethod(MA.AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
             .build()
             .create(),
         MA.toBuilder()
-            .setAverageComputationMethod(AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE)
+            .setAverageComputationMethod(MA.AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE)
+            .setWeight(BigDecimal.valueOf(2D / (3D + 1D)))
+            .build()
+            .create(),
+        BB.toBuilder()
+            .setAverageComputationMethod(BB.AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE)
+            .setWeight(BigDecimal.valueOf(2D / (3D + 1D)))
+            .setDevFactor(2)
+            .build()
+            .create(),
+        BB.toBuilder()
+            .setAverageComputationMethod(BB.AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
+            .setDevFactor(2)
             .build()
             .create());
   }

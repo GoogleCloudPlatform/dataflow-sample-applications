@@ -31,13 +31,15 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 
 @AutoValue
-public abstract class MA implements Serializable {
+public abstract class BB implements Serializable {
   public abstract AverageComputationMethod getAverageComputationMethod();
 
   public abstract BigDecimal getWeight();
 
+  public abstract Integer getDevFactor();
+
   public static Builder toBuilder() {
-    return new AutoValue_MA.Builder().setWeight(BigDecimal.ZERO);
+    return new AutoValue_BB.Builder().setWeight(BigDecimal.ZERO);
   }
 
   @AutoValue.Builder
@@ -47,55 +49,51 @@ public abstract class MA implements Serializable {
 
     public abstract Builder setWeight(BigDecimal alpha);
 
-    public abstract MA build();
+    public abstract Builder setDevFactor(Integer devFactor);
+
+    public abstract BB build();
   }
 
-  public MAComputation create() {
-    return new MAComputation(this);
+  public BBComputation create() {
+    return new BBComputation(this);
   }
 
   /**
-   * Compute Moving Average
+   * Compute Bollinger Bands
    *
    * <p>TODO Add full support for BigDecimal
    */
-  public static class MAComputation
+  public static class BBComputation
       extends PTransform<PCollection<KV<TSKey, TSAccumSequence>>, PCollection<KV<TSKey, TSAccum>>> {
 
-    MA ma;
+    BB bb;
 
-    public MAComputation(MA ma) {
-      this.ma = ma;
+    public BBComputation(BB bb) {
+      this.bb = bb;
     }
 
-    public MAComputation(@Nullable String name, MA ma) {
+    public BBComputation(@Nullable String name, BB bb) {
       super(name);
-      this.ma = ma;
+      this.bb = bb;
     }
 
     @Override
     public PCollection<KV<TSKey, TSAccum>> expand(PCollection<KV<TSKey, TSAccumSequence>> input) {
-      PCollection<KV<TSKey, TSAccum>> result;
-      if (this.ma.getAverageComputationMethod()
-          == AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE) {
-        result =
-            input
-                .apply(Values.create())
-                .apply(ParDo.of(new ComputeExponentialMovingAverageDoFn(this.ma.getWeight())));
-      } else if (this.ma.getAverageComputationMethod()
-          == AverageComputationMethod.WEIGHTED_MOVING_AVERAGE) {
-        result =
-            input.apply(Values.create()).apply(ParDo.of(new ComputeWeightedMovingAverageDoFn()));
-      } else { // By default we compute SMA
-        result = input.apply(Values.create()).apply(ParDo.of(new ComputeSimpleMovingAverageDoFn()));
-      }
+      PCollection<KV<TSKey, TSAccum>> result =
+          input
+              .apply(Values.create())
+              .apply(
+                  ParDo.of(
+                      new ComputeBollingerBandsDoFn(
+                          this.bb.getAverageComputationMethod(),
+                          this.bb.getWeight(),
+                          this.bb.getDevFactor())));
       return result;
     }
   }
 
   public enum AverageComputationMethod {
     SIMPLE_MOVING_AVERAGE,
-    EXPONENTIAL_MOVING_AVERAGE,
-    WEIGHTED_MOVING_AVERAGE
+    EXPONENTIAL_MOVING_AVERAGE
   }
 }
