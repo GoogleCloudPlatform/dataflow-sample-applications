@@ -82,7 +82,8 @@ public class StatisticalFormulas {
   }
 
   public static final String SQRT_METHOD = "BABYLONIAN"; // NEWTON
-  public static final Integer SCALE = 10; //How many decimal points of precision to calculate stdDev
+  public static final Integer SCALE =
+      10; // How many decimal points of precision to calculate stdDev
 
   private static final BigDecimal SQRT_DIG = new BigDecimal(150);
   private static final BigDecimal SQRT_PRE = new BigDecimal(10).pow(SQRT_DIG.intValue());
