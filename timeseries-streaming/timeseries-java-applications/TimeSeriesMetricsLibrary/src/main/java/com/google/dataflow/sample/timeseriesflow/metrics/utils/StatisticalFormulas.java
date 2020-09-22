@@ -134,9 +134,9 @@ public class StatisticalFormulas {
 
     AccumCoreNumericBuilder current = new AccumCoreNumericBuilder(it.next());
 
-    BigDecimal sum = TSDataUtils.getBigDecimalFromData(current.getLastOrNull()).setScale(SCALE);
+    BigDecimal sum = TSDataUtils.getBigDecimalFromData(current.getLastOrNull()).setScale(SCALE, RoundingMode.HALF_DOWN);
     BigDecimal sumPow =
-        TSDataUtils.getBigDecimalFromData(current.getLastOrNull()).pow(2).setScale(SCALE);
+        TSDataUtils.getBigDecimalFromData(current.getLastOrNull()).pow(2).setScale(SCALE, RoundingMode.HALF_DOWN);
     // BigDecimal count = TSDataUtils.getBigDecimalFromData(current.getCountOrNull()).setScale(130);
     BigDecimal count = BigDecimal.ONE;
 
@@ -144,7 +144,7 @@ public class StatisticalFormulas {
       AccumCoreNumericBuilder next = new AccumCoreNumericBuilder(it.next());
       BigDecimal nextSumValue = TSDataUtils.getBigDecimalFromData(next.getLastOrNull());
       BigDecimal nextSumPowValue = TSDataUtils.getBigDecimalFromData(next.getLastOrNull()).pow(2);
-      BigDecimal nextCount = BigDecimal.ONE.setScale(SCALE);
+      BigDecimal nextCount = BigDecimal.ONE.setScale(SCALE, RoundingMode.HALF_DOWN);
 
       sum = sum.add(nextSumValue);
       sumPow = sumPow.add(nextSumPowValue);
