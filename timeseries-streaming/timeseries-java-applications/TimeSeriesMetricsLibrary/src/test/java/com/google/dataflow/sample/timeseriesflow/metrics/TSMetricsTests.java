@@ -425,12 +425,8 @@ public class TSMetricsTests {
      */
     PAssert.that(bollingerBand)
         .containsInAnyOrder(
-            KV.of(
-                TSTestDataBaseline.KEY_A_A,
-                Arrays.asList(4.0D, 9.8878405776, -1.8878405776D)),
-            KV.of(
-                TSTestDataBaseline.KEY_A_B,
-                Arrays.asList(12.0D, 18.5319726474D, 5.4680273526D)),
+            KV.of(TSTestDataBaseline.KEY_A_A, Arrays.asList(4.0D, 9.8878405776, -1.8878405776D)),
+            KV.of(TSTestDataBaseline.KEY_A_B, Arrays.asList(12.0D, 18.5319726474D, 5.4680273526D)),
             KV.of(TSTestDataBaseline.KEY_A_C, Arrays.asList(12D, 12D, 12D)));
 
     p.run();
