@@ -123,9 +123,9 @@ public class StatisticalFormulas {
 
     while (!x0.equals(x1)) {
       x0 = x1;
-      x1 = A.divide(x0, SCALE, ROUND_HALF_UP);
+      x1 = (x0 == BigDecimal.ZERO) ? BigDecimal.ZERO : A.divide(x0, SCALE, ROUND_HALF_UP);
       x1 = x1.add(x0);
-      x1 = x1.divide(TWO, SCALE, ROUND_HALF_UP);
+      x1 = (x1 == BigDecimal.ZERO) ? BigDecimal.ZERO : x1.divide(TWO, SCALE, ROUND_HALF_UP);
     }
     return x1;
   }
@@ -134,10 +134,13 @@ public class StatisticalFormulas {
 
     AccumCoreNumericBuilder current = new AccumCoreNumericBuilder(it.next());
 
-    BigDecimal sum = TSDataUtils.getBigDecimalFromData(current.getLastOrNull()).setScale(SCALE, RoundingMode.HALF_DOWN);
+    BigDecimal sum =
+        TSDataUtils.getBigDecimalFromData(current.getLastOrNull())
+            .setScale(SCALE, RoundingMode.HALF_DOWN);
     BigDecimal sumPow =
-        TSDataUtils.getBigDecimalFromData(current.getLastOrNull()).pow(2).setScale(SCALE, RoundingMode.HALF_DOWN);
-    // BigDecimal count = TSDataUtils.getBigDecimalFromData(current.getCountOrNull()).setScale(130);
+        TSDataUtils.getBigDecimalFromData(current.getLastOrNull())
+            .pow(2)
+            .setScale(SCALE, RoundingMode.HALF_DOWN);
     BigDecimal count = BigDecimal.ONE;
 
     while (it.hasNext()) {
@@ -164,19 +167,18 @@ public class StatisticalFormulas {
 
     BigDecimal stdDev;
 
+    BigDecimal radicand = meanSquared.subtract(squaredMean);
+
     if (SQRT_METHOD == "NEWTON") {
       stdDev =
-          (count == BigDecimal.ZERO)
+          (radicand == BigDecimal.ZERO || radicand.compareTo(BigDecimal.ZERO) < 0)
               ? BigDecimal.ZERO
-              : sqrtNewtonRaphson(
-                  meanSquared.subtract(squaredMean),
-                  new BigDecimal(1),
-                  new BigDecimal(1).divide(SQRT_PRE));
+              : sqrtNewtonRaphson(radicand, new BigDecimal(1), new BigDecimal(1).divide(SQRT_PRE));
     } else { // By default use Babylonian sqrt method, perf and precision are similar to Newton
       stdDev =
-          (count == BigDecimal.ZERO)
+          (radicand == BigDecimal.ZERO || radicand.compareTo(BigDecimal.ZERO) < 0)
               ? BigDecimal.ZERO
-              : sqrt(meanSquared.subtract(squaredMean), SCALE);
+              : sqrt(radicand, SCALE);
     }
 
     return stdDev;
