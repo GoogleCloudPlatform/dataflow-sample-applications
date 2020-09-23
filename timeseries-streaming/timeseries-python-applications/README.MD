@@ -54,7 +54,7 @@ There are two versions which can be run;
 * Step 1 - Follow the quick start on the Java README to run [SimpleDataStreamGenerator.java](../timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java) with example_2.
 * Step 2 - Run the command with the virtual-env activated, providing values for the location of the ```--saved_model_location``` using the uncompressed provided model, and the location of the generated data from previous step with ```--tfrecord_folder```.
 ```
-python MLPipelineExamples/test_pipelines/batch_inference.py --saved_model_location=serving_model_dir/ --tfrecord_folder=/<your-directory>/simple-data/data/timeseries*
+python MLPipelineExamples/test_pipelines/batch_inference.py --saved_model_location=MLPipelineExamples/test_pipelines/saved_model_example/serving_model_dir --tfrecord_folder=/<your-directory>/simple-data/data/*
 ```
 Dependent on how long you ran the ```SimpleDataStreamGenerator``` you will see outliers in the range of 120 to 300 being detected.
 
@@ -63,7 +63,7 @@ Dependent on how long you ran the ```SimpleDataStreamGenerator``` you will see o
 * Step 2 - Create a subscription in the topic, to the read events generated in previous step
 * Step 3 - Run the command with the virtual-env activated, providing values for the location of the ```--saved_model_location``` using the uncompressed provided model, and set the subscription to read events from ```--pubsub_subscription```.
 ```
-python MLPipelineExamples/test_pipelines/stream_inference.py --saved_model_location=serving_model_dir/ --pubsub_subscription=projects/<your-project>/subscriptions/<your-subscription>
+python MLPipelineExamples/test_pipelines/stream_inference.py --saved_model_location=MLPipelineExamples/test_pipelines/saved_model_example/serving_model_dir --pubsub_subscription=projects/<your-project>/subscriptions/<your-subscription>
 ``` 
 
 While both are running you will see outliers showing every 50 ticks.
@@ -99,4 +99,7 @@ Epoch 30/30
 ```
 
 This will output a serving_model_dir under the location you specified for ```PIPELINE_ROOT``` in the config.py file. With this you can now follow the rest of the steps outlines in Option 1 but using your own model.
-
+For example:
+```
+python MLPipelineExamples/test_pipelines/batch_inference.py --saved_model_location=<PIPELINE_ROOT>/serving_model_dir --tfrecord_folder=/<your-directory>/simple-data/data/*
+```
