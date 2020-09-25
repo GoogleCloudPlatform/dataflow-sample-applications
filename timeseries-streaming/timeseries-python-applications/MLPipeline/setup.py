@@ -24,7 +24,7 @@ setuptools.setup(
     install_requires=[
       'tfx==0.22.0',
       'kfp==0.5.1',
-      'tensorflow==2.2.0',
+      'tensorflow==2.2.1',
       'apache-beam==2.23.0'
     ],
     python_requires='>=3.7',
