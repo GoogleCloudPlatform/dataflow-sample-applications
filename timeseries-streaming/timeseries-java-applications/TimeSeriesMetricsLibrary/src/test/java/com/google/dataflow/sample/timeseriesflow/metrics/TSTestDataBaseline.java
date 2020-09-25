@@ -44,6 +44,10 @@ public class TSTestDataBaseline {
       TSKey.newBuilder().setMajorKey("Key-C").setMinorKeyString("MKey-b").build();
   public static final TSKey KEY_C_C =
       TSKey.newBuilder().setMajorKey("Key-C").setMinorKeyString("MKey-c").build();
+  public static final TimeSeriesData.TSDataPoint DATA_0 =
+      TimeSeriesData.TSDataPoint.newBuilder().setData(CommonUtils.createNumData(0d)).build();
+  public static final TimeSeriesData.TSDataPoint DATA_NEGATIVE_1 =
+      TimeSeriesData.TSDataPoint.newBuilder().setData(CommonUtils.createNumData(-1d)).build();
   public static final TimeSeriesData.TSDataPoint DATA_1 =
       TimeSeriesData.TSDataPoint.newBuilder().setData(CommonUtils.createNumData(1d)).build();
   public static final TimeSeriesData.TSDataPoint DATA_2 =

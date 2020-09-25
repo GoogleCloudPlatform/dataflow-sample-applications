@@ -81,8 +81,8 @@ public class StatisticalFormulas {
     return avg;
   }
 
-  public static final String SQRT_METHOD = "BABYLONIAN"; // NEWTON
-  public static final Integer SCALE =
+  private static final String SQRT_METHOD = "BABYLONIAN"; // NEWTON
+  private static final Integer SCALE =
       10; // How many decimal points of precision to calculate stdDev
 
   private static final BigDecimal SQRT_DIG = new BigDecimal(150);
@@ -94,7 +94,7 @@ public class StatisticalFormulas {
    * @author Luciano Culacciatti
    * @url http://www.codeproject.com/Tips/257031/Implementing-SqrtRoot-in-BigDecimal
    */
-  private static BigDecimal sqrtNewtonRaphson(BigDecimal c, BigDecimal xn, BigDecimal precision) {
+  public static BigDecimal sqrtNewtonRaphson(BigDecimal c, BigDecimal xn, BigDecimal precision) {
     BigDecimal fx = xn.pow(2).add(c.negate());
     BigDecimal fpx = xn.multiply(new BigDecimal(2));
     BigDecimal xn1 = fx.divide(fpx, 2 * SQRT_DIG.intValue(), RoundingMode.HALF_DOWN);
@@ -115,7 +115,7 @@ public class StatisticalFormulas {
    * @url https://stackoverflow.com/questions/13649703/square-root-of-bigdecimal-in-java
    * @url https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Babylonian_method
    */
-  private static final BigDecimal TWO = BigDecimal.valueOf(2);
+  public static final BigDecimal TWO = BigDecimal.valueOf(2);
 
   public static BigDecimal sqrt(BigDecimal A, final int SCALE) {
     BigDecimal x0 = new BigDecimal("0");
