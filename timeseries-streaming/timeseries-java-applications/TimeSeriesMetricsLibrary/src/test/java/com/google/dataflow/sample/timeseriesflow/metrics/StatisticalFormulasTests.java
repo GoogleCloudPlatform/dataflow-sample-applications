@@ -18,7 +18,6 @@
 package com.google.dataflow.sample.timeseriesflow.metrics;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.dataflow.sample.timeseriesflow.DerivedAggregations;
@@ -26,6 +25,7 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.metrics.utils.StatisticalFormulas;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -68,28 +68,25 @@ public class StatisticalFormulasTests {
 
   @Test
   public void sqrtOfNegativeShouldRaiseException() {
-    final Integer SCALE = 10; // How many decimal points of precision to calculate stdDev
+    final int SCALE = 10; // How many decimal points of precision to calculate stdDev
     final BigDecimal SQRT_DIG = new BigDecimal(150);
     final BigDecimal SQRT_PRE = new BigDecimal(10).pow(SQRT_DIG.intValue());
 
-    // Asserting Babylonian method
-    Exception exception =
-        assertThrows(
-            NumberFormatException.class,
-            () -> {
-              StatisticalFormulas.sqrt(BigDecimal.valueOf(-1), SCALE);
-            });
-    String expectedMessage = "Infinite or NaN";
-    String actualMessage = exception.getMessage();
+    /* Asserting Babylonian method */
+    assertThrows(
+        NumberFormatException.class,
+        () -> {
+          StatisticalFormulas.sqrt(BigDecimal.valueOf(-1), SCALE);
+        });
 
-    assertTrue(actualMessage.contains(expectedMessage));
-
-    // Asserting Newton method
+    /* Asserting Newton method */
     assertThrows(
         ArithmeticException.class,
         () -> {
           StatisticalFormulas.sqrtNewtonRaphson(
-              BigDecimal.valueOf(-1), new BigDecimal(1), new BigDecimal(1).divide(SQRT_PRE));
+              BigDecimal.valueOf(-1),
+              new BigDecimal(1),
+              new BigDecimal(1).divide(SQRT_PRE, RoundingMode.HALF_EVEN));
         });
   }
 }

@@ -54,7 +54,7 @@ public class StatisticalFormulas {
     }
     // EMA_n = WeightedSum_n / WeightedCount_n
     ema =
-        (currentWeightedCount == BigDecimal.ZERO)
+        (currentWeightedCount.compareTo(BigDecimal.ZERO) == 0)
             ? BigDecimal.ZERO
             : currentWeightedSum.divide(currentWeightedCount, RoundingMode.HALF_EVEN);
     return ema;
@@ -76,14 +76,13 @@ public class StatisticalFormulas {
       count = count.add(nextCount);
     }
 
-    BigDecimal avg =
-        (count == BigDecimal.ZERO) ? BigDecimal.ZERO : sum.divide(count, RoundingMode.HALF_EVEN);
-    return avg;
+    return (count.compareTo(BigDecimal.ZERO) == 0)
+        ? BigDecimal.ZERO
+        : sum.divide(count, RoundingMode.HALF_EVEN);
   }
 
   private static final String SQRT_METHOD = "BABYLONIAN"; // NEWTON
-  private static final Integer SCALE =
-      10; // How many decimal points of precision to calculate stdDev
+  private static final int SCALE = 10; // How many decimal points of precision to calculate stdDev
 
   private static final BigDecimal SQRT_DIG = new BigDecimal(150);
   private static final BigDecimal SQRT_PRE = new BigDecimal(10).pow(SQRT_DIG.intValue());
@@ -119,13 +118,19 @@ public class StatisticalFormulas {
 
   public static BigDecimal sqrt(BigDecimal A, final int SCALE) {
     BigDecimal x0 = new BigDecimal("0");
-    BigDecimal x1 = new BigDecimal(Math.sqrt(A.doubleValue()));
+    BigDecimal x1 = BigDecimal.valueOf(Math.sqrt(A.doubleValue()));
 
     while (!x0.equals(x1)) {
       x0 = x1;
-      x1 = (x0 == BigDecimal.ZERO) ? BigDecimal.ZERO : A.divide(x0, SCALE, ROUND_HALF_UP);
+      x1 =
+          (x0.compareTo(BigDecimal.ZERO) == 0)
+              ? BigDecimal.ZERO
+              : A.divide(x0, SCALE, ROUND_HALF_UP);
       x1 = x1.add(x0);
-      x1 = (x1 == BigDecimal.ZERO) ? BigDecimal.ZERO : x1.divide(TWO, SCALE, ROUND_HALF_UP);
+      x1 =
+          (x1.compareTo(BigDecimal.ZERO) == 0)
+              ? BigDecimal.ZERO
+              : x1.divide(TWO, SCALE, ROUND_HALF_UP);
     }
     return x1;
   }
@@ -153,15 +158,13 @@ public class StatisticalFormulas {
       sumPow = sumPow.add(nextSumPowValue);
       count = count.add(nextCount);
     }
-    /**
-     * We use the formula std_dev = sqrt(mean(x^2)-mean(x)^2) to obtain population standard
-     * deviation (not sample) https://en.wikipedia.org/wiki/Standard_deviation
-     */
     BigDecimal meanSquared =
-        (count == BigDecimal.ZERO) ? BigDecimal.ZERO : sumPow.divide(count, RoundingMode.HALF_EVEN);
+        (count.compareTo(BigDecimal.ZERO) == 0)
+            ? BigDecimal.ZERO
+            : sumPow.divide(count, RoundingMode.HALF_EVEN);
 
     BigDecimal squaredMean =
-        (count == BigDecimal.ZERO)
+        (count.compareTo(BigDecimal.ZERO) == 0)
             ? BigDecimal.ZERO
             : sum.divide(count, RoundingMode.HALF_EVEN).pow(2);
 
@@ -169,16 +172,18 @@ public class StatisticalFormulas {
 
     BigDecimal radicand = meanSquared.subtract(squaredMean);
 
+    final boolean radicandZeroNegative =
+        radicand.compareTo(BigDecimal.ZERO) == 0 || radicand.compareTo(BigDecimal.ZERO) < 0;
     if (SQRT_METHOD == "NEWTON") {
       stdDev =
-          (radicand == BigDecimal.ZERO || radicand.compareTo(BigDecimal.ZERO) < 0)
+          radicandZeroNegative
               ? BigDecimal.ZERO
-              : sqrtNewtonRaphson(radicand, new BigDecimal(1), new BigDecimal(1).divide(SQRT_PRE));
+              : sqrtNewtonRaphson(
+                  radicand,
+                  new BigDecimal(1),
+                  new BigDecimal(1).divide(SQRT_PRE, RoundingMode.HALF_EVEN));
     } else { // By default use Babylonian sqrt method, perf and precision are similar to Newton
-      stdDev =
-          (radicand == BigDecimal.ZERO || radicand.compareTo(BigDecimal.ZERO) < 0)
-              ? BigDecimal.ZERO
-              : sqrt(radicand, SCALE);
+      stdDev = radicandZeroNegative ? BigDecimal.ZERO : sqrt(radicand, SCALE);
     }
 
     return stdDev;
