@@ -54,7 +54,7 @@ public class StatisticalFormulas {
     }
     // EMA_n = WeightedSum_n / WeightedCount_n
     ema =
-        (currentWeightedCount == BigDecimal.ZERO)
+        (currentWeightedCount.compareTo(BigDecimal.ZERO) == 0)
             ? BigDecimal.ZERO
             : currentWeightedSum.divide(currentWeightedCount, RoundingMode.HALF_EVEN);
     return ema;
@@ -76,37 +76,12 @@ public class StatisticalFormulas {
       count = count.add(nextCount);
     }
 
-    BigDecimal avg =
-        (count == BigDecimal.ZERO) ? BigDecimal.ZERO : sum.divide(count, RoundingMode.HALF_EVEN);
-    return avg;
+    return (count.compareTo(BigDecimal.ZERO) == 0)
+        ? BigDecimal.ZERO
+        : sum.divide(count, RoundingMode.HALF_EVEN);
   }
 
-  public static final String SQRT_METHOD = "BABYLONIAN"; // NEWTON
-  public static final Integer SCALE =
-      10; // How many decimal points of precision to calculate stdDev
-
-  private static final BigDecimal SQRT_DIG = new BigDecimal(150);
-  private static final BigDecimal SQRT_PRE = new BigDecimal(10).pow(SQRT_DIG.intValue());
-
-  /**
-   * Private utility method used to compute the square root of a BigDecimal in JDK 1.8.
-   *
-   * @author Luciano Culacciatti
-   * @url http://www.codeproject.com/Tips/257031/Implementing-SqrtRoot-in-BigDecimal
-   */
-  private static BigDecimal sqrtNewtonRaphson(BigDecimal c, BigDecimal xn, BigDecimal precision) {
-    BigDecimal fx = xn.pow(2).add(c.negate());
-    BigDecimal fpx = xn.multiply(new BigDecimal(2));
-    BigDecimal xn1 = fx.divide(fpx, 2 * SQRT_DIG.intValue(), RoundingMode.HALF_DOWN);
-    xn1 = xn.add(xn1.negate());
-    BigDecimal currentSquare = xn1.pow(2);
-    BigDecimal currentPrecision = currentSquare.subtract(c);
-    currentPrecision = currentPrecision.abs();
-    if (currentPrecision.compareTo(precision) <= -1) {
-      return xn1;
-    }
-    return sqrtNewtonRaphson(c, xn1, precision);
-  }
+  private static final int SCALE = 10; // How many decimal points of precision to calculate stdDev
 
   /**
    * Private utility method to compute the square root of a BigDecimal in JDK 1.8
@@ -115,17 +90,23 @@ public class StatisticalFormulas {
    * @url https://stackoverflow.com/questions/13649703/square-root-of-bigdecimal-in-java
    * @url https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Babylonian_method
    */
-  private static final BigDecimal TWO = BigDecimal.valueOf(2);
+  public static final BigDecimal TWO = BigDecimal.valueOf(2);
 
   public static BigDecimal sqrt(BigDecimal A, final int SCALE) {
     BigDecimal x0 = new BigDecimal("0");
-    BigDecimal x1 = new BigDecimal(Math.sqrt(A.doubleValue()));
+    BigDecimal x1 = BigDecimal.valueOf(Math.sqrt(A.doubleValue()));
 
     while (!x0.equals(x1)) {
       x0 = x1;
-      x1 = (x0 == BigDecimal.ZERO) ? BigDecimal.ZERO : A.divide(x0, SCALE, ROUND_HALF_UP);
+      x1 =
+          (x0.compareTo(BigDecimal.ZERO) == 0)
+              ? BigDecimal.ZERO
+              : A.divide(x0, SCALE, ROUND_HALF_UP);
       x1 = x1.add(x0);
-      x1 = (x1 == BigDecimal.ZERO) ? BigDecimal.ZERO : x1.divide(TWO, SCALE, ROUND_HALF_UP);
+      x1 =
+          (x1.compareTo(BigDecimal.ZERO) == 0)
+              ? BigDecimal.ZERO
+              : x1.divide(TWO, SCALE, ROUND_HALF_UP);
     }
     return x1;
   }
@@ -153,15 +134,13 @@ public class StatisticalFormulas {
       sumPow = sumPow.add(nextSumPowValue);
       count = count.add(nextCount);
     }
-    /**
-     * We use the formula std_dev = sqrt(mean(x^2)-mean(x)^2) to obtain population standard
-     * deviation (not sample) https://en.wikipedia.org/wiki/Standard_deviation
-     */
     BigDecimal meanSquared =
-        (count == BigDecimal.ZERO) ? BigDecimal.ZERO : sumPow.divide(count, RoundingMode.HALF_EVEN);
+        (count.compareTo(BigDecimal.ZERO) == 0)
+            ? BigDecimal.ZERO
+            : sumPow.divide(count, RoundingMode.HALF_EVEN);
 
     BigDecimal squaredMean =
-        (count == BigDecimal.ZERO)
+        (count.compareTo(BigDecimal.ZERO) == 0)
             ? BigDecimal.ZERO
             : sum.divide(count, RoundingMode.HALF_EVEN).pow(2);
 
@@ -169,17 +148,9 @@ public class StatisticalFormulas {
 
     BigDecimal radicand = meanSquared.subtract(squaredMean);
 
-    if (SQRT_METHOD == "NEWTON") {
-      stdDev =
-          (radicand == BigDecimal.ZERO || radicand.compareTo(BigDecimal.ZERO) < 0)
-              ? BigDecimal.ZERO
-              : sqrtNewtonRaphson(radicand, new BigDecimal(1), new BigDecimal(1).divide(SQRT_PRE));
-    } else { // By default use Babylonian sqrt method, perf and precision are similar to Newton
-      stdDev =
-          (radicand == BigDecimal.ZERO || radicand.compareTo(BigDecimal.ZERO) < 0)
-              ? BigDecimal.ZERO
-              : sqrt(radicand, SCALE);
-    }
+    final boolean radicandZeroNegative =
+        radicand.compareTo(BigDecimal.ZERO) == 0 || radicand.compareTo(BigDecimal.ZERO) < 0;
+    stdDev = radicandZeroNegative ? BigDecimal.ZERO : sqrt(radicand, SCALE);
 
     return stdDev;
   }
