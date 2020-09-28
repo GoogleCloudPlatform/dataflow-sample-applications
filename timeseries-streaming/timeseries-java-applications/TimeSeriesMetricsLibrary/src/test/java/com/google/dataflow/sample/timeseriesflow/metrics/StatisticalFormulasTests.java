@@ -25,7 +25,6 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.metrics.utils.StatisticalFormulas;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -77,16 +76,6 @@ public class StatisticalFormulasTests {
         NumberFormatException.class,
         () -> {
           StatisticalFormulas.sqrt(BigDecimal.valueOf(-1), SCALE);
-        });
-
-    /* Asserting Newton method */
-    assertThrows(
-        ArithmeticException.class,
-        () -> {
-          StatisticalFormulas.sqrtNewtonRaphson(
-              BigDecimal.valueOf(-1),
-              new BigDecimal(1),
-              new BigDecimal(1).divide(SQRT_PRE, RoundingMode.HALF_EVEN));
         });
   }
 }
