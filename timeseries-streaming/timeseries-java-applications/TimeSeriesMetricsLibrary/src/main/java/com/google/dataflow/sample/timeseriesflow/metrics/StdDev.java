@@ -46,10 +46,7 @@ public abstract class StdDev implements Serializable {
     return new StdDevComputation(this);
   }
 
-  /**
-   * Compute StdDev
-   *
-   */
+  /** Compute StdDev */
   public static class StdDevComputation
       extends PTransform<PCollection<KV<TSKey, TSAccumSequence>>, PCollection<KV<TSKey, TSAccum>>> {
 
