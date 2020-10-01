@@ -431,4 +431,76 @@ public class TSMetricsTests {
 
     p.run();
   }
+
+  @Test
+  /* Simple test to check Exponential Moving Average Technical is created correctly */
+  public void testCreateStdDev() throws IOException {
+
+    String resourceName = "TSTestDataHints.json";
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource(resourceName).getFile());
+    String absolutePath = file.getAbsolutePath();
+
+    TSTestData tsTestData =
+        TSTestData.toBuilder()
+            .setInputTSDataFromJSON(
+                new JsonReader(new FileReader(absolutePath)),
+                Duration.standardSeconds(5),
+                Duration.standardSeconds(15))
+            .build();
+
+    TestStream<TSDataPoint> stream = tsTestData.inputTSData();
+
+    PCollection<KV<TSKey, TSAccum>> techAccum =
+        p.apply(stream)
+            .apply(
+                GenerateComputations.builder()
+                    .setType1FixedWindow(Duration.standardSeconds(5))
+                    .setType2SlidingWindowDuration(Duration.standardSeconds(15))
+                    .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
+                    .setType2NumericComputations(
+                        ImmutableList.of(StdDev.toBuilder().build().create()))
+                    .build());
+
+    // The sliding window will create partial values, to keep testing simple we just test
+    // correctness of BB for the full value
+
+    PCollection<KV<TSKey, TSAccum>> fullAccum =
+        techAccum.apply(
+            Filter.by(
+                x ->
+                    x.getValue()
+                            .getDataStoreOrThrow(FsiTechnicalIndicators.SUM_MOVEMENT_COUNT.name())
+                            .getIntVal()
+                        == 3));
+
+    PCollection<KV<TSKey, Double>> stdDev =
+        fullAccum.apply(
+            "StdDev",
+            MapElements.into(
+                    TypeDescriptors.kvs(TypeDescriptor.of(TSKey.class), TypeDescriptors.doubles()))
+                .via(
+                    x ->
+                        KV.of(
+                            x.getKey(),
+                            x.getValue()
+                                .getDataStoreOrThrow(
+                                    FsiTechnicalIndicators.STANDARD_DEVIATION.name())
+                                .getDoubleVal())));
+
+    /*
+    POPULATION STDDEV = SQRT(MEAN_SQUARED - SQUARED_MEAN)
+    Key_A_A = [1, 3, 8] = [2.9439202888]
+    Key_A_B = [16, 12, 8] = [3.2659863237]
+    Key_A_C = [12, 12, 12] = [0]
+
+     */
+    PAssert.that(stdDev)
+        .containsInAnyOrder(
+            KV.of(TSTestDataBaseline.KEY_A_A, 2.9439202888D),
+            KV.of(TSTestDataBaseline.KEY_A_B, 3.2659863237D),
+            KV.of(TSTestDataBaseline.KEY_A_C, 0D));
+
+    p.run();
+  }
 }
