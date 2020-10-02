@@ -27,7 +27,7 @@ processing window when applying transforms to the current windows. For example,
 we want to compute the rate of change between the First element in a window and 
 the Last element in another window.
 
-If you want to learn which metrics are supported or want to contribute with new ones, look at the [README.MD](timeseries-java-applications/TimeSeriesMetricsLibrary/README.MD) for more details.
+***NOTE*** If you want to learn which metrics are supported or want to contribute with new ones, look at the [README.MD](timeseries-java-applications/TimeSeriesMetricsLibrary/README.MD) for more details.
 
 ------
 
