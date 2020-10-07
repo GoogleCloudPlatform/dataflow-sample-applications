@@ -1,0 +1,314 @@
+feature {
+  name: "METADATA_SPAN_END_TS"
+  value_count {
+    min: 1
+    max: 1
+  }
+  type: INT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "METADATA_SPAN_START_TS"
+  value_count {
+    min: 1
+    max: 1
+  }
+  type: INT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "__CONFIG_TIMESTEPS-5"
+  value_count {
+    min: 1
+    max: 1
+  }
+  type: INT
+  bool_domain {
+  }
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-ABS_MOVING_AVERAGE_GAIN"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-ABS_MOVING_AVERAGE_LOSS"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-BB_BOTTOM_BAND_EMA"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-BB_BOTTOM_BAND_SMA"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-BB_MIDDLE_BAND_EMA"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-BB_MIDDLE_BAND_SMA"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-BB_UPPER_BAND_EMA"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-BB_UPPER_BAND_SMA"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-DATA_POINT_COUNT"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: INT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-EXPONENTIAL_MOVING_AVERAGE"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-FIRST"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-FIRST_TIMESTAMP"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: INT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-LAST"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-LAST_TIMESTAMP"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: INT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-MAX"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-MIN"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-RELATIVE_STRENGTH"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-RELATIVE_STRENGTH_INDICATOR"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-SIMPLE_MOVING_AVERAGE"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-SUM"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-SUM_DOWN_MOVEMENT"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-SUM_MOVEMENT_COUNT"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: INT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-SUM_UP_MOVEMENT"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}

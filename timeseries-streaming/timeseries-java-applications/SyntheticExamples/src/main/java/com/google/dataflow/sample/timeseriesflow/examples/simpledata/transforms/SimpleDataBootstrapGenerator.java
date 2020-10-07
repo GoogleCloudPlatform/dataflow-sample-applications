@@ -52,7 +52,7 @@ public class SimpleDataBootstrapGenerator {
 
     // The starting time for the bootstrap data is unimportant for this dataset as the data function
     // is always the same.
-    Instant now = Instant.parse("2000-01-01T00:00:00");
+    Instant now = Instant.parse("2000-01-01T00:00:00Z");
 
     List<TimestampedValue<TSDataPoint>> data = new ArrayList<>();
 

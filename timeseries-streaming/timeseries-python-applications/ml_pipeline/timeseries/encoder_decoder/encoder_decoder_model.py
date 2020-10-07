@@ -15,20 +15,18 @@
 
 import absl
 import tensorflow as tf
-import tensorflow_transform as tft
 
 from tensorflow import keras
 from tensorflow.keras.models import Model
 
 
-def _build_keras_model(
-        tf_transform_output: tft.TFTransformOutput,
+def build_keras_model(
         timesteps: int,
         number_features: int,
         outer_units: int = 32,
         inner_units: int = 16,
 ) -> tf.keras.Model:
-    """Creates a Dn LSTM Keras model
+    """Creates a LSTM Keras encode-decode model
     Returns:
       A Keras Model for auto encode-decode of timeseries data.
     """
