@@ -24,6 +24,7 @@ import com.google.dataflow.sample.timeseriesflow.DerivedAggregations;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.metrics.utils.StatisticalFormulas;
+import common.TSTestDataBaseline;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;

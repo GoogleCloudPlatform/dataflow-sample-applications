@@ -15,12 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.timeseriesflow.metrics;
+package common;
 
-import static com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.Time.TimePointCase.ADVANCE_WATERMARK_EXPRESSION;
-import static com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.Time.TimePointCase.ADVANCE_WATERMARK_SECONDS;
-import static com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.Time.TimePointCase.TIMEPOINT_NOT_SET;
-import static com.google.dataflow.sample.timeseriesflow.metrics.TSTestDataBaseline.START;
+import static common.TSTestDataBaseline.START;
 
 import com.google.auto.value.AutoValue;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
@@ -28,6 +25,7 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.AdvanceWatermarkExpression;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.TSTimePointTest;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.Time.TimePointCase;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
@@ -112,7 +110,7 @@ public abstract class TSTestData implements Serializable {
           TimeSeriesDataTest.Time.TimePointCase timePointCase =
               tsTimePointTestBuilder.getTime().getTimePointCase();
           // Skip processing hints while timestamp has not been set
-          if (timePointCase != TIMEPOINT_NOT_SET) {
+          if (timePointCase != TimePointCase.TIMEPOINT_NOT_SET) {
             hintProvided = Boolean.TRUE;
             // Hint detected get all previous events and start creating stream
             for (int i = 0; i < messages.size(); i++) {
