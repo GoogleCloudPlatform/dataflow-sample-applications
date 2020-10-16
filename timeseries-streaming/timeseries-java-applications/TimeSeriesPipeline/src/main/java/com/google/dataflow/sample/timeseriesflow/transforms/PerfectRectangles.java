@@ -192,7 +192,7 @@ public abstract class PerfectRectangles
     // Apply fixed window domain and combine to get the last known value in Event time.
 
     PCollection<KV<TSKey, TSDataPoint>> windowedInput =
-        input.apply(Window.into(FixedWindows.of(getFixedWindowDuration())));
+        input.apply("GapFillWindow", Window.into(FixedWindows.of(getFixedWindowDuration())));
 
     PCollection<KV<TSKey, TSDataPoint>> lastValueInWindow =
         windowedInput.apply(LatestEventTimeDataPoint.perKey());
@@ -217,6 +217,7 @@ public abstract class PerfectRectangles
         globalWindow
             .apply(ParDo.of(FillGaps.create(this)))
             .apply(
+                "PostGapFillReWindow",
                 Window.<KV<TSKey, TSDataPoint>>into(FixedWindows.of(getFixedWindowDuration()))
                     .triggering(DefaultTrigger.of()));
 
@@ -410,6 +411,15 @@ public abstract class PerfectRectangles
         if (lastValue == null) {
           // This is a state check, we should never have a situation where lastValue == null and the
           // first value in the sorted lists timestamp is > then current window.
+          if (sortedElements.isEmpty()) {
+
+            throw new IllegalStateException(
+                String.format(
+                    "There is no known last value and no new values in the list for window boundary %s. If you are using the DirectRunner please switch to another runner like Dataflow or Flink, we are investigating a known issue with larger datasets and the direct runner and this class.",
+                    Timestamps.toString(sortedElements.get(0).getValue().getTimestamp()),
+                    currentWindowBoundary.end()));
+          }
+
           if (Timestamps.toMillis(sortedElements.get(0).getValue().getTimestamp())
               > currentWindowBoundary.end().getMillis()) {
             throw new IllegalStateException(
@@ -491,7 +501,8 @@ public abstract class PerfectRectangles
       }
 
       long start = currentWindowBoundary.start().getMillis();
-      long end = currentWindowBoundary.end().getMillis();
+      // Boundary is exclusive of max timestamp
+      long end = currentWindowBoundary.end().getMillis() - 1;
 
       // Get an iterator to loop through our sorted list
       Iterator<KV<TSKey, TSDataPoint>> it = sortedElements.iterator();
