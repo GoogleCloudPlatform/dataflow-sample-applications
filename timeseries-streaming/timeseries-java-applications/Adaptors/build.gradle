@@ -15,28 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+plugins {
+    id 'java'
+    id 'idea'
+    id "com.diffplug.gradle.spotless" version "3.24.2"
+}
 
-// Needed for spotless apply
-buildscript { repositories { mavenCentral() }}
+sourceCompatibility = 1.8
 
-// All common configuration
-allprojects {
+dependencies {
+    compile project(':TimeSeriesPipeline')
+    compile project(':TimeSeriesMetricsLibrary')
 
-    ext {
-        beamVersion = '2.24.0'
-        protobuf_version = '3.11.1'
-        autoValueVersion = '1.6.3'
-    }
+    compile             "com.google.auto.value:auto-value-annotations:${autoValueVersion}"
+    annotationProcessor "com.google.auto.value:auto-value:${autoValueVersion}"
 
-    repositories {
-        mavenCentral()
-    }
-    wrapper {
-        gradleVersion = '5.6.1' //version required
-    }
+    testCompile project(path: ":TimeSeriesPipeline", configuration: 'testArtifacts')
+    testCompile group: 'junit', name: 'junit', version: '4.12'
 }
 
 
-
-
-
+// Enable code formatting
+spotless {
+    java {
+        licenseHeaderFile '../Apache_Licence_For_Spotless'
+        googleJavaFormat('1.7')
+    }
+}

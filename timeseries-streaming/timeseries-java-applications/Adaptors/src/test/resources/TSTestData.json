@@ -1,0 +1,74 @@
+[
+  {
+    "key": {
+      "major_key": "Key-A",
+      "minor_key_string": "MKey-a"
+    },
+    "data": {"double_val": 10.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-A",
+      "minor_key_string": "MKey-a"
+    },
+    "data": {"double_val": 20.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-A",
+      "minor_key_string": "MKey-a"
+    },
+    "data": {"double_val": 30.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-B",
+      "minor_key_string": "MKey-a"
+    },
+    "data": {"double_val": 110.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-B",
+      "minor_key_string": "MKey-a"
+    },
+    "data": {"double_val": 120.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-C",
+      "minor_key_string": "MKey-a"
+    },
+    "data": {"double_val": 130.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-C",
+      "minor_key_string": "MKey-a"
+    },
+    "data": {"double_val": 210.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-C",
+      "minor_key_string": "MKey-a"
+    },
+    "data": {"double_val": 220.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-C",
+      "minor_key_string": "MKey-a"
+    },
+    "data": {"double_val": 230.0
+    }
+  }
+]
