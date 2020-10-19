@@ -558,4 +558,69 @@ public class PerfectRectanglesTests {
 
     p.run();
   }
+
+  @Test
+  public void testEarlySuppressionWithAbsoluteBound() {
+
+    Pipeline p = Pipeline.create(PipelineOptionsFactory.create());
+
+    PCollection<TSDataPoint> perfectRectangle =
+        p.apply(getStreamWithLargerThanTTLGap(DATA_POINT_A_B))
+            .apply(
+                PerfectRectangles.withWindowAndAbsoluteStop(
+                        Duration.standardSeconds(1),
+                        Instant.ofEpochMilli(TSDataTestUtils.START + 8000))
+                    .enablePreviousValueFill()
+                    .suppressEarlyValuesWithStartTime(
+                        Instant.ofEpochMilli(TSDataTestUtils.START + 5000)))
+            .apply(Values.create())
+            .apply(Window.into(FixedWindows.of(Duration.standardSeconds(1))));
+
+    PAssert.that(perfectRectangle)
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 2000), Duration.standardSeconds(1)))
+        .empty()
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 3000), Duration.standardSeconds(1)))
+        .empty()
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 4000), Duration.standardSeconds(1)))
+        .empty()
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 5000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 5999))
+                .setIsAGapFillMessage(true)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 6000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 6000))
+                .setIsAGapFillMessage(false)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 7000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 7999))
+                .setIsAGapFillMessage(true)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 8000), Duration.standardSeconds(1)))
+        .empty();
+
+    p.run();
+  }
 }

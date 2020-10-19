@@ -51,6 +51,7 @@ import org.apache.beam.sdk.state.TimerSpecs;
 import org.apache.beam.sdk.state.ValueState;
 import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.Filter;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -117,6 +118,8 @@ public abstract class PerfectRectangles
 
   abstract @Nullable Instant getAbsoluteStopTime();
 
+  abstract @Nullable Instant getSuppressedEarlyValues();
+
   abstract Builder toBuilder();
 
   public static Builder builder() {
@@ -132,6 +135,8 @@ public abstract class PerfectRectangles
     public abstract Builder setTtlDuration(Duration value);
 
     public abstract Builder setAbsoluteStopTime(Instant value);
+
+    public abstract Builder setSuppressedEarlyValues(Instant values);
 
     public abstract PerfectRectangles build();
   }
@@ -182,8 +187,22 @@ public abstract class PerfectRectangles
         .build();
   }
 
+  /**
+   * Assign the last known value to any gaps. So if last value was a TSDataPoint with Data 8, then
+   * the gap filled value with have Data 8 and timestamp from previous value.
+   */
   public PerfectRectangles enablePreviousValueFill() {
     return this.toBuilder().setEnableHoldAndPropogate(true).build();
+  }
+
+  /**
+   * Often during batch bootstrap it is desirable to ignore early values where not all known keys
+   * have yet had a value. For example there are keys K1, K2 and K3. K1 has a value at 20:00:00, K2
+   * at 20:00:01 and K3 at 20:00:02. By setting this value to 20:00:03 all outputs from before this
+   * time will be suppressed. Allowing the final output to include all keys.
+   */
+  public PerfectRectangles suppressEarlyValuesWithStartTime(Instant startTimeForFirstValues) {
+    return this.toBuilder().setSuppressedEarlyValues(startTimeForFirstValues).build();
   }
 
   @Override
@@ -225,6 +244,15 @@ public abstract class PerfectRectangles
 
     PCollection<KV<TSKey, TSDataPoint>> readyForProcessing =
         PCollectionList.of(gapCorrectedDataPoints).and(windowedInput).apply(Flatten.pCollections());
+
+    // If suppress has been enabled remove early values
+    if (getSuppressedEarlyValues() != null) {
+      return readyForProcessing.apply(
+          Filter.by(
+              x ->
+                  Timestamps.toMillis(x.getValue().getTimestamp())
+                      > getSuppressedEarlyValues().getMillis()));
+    }
 
     return readyForProcessing;
   }
