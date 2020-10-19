@@ -36,4 +36,12 @@ public interface ScaleTestingOptions extends TimeseriesStreamingOptions {
   public Boolean getWithFileOutput();
 
   public void setWithFileOutput(Boolean withFileOutput);
+
+  public Integer getPerfectRecNumberDataSecs();
+
+  public void setPerfectRecNumberDataSecs(Integer endTimestamp);
+
+  public Boolean getSkipEvens();
+
+  public void setSkipEvens(Boolean skipEvens);
 }

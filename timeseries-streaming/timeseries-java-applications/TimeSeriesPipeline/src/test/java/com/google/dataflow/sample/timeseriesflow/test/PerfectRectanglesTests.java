@@ -60,6 +60,46 @@ public class PerfectRectanglesTests {
           .setTimestamp(Timestamps.fromMillis(NOW.getMillis()))
           .build();
 
+  public TestStream<KV<TSKey, TSDataPoint>> getStreamNoGapImperfectWatermark() {
+    // Stream has gaps at mid point along the stream.
+    // There should be continuous values in every window as well as a final Gap value when the
+    // stream finally stops
+    return TestStream.create(CommonUtils.getKvTSDataPointCoder())
+        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START))
+        .addElements(
+            TimestampedValue.of(
+                KV.of(DATA_POINT_A_A.getKey(), DATA_POINT_A_A), new Instant(TSDataTestUtils.START)))
+        .addElements(
+            TimestampedValue.of(
+                KV.of(
+                    DATA_POINT_A_A.getKey(),
+                    DATA_POINT_A_A
+                        .toBuilder()
+                        .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 1000))
+                        .build()),
+                new Instant(TSDataTestUtils.START + 1000)))
+        .addElements(
+            TimestampedValue.of(
+                KV.of(
+                    DATA_POINT_A_A.getKey(),
+                    DATA_POINT_A_A
+                        .toBuilder()
+                        .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 2000))
+                        .build()),
+                new Instant(TSDataTestUtils.START + 2000)))
+        .addElements(
+            TimestampedValue.of(
+                KV.of(
+                    DATA_POINT_A_A.getKey(),
+                    DATA_POINT_A_A
+                        .toBuilder()
+                        .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 3000))
+                        .build()),
+                new Instant(TSDataTestUtils.START + 3000)))
+        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 4000))
+        .advanceWatermarkToInfinity();
+  }
+
   public TestStream<KV<TSKey, TSDataPoint>> getStreamWithGap() {
     // Stream has gaps at mid point along the stream.
     // There should be continuous values in every window as well as a final Gap value when the
@@ -79,7 +119,7 @@ public class PerfectRectanglesTests {
                         .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 1000))
                         .build()),
                 new Instant(TSDataTestUtils.START + 1000)))
-        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 2000))
+        //        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 2000))
         .addElements(
             TimestampedValue.of(
                 KV.of(
@@ -89,7 +129,7 @@ public class PerfectRectanglesTests {
                         .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 3000))
                         .build()),
                 new Instant(TSDataTestUtils.START + 3000)))
-        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 4000))
+        //        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 4000))
         .addElements(
             TimestampedValue.of(
                 KV.of(
@@ -122,7 +162,7 @@ public class PerfectRectanglesTests {
                         .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 1000))
                         .build()),
                 new Instant(TSDataTestUtils.START + 1000)))
-        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 2000))
+        //        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 2000))
         .addElements(
             TimestampedValue.of(
                 KV.of(
@@ -144,6 +184,66 @@ public class PerfectRectanglesTests {
                 new Instant(TSDataTestUtils.START + 6000)))
         .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 7000))
         .advanceWatermarkToInfinity();
+  }
+
+  @Test
+  public void testNoGaps() {
+
+    Duration ttlDuration = Duration.standardSeconds(1);
+
+    Pipeline p = Pipeline.create(PipelineOptionsFactory.create());
+
+    PCollection<TSDataPoint> perfectRectangle =
+        p.apply(getStreamNoGapImperfectWatermark())
+            .apply(
+                PerfectRectangles.withWindowAndTTLDuration(
+                        Duration.standardSeconds(1), Duration.ZERO)
+                    .enablePreviousValueFill())
+            .apply(Values.create())
+            .apply(Window.into(FixedWindows.of(Duration.standardSeconds(1))));
+
+    PAssert.that(perfectRectangle)
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_A
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START))
+                .setIsAGapFillMessage(false)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 1000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_A
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 1000))
+                .setIsAGapFillMessage(false)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 2000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_A
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 2000))
+                .setIsAGapFillMessage(false)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 3000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_A
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 3000))
+                .setIsAGapFillMessage(false)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 4000), Duration.standardSeconds(1)))
+        .empty();
+    p.run();
   }
 
   @Test
@@ -623,4 +723,7 @@ public class PerfectRectanglesTests {
 
     p.run();
   }
+
+  @Test
+  public void testGarbageCollection() {}
 }
