@@ -126,7 +126,7 @@ public abstract class OutPutTFExampleToFile extends PTransform<PCollection<Examp
               FileIO.<KV<String, Example>>write()
                   .to(String.format("%s/data", options.getInterchangeLocation()))
                   .withNumShards(getNumShards())
-                  .withPrefix("Timeseries_TFExamples_")
+                  .withPrefix("TS_TFExamples")
                   .withSuffix(".tfrecord")
                   .via(
                       Contextful.<KV<String, Example>, byte[]>fn((x -> x.getValue().toByteArray())),
