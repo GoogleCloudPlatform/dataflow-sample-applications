@@ -31,8 +31,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Optional;
-import java.util.stream.IntStream;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.coders.BigEndianLongCoder;
@@ -51,6 +51,7 @@ import org.apache.beam.sdk.state.TimerSpecs;
 import org.apache.beam.sdk.state.ValueState;
 import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.Filter;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -117,6 +118,8 @@ public abstract class PerfectRectangles
 
   abstract @Nullable Instant getAbsoluteStopTime();
 
+  abstract @Nullable Instant getSuppressedEarlyValues();
+
   abstract Builder toBuilder();
 
   public static Builder builder() {
@@ -132,6 +135,8 @@ public abstract class PerfectRectangles
     public abstract Builder setTtlDuration(Duration value);
 
     public abstract Builder setAbsoluteStopTime(Instant value);
+
+    public abstract Builder setSuppressedEarlyValues(Instant values);
 
     public abstract PerfectRectangles build();
   }
@@ -182,8 +187,22 @@ public abstract class PerfectRectangles
         .build();
   }
 
+  /**
+   * Assign the last known value to any gaps. So if last value was a TSDataPoint with Data 8, then
+   * the gap filled value with have Data 8 and timestamp from previous value.
+   */
   public PerfectRectangles enablePreviousValueFill() {
     return this.toBuilder().setEnableHoldAndPropogate(true).build();
+  }
+
+  /**
+   * Often during batch bootstrap it is desirable to ignore early values where not all known keys
+   * have yet had a value. For example there are keys K1, K2 and K3. K1 has a value at 20:00:00, K2
+   * at 20:00:01 and K3 at 20:00:02. By setting this value to 20:00:03 all outputs from before this
+   * time will be suppressed. Allowing the final output to include all keys.
+   */
+  public PerfectRectangles suppressEarlyValuesWithStartTime(Instant startTimeForFirstValues) {
+    return this.toBuilder().setSuppressedEarlyValues(startTimeForFirstValues).build();
   }
 
   @Override
@@ -192,7 +211,7 @@ public abstract class PerfectRectangles
     // Apply fixed window domain and combine to get the last known value in Event time.
 
     PCollection<KV<TSKey, TSDataPoint>> windowedInput =
-        input.apply(Window.into(FixedWindows.of(getFixedWindowDuration())));
+        input.apply("GapFillWindow", Window.into(FixedWindows.of(getFixedWindowDuration())));
 
     PCollection<KV<TSKey, TSDataPoint>> lastValueInWindow =
         windowedInput.apply(LatestEventTimeDataPoint.perKey());
@@ -217,6 +236,7 @@ public abstract class PerfectRectangles
         globalWindow
             .apply(ParDo.of(FillGaps.create(this)))
             .apply(
+                "PostGapFillReWindow",
                 Window.<KV<TSKey, TSDataPoint>>into(FixedWindows.of(getFixedWindowDuration()))
                     .triggering(DefaultTrigger.of()));
 
@@ -224,6 +244,15 @@ public abstract class PerfectRectangles
 
     PCollection<KV<TSKey, TSDataPoint>> readyForProcessing =
         PCollectionList.of(gapCorrectedDataPoints).and(windowedInput).apply(Flatten.pCollections());
+
+    // If suppress has been enabled remove early values
+    if (getSuppressedEarlyValues() != null) {
+      return readyForProcessing.apply(
+          Filter.by(
+              x ->
+                  Timestamps.toMillis(x.getValue().getTimestamp())
+                      > getSuppressedEarlyValues().getMillis()));
+    }
 
     return readyForProcessing;
   }
@@ -371,6 +400,8 @@ public abstract class PerfectRectangles
 
       // Move elements in the sortedElements queue to a List and sort.
 
+      long t = System.currentTimeMillis();
+
       List<KV<TSKey, TSDataPoint>> sortedElements =
           loadAndSortElements(newElementsBag, sortedValueList);
 
@@ -380,29 +411,34 @@ public abstract class PerfectRectangles
               c.timestamp().minus(perfectRectangles().getFixedWindowDuration()),
               perfectRectangles().getFixedWindowDuration());
 
-      // Check if there is a value within the current window
-      KV<TSKey, TSDataPoint> lastValueInCurrentWindow =
+      // Process elements in the sorted list until gap is found
+      KV<IntervalWindow, KV<TSKey, TSDataPoint>> lastValueBeforeGap =
           checkIfValueInBoundary(sortedElements, currentWindowBoundary);
 
-      // If there is no Gap then we set the timer to fire in the next window. And ensure the
-      // LastValue is updated.
+      // If there is no Gap then we set the timer to fire in the  window after the last known value.
+      // And ensure the
+      // LastValue is updated. Important note the last Value could be in the 'future' as we seek
+      // ahead in the event queue for efficiency
+      // TODO Change this impl once orderedliststate is added to Beam.
 
-      if (lastValueInCurrentWindow != null) {
+      if (lastValueBeforeGap != null) {
         // Store the current value into State
-        lastStoredValue.write(lastValueInCurrentWindow);
+        lastStoredValue.write(lastValueBeforeGap.getValue());
         // Set a timer in the next window
         timer.set(
-            "tick", currentWindowBoundary.end().plus(perfectRectangles().getFixedWindowDuration()));
+            "tick",
+            lastValueBeforeGap.getKey().end().plus(perfectRectangles().getFixedWindowDuration()));
         isTimerActive.write(true);
         // Clear any previous gap timestamps
         gapStartingTimestamp.clear();
         // Garbage collection
-        garbageCollect(sortedElements, currentWindowBoundary.end().getMillis());
+        sortedElements =
+            garbageCollect(sortedElements, lastValueBeforeGap.getKey().end().getMillis());
       }
 
       // If there is a gap then we will gap fill, using the last known value
 
-      if (lastValueInCurrentWindow == null) {
+      if (lastValueBeforeGap == null) {
 
         // Load the last known value, this value can be NULL if this is the init state
         KV<TSKey, TSDataPoint> lastValue = lastStoredValue.read();
@@ -410,6 +446,15 @@ public abstract class PerfectRectangles
         if (lastValue == null) {
           // This is a state check, we should never have a situation where lastValue == null and the
           // first value in the sorted lists timestamp is > then current window.
+          if (sortedElements.isEmpty()) {
+
+            throw new IllegalStateException(
+                String.format(
+                    "There is no known last value and no new values in the list for window boundary %s. If you are using the DirectRunner please switch to another runner like Dataflow or Flink, we are investigating a known issue with larger datasets and the direct runner and this class.",
+                    Timestamps.toString(sortedElements.get(0).getValue().getTimestamp()),
+                    currentWindowBoundary.end()));
+          }
+
           if (Timestamps.toMillis(sortedElements.get(0).getValue().getTimestamp())
               > currentWindowBoundary.end().getMillis()) {
             throw new IllegalStateException(
@@ -428,13 +473,13 @@ public abstract class PerfectRectangles
 
         boolean withinTTL = checkWithinTT(c, gapStartingTimestamp);
 
+        // GC the old TSDataPoint
+        sortedElements = garbageCollect(sortedElements, currentWindowBoundary.end().getMillis());
+
         if (withinTTL) {
 
           // Output a GapFill TSDataPoint
           outputGapFill(lastValue, c);
-
-          // GC the old TSDataPoint
-          garbageCollect(sortedElements, currentWindowBoundary.end().getMillis());
 
           // If this is the first window in which a gap happens set the gap starting timestamp
           if (gapStartingTimestamp.read() == null) {
@@ -446,13 +491,37 @@ public abstract class PerfectRectangles
               new Instant(c.timestamp()).plus(perfectRectangles().getFixedWindowDuration());
           timer.set("tick", nextAlarm);
           isTimerActive.write(true);
+
         } else {
-          // We stop the looping timer & clear all state and end the OnTimer()
-          isTimerActive.clear();
-          sortedValueList.clear();
-          lastStoredValue.clear();
-          gapStartingTimestamp.clear();
-          trailingWWM.clear();
+          // If the sorted elements is now empty and we are TTL we can stop the looping timer &
+          // clear all state and end the OnTimer()
+          if (sortedElements.isEmpty()) {
+            isTimerActive.clear();
+            sortedValueList.clear();
+            lastStoredValue.clear();
+            gapStartingTimestamp.clear();
+            trailingWWM.clear();
+          } else {
+
+            // As there are data points on the horizon, we need to set a new timer, this needs to
+            // match the start of
+            // the fixed window periods, similar to the values that came from the LASTVALUE
+            // transform.
+
+            Instant nextAlarm =
+                new Instant(c.timestamp()).plus(perfectRectangles().getFixedWindowDuration());
+            KV<TSKey, TSDataPoint> nextValue = sortedElements.get(0);
+
+            while (nextAlarm.getMillis()
+                <= Timestamps.toMillis(nextValue.getValue().getTimestamp())) {
+              nextAlarm = nextAlarm.plus(perfectRectangles().getFixedWindowDuration());
+            }
+
+            timer.set("tick", nextAlarm);
+
+            lastStoredValue.clear();
+            gapStartingTimestamp.clear();
+          }
 
           return;
         }
@@ -469,34 +538,49 @@ public abstract class PerfectRectangles
       List<KV<TSKey, TSDataPoint>> sortedElements =
           Optional.ofNullable(sortedValueList.read()).orElse(new ArrayList<>());
 
+      int sizeOfListBefore = sortedElements.size();
+
       sortedElements.addAll(Lists.newArrayList(newElementsBag.read()));
+
+      int sizeOfListAfter = sortedElements.size();
 
       // Clear the elements now that they have been added to memory.
       newElementsBag.clear();
 
-      // Sort the values
-      sortedElements.sort(
-          Comparator.comparing(x -> Timestamps.toMillis(x.getValue().getTimestamp())));
+      if (sizeOfListAfter != sizeOfListBefore) {
+        // Sort the values, this is a very slow operation
+        sortedElements.sort(
+            Comparator.comparing(x -> Timestamps.toMillis(x.getValue().getTimestamp())));
+      }
 
       return sortedElements;
     }
 
-    /** Return true if we find a value within the IntervalWindow provided */
-    private KV<TSKey, TSDataPoint> checkIfValueInBoundary(
+    /*
+     * TODO Replace with OrderedStateList based implementation when it becomes available.
+     *
+     */
+    private KV<IntervalWindow, KV<TSKey, TSDataPoint>> checkIfValueInBoundary(
         List<KV<TSKey, TSDataPoint>> sortedElements, IntervalWindow currentWindowBoundary) {
+      long t = System.currentTimeMillis();
 
-      // If the list is empty return false;
+      // If the list is empty return null;
       if (sortedElements.isEmpty()) {
         return null;
       }
 
       long start = currentWindowBoundary.start().getMillis();
+      // Boundary is exclusive of max timestamp
       long end = currentWindowBoundary.end().getMillis();
 
       // Get an iterator to loop through our sorted list
       Iterator<KV<TSKey, TSDataPoint>> it = sortedElements.iterator();
 
-      while (it.hasNext()) {
+      // First we check if the current window has a value
+
+      KV<IntervalWindow, KV<TSKey, TSDataPoint>> lastKnownValue = null;
+
+      while (it.hasNext() && lastKnownValue == null) {
         KV<TSKey, TSDataPoint> next = it.next();
         long timestamp = Timestamps.toMillis(next.getValue().getTimestamp());
         // If the timestamp is > then our window then we can stop
@@ -505,10 +589,28 @@ public abstract class PerfectRectangles
         }
         // If value is bigger than start then its a valid value for this window.
         if (timestamp >= start) {
-          return next;
+          lastKnownValue = KV.of(currentWindowBoundary, next);
         }
       }
-      return null;
+
+      Instant startOfWindow = currentWindowBoundary.end();
+      Instant endOfWindow =
+          currentWindowBoundary.end().plus(perfectRectangles().getFixedWindowDuration());
+      // For efficiency we now seek forward until we find a gap
+      while (it.hasNext()) {
+
+        KV<TSKey, TSDataPoint> next = it.next();
+        long timestamp = Timestamps.toMillis(next.getValue().getTimestamp());
+        if (timestamp >= startOfWindow.getMillis() && timestamp < endOfWindow.getMillis()) {
+          lastKnownValue = KV.of(new IntervalWindow(startOfWindow, endOfWindow), next);
+        } else {
+          break;
+        }
+        startOfWindow = startOfWindow.plus(perfectRectangles().getFixedWindowDuration());
+        endOfWindow = endOfWindow.plus(perfectRectangles().getFixedWindowDuration());
+      }
+
+      return lastKnownValue;
     }
 
     private boolean checkWithinTT(OnTimerContext c, ValueState<Long> gapStartingTimestamp) {
@@ -562,21 +664,34 @@ public abstract class PerfectRectangles
       }
     }
 
-    private void garbageCollect(List<KV<TSKey, TSDataPoint>> sortedList, long windowEnd) {
+    /** Remove all values before the end of the current window */
+    @VisibleForTesting
+    public List<KV<TSKey, TSDataPoint>> garbageCollect(
+        List<KV<TSKey, TSDataPoint>> sortedList, long windowEnd) {
 
-      // Remove all entries up to and including the current window
-      Iterator<KV<TSKey, TSDataPoint>> it = sortedList.iterator();
-      int i = 0;
-      while (it.hasNext()) {
-        KV<TSKey, TSDataPoint> next = it.next();
-        if (Timestamps.toMillis(next.getValue().getTimestamp()) > windowEnd) {
-          break;
-        }
-        i++;
+      if (sortedList.isEmpty()) {
+        return sortedList;
       }
 
-      // GC the list
-      IntStream.range(0, i).forEach(sortedList::remove);
+      int pos = -1;
+
+      for (ListIterator<KV<TSKey, TSDataPoint>> iter = sortedList.listIterator();
+          iter.hasNext(); ) {
+        if (Timestamps.toMillis(iter.next().getValue().getTimestamp()) > windowEnd) {
+          pos = iter.previousIndex();
+          break;
+        }
+      }
+
+      // We found a value which is larger than the window , so create sublist of the values
+      if (pos >= 0) {
+        sortedList.subList(0, pos).clear();
+        return sortedList;
+      }
+
+      sortedList.clear();
+
+      return sortedList;
     }
   }
 }

@@ -25,6 +25,8 @@ import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSNumericComb
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.gson.stream.JsonReader;
+import common.TSTestData;
+import common.TSTestDataBaseline;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;

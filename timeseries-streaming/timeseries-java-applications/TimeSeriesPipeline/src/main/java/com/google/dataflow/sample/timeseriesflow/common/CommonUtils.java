@@ -29,6 +29,9 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.coders.Coder;
 import org.apache.beam.sdk.coders.KvCoder;
@@ -59,6 +62,16 @@ public class CommonUtils {
     }
 
     return (Timestamps.comparator().compare(a, b) < 0) ? a : b;
+  }
+
+  /** merges the Metadata from TSDataPoints into a map */
+  public static Map<String, String> mergeDataPoints(List<TSDataPoint> datapoints) {
+
+    Map<String, String> mergedMap = new HashMap<>();
+    for (TSDataPoint dataPoint : datapoints) {
+      mergedMap.putAll(dataPoint.getMetadataMap());
+    }
+    return mergedMap;
   }
 
   /** returns a {@link Data} given a {@link Number} */

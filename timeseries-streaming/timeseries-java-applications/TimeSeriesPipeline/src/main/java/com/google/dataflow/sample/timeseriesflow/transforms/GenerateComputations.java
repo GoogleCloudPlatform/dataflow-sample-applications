@@ -254,19 +254,19 @@ public abstract class GenerateComputations
 
       List<PCollection<KV<TSKey, TSAccum>>> type2computations = new ArrayList<>();
 
+      PCollection<KV<TSKey, TSAccumSequence>> sequencedAccums =
+          type1Computations.apply(
+              ConvertAccumToSequence.builder()
+                  .setWindow(
+                      Window.into(
+                          SlidingWindows.of(type2SlidingWindowDuration())
+                              .every(type1FixedWindow())))
+                  .build());
+
       for (PTransform<PCollection<KV<TSKey, TSAccumSequence>>, PCollection<KV<TSKey, TSAccum>>>
           compute : type2NumericComputations()) {
 
-        type2computations.add(
-            type1Computations
-                .apply(
-                    ConvertAccumToSequence.builder()
-                        .setWindow(
-                            Window.into(
-                                SlidingWindows.of(type2SlidingWindowDuration())
-                                    .every(type1FixedWindow())))
-                        .build())
-                .apply(compute));
+        type2computations.add(sequencedAccums.apply(compute));
       }
 
       // --------------- Merge Type 1 & Type 2 aggregations
