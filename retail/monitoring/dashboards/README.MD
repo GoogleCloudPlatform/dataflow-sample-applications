@@ -36,7 +36,7 @@ terraform apply -var 'dashboard_json_file=retail-pipeline.json' \
 | console\_link | The destination console URL for the dashboard |
 
 ## Resources:
-* [Terraform - Getting Started with the Google Provide](https://www.terraform.io/docs/providers/google/guides/getting_started.html)
+* [Terraform - Getting Started with the Google Provider](https://www.terraform.io/docs/providers/google/guides/getting_started.html)
 * [Terraform - Google monitoring dashboard](https://www.terraform.io/docs/providers/google/r/monitoring_dashboard.html)
 * [Use the Dashboard API to build your own monitoring dashboard](https://cloud.google.com/blog/products/management-tools/cloud-monitoring-dashboards-using-an-api)
 * [REST Resource: projects.dashboards](https://cloud.google.com/monitoring/api/ref_v3/rest/v1/projects.dashboards)
