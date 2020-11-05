@@ -23,7 +23,6 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.common.TSDataUtils;
-import com.google.dataflow.sample.timeseriesflow.transforms.PerfectRectangles;
 import com.google.protobuf.util.Timestamps;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -34,19 +33,10 @@ import java.util.Set;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.Filter;
-import org.apache.beam.sdk.transforms.GroupByKey;
-import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.Reify;
-import org.apache.beam.sdk.transforms.Values;
-import org.apache.beam.sdk.transforms.WithKeys;
-import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
-import org.apache.beam.sdk.values.TypeDescriptor;
-import org.apache.beam.sdk.values.TypeDescriptors;
 import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
@@ -116,42 +106,16 @@ public abstract class BlendedIndex
   @Override
   public PCollection<TSDataPoint> expand(PCollection<TSDataPoint> input) {
 
-    PerfectRectangles perfectRectangles = null;
+    MergeSparseStreamsToSingleDenseStream merge =
+        MergeSparseStreamsToSingleDenseStream.builder()
+            .setAbsoluteStopTime(getAbsoluteStopTime())
+            .setDownSampleWindowLength(getDownSampleWindowLength())
+            .setIndexList(getIndexList())
+            .setTimeToLive(getTimeToLive())
+            .setNewIndexKey(getIndexKey())
+            .build();
 
-    if (getTimeToLive() == null) {
-      perfectRectangles =
-          PerfectRectangles.withWindowAndAbsoluteStop(
-                  getDownSampleWindowLength(), getAbsoluteStopTime())
-              .enablePreviousValueFill();
-    }
-
-    if (getAbsoluteStopTime() == null) {
-
-      perfectRectangles =
-          PerfectRectangles.withWindowAndTTLDuration(getDownSampleWindowLength(), getTimeToLive())
-              .enablePreviousValueFill();
-    }
-
-    Preconditions.checkNotNull(perfectRectangles);
-
-    PCollection<KV<String, TSDataPoint>> valuesInWindow =
-        input
-            .apply("FilterIndexes", Filter.by(x -> getIndexList().contains(x.getKey())))
-            .apply(WithKeys.of(x -> x.getKey()))
-            .setCoder(CommonUtils.getKvTSDataPointCoder())
-            .apply(perfectRectangles)
-            .apply(Reify.windowsInValue())
-            .apply(
-                "CreateWindowKeys",
-                MapElements.into(
-                        TypeDescriptors.kvs(
-                            TypeDescriptors.strings(), TypeDescriptor.of(TSDataPoint.class)))
-                    .via(x -> KV.of(x.getValue().getWindow().toString(), x.getValue().getValue())));
-
-    return valuesInWindow
-        .apply(GroupByKey.create())
-        .apply(Values.create())
-        .apply(ParDo.of(Blend.create(this)).withSideInputs(getRatioList()));
+    return input.apply(merge).apply(ParDo.of(Blend.create(this)).withSideInputs(getRatioList()));
   }
 
   @AutoValue
