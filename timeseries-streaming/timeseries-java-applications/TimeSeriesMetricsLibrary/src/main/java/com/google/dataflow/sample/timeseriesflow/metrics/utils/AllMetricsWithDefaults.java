@@ -27,6 +27,8 @@ import com.google.dataflow.sample.timeseriesflow.metrics.MA;
 import com.google.dataflow.sample.timeseriesflow.metrics.RSI;
 import java.math.BigDecimal;
 import java.util.List;
+
+import com.google.dataflow.sample.timeseriesflow.metrics.StdDev;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.Combine.CombineFn;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -39,7 +41,7 @@ import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.Immutabl
  *
  * <p>Type 1 {@link TSNumericCombiner}
  *
- * <p>Type 2 {@link RSI},{@link MA},{@link BB}
+ * <p>Type 2 {@link RSI},{@link MA},{@link BB},{@link StdDev}
  */
 @Experimental
 public class AllMetricsWithDefaults {
@@ -74,6 +76,9 @@ public class AllMetricsWithDefaults {
         BB.toBuilder()
             .setAverageComputationMethod(BB.AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
             .setDevFactor(2)
+            .build()
+            .create(),
+        StdDev.toBuilder()
             .build()
             .create());
   }
