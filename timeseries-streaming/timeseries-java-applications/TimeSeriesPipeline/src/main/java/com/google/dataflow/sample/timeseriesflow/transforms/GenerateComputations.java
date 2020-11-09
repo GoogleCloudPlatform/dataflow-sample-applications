@@ -24,8 +24,10 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.TimeseriesStreamingOptions;
+import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSBaseCombiner;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.common.TupleTypes;
+import com.google.dataflow.sample.timeseriesflow.transforms.TypeTwoComputation.ComputeType;
 import com.google.dataflow.sample.timeseriesflow.verifier.TSDataPointVerifier;
 import com.google.protobuf.util.Timestamps;
 import java.util.ArrayList;
@@ -37,6 +39,7 @@ import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.Combine.CombineFn;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.Flatten;
+import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.Reify;
@@ -51,6 +54,7 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.TupleTagList;
+import org.apache.beam.sdk.values.TypeDescriptors;
 import org.apache.beam.sdk.values.ValueInSingleWindow;
 import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions;
 import org.joda.time.Duration;
@@ -95,6 +99,8 @@ public abstract class GenerateComputations
 
   abstract List<CombineFn<TSDataPoint, TSAccum, TSAccum>> type1NumericComputations();
 
+  public @Nullable abstract List<CreateCompositeTSAccum> type1KeyMerge();
+
   public @Nullable abstract List<
           PTransform<PCollection<KV<TSKey, TSAccumSequence>>, PCollection<KV<TSKey, TSAccum>>>>
       type2NumericComputations();
@@ -124,6 +130,8 @@ public abstract class GenerateComputations
 
     public abstract Builder setType1NumericComputations(
         List<CombineFn<TSDataPoint, TSAccum, TSAccum>> value);
+
+    public abstract Builder setType1KeyMerge(List<CreateCompositeTSAccum> value);
 
     public @Nullable abstract Builder setType2NumericComputations(
         List<PTransform<PCollection<KV<TSKey, TSAccumSequence>>, PCollection<KV<TSKey, TSAccum>>>>
@@ -243,6 +251,9 @@ public abstract class GenerateComputations
             .apply(Reify.windowsInValue())
             .apply(ParDo.of(new AddWindowBoundaryToTSAccum()));
 
+    // Set output if there are no more computations we are done.
+    PCollection<KV<TSKey, TSAccum>> output = type1Computations;
+
     // --------------- Compute Type 2 aggregations
 
     // **************************************************************
@@ -254,19 +265,85 @@ public abstract class GenerateComputations
 
       List<PCollection<KV<TSKey, TSAccum>>> type2computations = new ArrayList<>();
 
-      PCollection<KV<TSKey, TSAccumSequence>> sequencedAccums =
-          type1Computations.apply(
-              ConvertAccumToSequence.builder()
-                  .setWindow(
-                      Window.into(
-                          SlidingWindows.of(type2SlidingWindowDuration())
-                              .every(type1FixedWindow())))
-                  .build());
+      List<PTransform<PCollection<KV<TSKey, TSAccumSequence>>, PCollection<KV<TSKey, TSAccum>>>>
+          singleKeyComp = new ArrayList<>();
+      List<PTransform<PCollection<KV<TSKey, TSAccumSequence>>, PCollection<KV<TSKey, TSAccum>>>>
+          compKeyComp = new ArrayList<>();
 
       for (PTransform<PCollection<KV<TSKey, TSAccumSequence>>, PCollection<KV<TSKey, TSAccum>>>
           compute : type2NumericComputations()) {
 
-        type2computations.add(sequencedAccums.apply(compute));
+        TypeTwoComputation typeTwoComputation =
+            compute.getClass().getAnnotation(TypeTwoComputation.class);
+
+        if (typeTwoComputation.computeType().equals(ComputeType.SINGLE_KEY)) {
+          LOG.info("Adding Type 2 Computation For Single Key " + compute.getClass());
+
+          singleKeyComp.add(compute);
+        }
+
+        if (typeTwoComputation.computeType().equals(ComputeType.COMPOSITE_KEY)) {
+          LOG.info("Adding Type 2 Computation For Composite Key " + compute.getClass());
+          compKeyComp.add(compute);
+        }
+      }
+
+      if (singleKeyComp.size() > 0) {
+
+        PCollection<KV<TSKey, TSAccumSequence>> sequencedAccums =
+            type1Computations.apply(
+                ConvertAccumToSequence.builder()
+                    .setWindow(
+                        Window.into(
+                            SlidingWindows.of(type2SlidingWindowDuration())
+                                .every(type1FixedWindow())))
+                    .build());
+
+        singleKeyComp.forEach(x -> type2computations.add(sequencedAccums.apply(x)));
+      }
+
+      if (compKeyComp.size() > 0) {
+
+        // --------------- Apply key merge if any, this produces a TSAccum which has values
+        // from multiple streams
+        List<PCollection<KV<TSKey, TSAccum>>> keyMergeList = new ArrayList<>();
+
+        if (type1KeyMerge() != null && type1KeyMerge().size() > 0) {
+
+          for (CreateCompositeTSAccum transform : type1KeyMerge()) {
+            keyMergeList.add(type1Computations.apply(transform));
+          }
+        }
+
+        if (keyMergeList.size() > 0) {
+          PCollection<KV<TSKey, TSAccumSequence>> sequencedAccumsCompKey =
+              PCollectionList.of(keyMergeList)
+                  .apply(Flatten.pCollections())
+                  .apply(
+                      ConvertAccumToSequence.builder()
+                          .setWindow(
+                              Window.into(
+                                  SlidingWindows.of(type2SlidingWindowDuration())
+                                      .every(type1FixedWindow())))
+                          .build());
+
+          compKeyComp.forEach(
+              x ->
+                  type2computations.add(
+                      sequencedAccumsCompKey
+                          .apply(x)
+                          .apply("SetInternalState", ParDo.of(new SetInternalState()))));
+
+          type2computations
+              .get(0)
+              .apply(
+                  MapElements.into(TypeDescriptors.strings())
+                      .via(
+                          x -> {
+                            System.out.println(x.getValue());
+                            return "";
+                          }));
+        }
       }
 
       // --------------- Merge Type 1 & Type 2 aggregations
@@ -279,9 +356,10 @@ public abstract class GenerateComputations
               MergeAllTypeCompsInSameKeyWindow.withMergeWindow(
                   Window.into(FixedWindows.of(type1FixedWindow()))));
 
-      return mergedComputations;
+      output = mergedComputations;
     }
-    return type1Computations;
+
+    return output.apply(ParDo.of(new ClearInternalState()));
   }
 
   private static class AddWindowBoundaryToTSAccum
@@ -355,6 +433,39 @@ public abstract class GenerateComputations
             }
         }
       }
+    }
+  }
+
+  /** */
+  private static class ClearInternalState extends DoFn<KV<TSKey, TSAccum>, KV<TSKey, TSAccum>> {
+
+    @ProcessElement
+    public void process(@Element KV<TSKey, TSAccum> element, OutputReceiver<KV<TSKey, TSAccum>> o) {
+
+      o.output(
+          KV.of(
+              element.getKey(),
+              element
+                  .getValue()
+                  .toBuilder()
+                  .removeMetadata(TSBaseCombiner._BASE_COMBINER)
+                  .build()));
+    }
+  }
+  /** */
+  private static class SetInternalState extends DoFn<KV<TSKey, TSAccum>, KV<TSKey, TSAccum>> {
+
+    @ProcessElement
+    public void process(@Element KV<TSKey, TSAccum> element, OutputReceiver<KV<TSKey, TSAccum>> o) {
+
+      o.output(
+          KV.of(
+              element.getKey(),
+              element
+                  .getValue()
+                  .toBuilder()
+                  .putMetadata(TSBaseCombiner._BASE_COMBINER, "t")
+                  .build()));
     }
   }
 }

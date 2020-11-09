@@ -21,6 +21,8 @@ import com.google.auto.value.AutoValue;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
+import com.google.dataflow.sample.timeseriesflow.transforms.TypeTwoComputation;
+import com.google.dataflow.sample.timeseriesflow.transforms.TypeTwoComputation.ComputeType;
 import java.io.Serializable;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -47,6 +49,7 @@ public abstract class StdDev implements Serializable {
   }
 
   /** Compute StdDev */
+  @TypeTwoComputation(computeType = ComputeType.SINGLE_KEY)
   public static class StdDevComputation
       extends PTransform<PCollection<KV<TSKey, TSAccumSequence>>, PCollection<KV<TSKey, TSAccum>>> {
 

@@ -22,6 +22,7 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
+import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSBaseCombiner;
 import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSNumericCombiner;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.protobuf.Timestamp;
@@ -82,6 +83,7 @@ public class TSNumericCombinerTest {
     output.putDataStore(Indicators.MAX.name(), CommonUtils.createNumData(2));
     output.putDataStore(Indicators.MIN.name(), CommonUtils.createNumData(1));
     output.putDataStore(Indicators.DATA_POINT_COUNT.name(), CommonUtils.createNumData(2L));
+    output.putMetadata(TSBaseCombiner._BASE_COMBINER, "t");
 
     PAssert.that(collection).containsInAnyOrder(output.build());
     p.run();

@@ -18,23 +18,17 @@
 package com.google.dataflow.sample.timeseriesflow.transforms;
 
 import com.google.auto.value.AutoValue;
-import com.google.dataflow.sample.timeseriesflow.DerivedAggregations.Indicators;
-import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
-import com.google.protobuf.util.Timestamps;
+import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSBaseCombiner;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.apache.beam.sdk.annotations.Experimental;
-import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.Filter;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.windowing.IntervalWindow;
 import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
@@ -84,97 +78,16 @@ public abstract class MergeAllTypeCompsInSameKeyWindow
     return PCollectionList.of(windowedCollections)
         .apply(Flatten.pCollections())
         .apply(GroupByKey.create())
-        .apply(ParDo.of(new MergeAccum()));
-  }
-
-  private static class MergeAccum extends DoFn<KV<TSKey, Iterable<TSAccum>>, KV<TSKey, TSAccum>> {
-
-    @ProcessElement
-    public void process(ProcessContext pc, IntervalWindow w) {
-      TSAccum.Builder merged = TSAccum.newBuilder();
-
-      Map<String, Data> dataMap = new HashMap<>();
-
-      com.google.protobuf.Timestamp upperWindowBoundary = null;
-      com.google.protobuf.Timestamp lowerWindowBoundary = null;
-      boolean isGapFillValue = false;
-
-      for (TSAccum tsAccum : pc.element().getValue()) {
-
-        if (tsAccum.getHasAGapFillMessage()) {
-          isGapFillValue = true;
-        }
-
-        if (upperWindowBoundary != null && tsAccum.hasUpperWindowBoundary()) {
-          if (Timestamps.compare(upperWindowBoundary, tsAccum.getUpperWindowBoundary()) != 0) {
-            throw new IllegalStateException(
-                String.format(
-                    "Different time boundary accums are being merged! %s with %s accums are %s and %s",
-                    Timestamps.toString(upperWindowBoundary),
-                    Timestamps.toString(tsAccum.getUpperWindowBoundary()),
-                    merged,
-                    tsAccum));
-          }
-        }
-
-        if (tsAccum.hasUpperWindowBoundary()) {
-          upperWindowBoundary = tsAccum.getUpperWindowBoundary();
-        }
-
-        if (lowerWindowBoundary != null && tsAccum.hasLowerWindowBoundary()) {
-          if (Timestamps.compare(lowerWindowBoundary, tsAccum.getLowerWindowBoundary()) != 0) {
-            throw new IllegalStateException(
-                String.format(
-                    "Different time boundary accums are being merged! %s with %s accums are %s and %s",
-                    Timestamps.toString(lowerWindowBoundary),
-                    Timestamps.toString((tsAccum.getLowerWindowBoundary())),
-                    merged,
-                    tsAccum));
-          }
-        }
-
-        if (tsAccum.hasLowerWindowBoundary()) {
-          lowerWindowBoundary = tsAccum.getLowerWindowBoundary();
-        }
-
-        // In this version of the library we can have multiple values of Type 2 sub computations
-        // appear in the Accum.
-        // This is because the library does not contain an optimizer for its computations to avoid
-        // redundancy yet.
-        // However the same value for the same window must be equal, otherwise there is a name space
-        // clash which is a bug.
-
-        for (String key : tsAccum.getDataStoreMap().keySet()) {
-          if (merged.getDataStoreMap().containsKey(key)) {
-            Data existingData = merged.getDataStoreMap().get(key);
-            if (!existingData.equals(tsAccum.getDataStoreOrThrow(key))) {
-              throw new IllegalStateException(
-                  String.format(
-                      "%s already seen in this Key-Window, however this value is different than the one seen, this suggests there is a namespace collision within the type 1 or type 2 generators.",
-                      key));
-            }
-          }
-          dataMap.put(key, tsAccum.getDataStoreOrThrow(key));
-        }
-
-        merged.putAllDataStore(dataMap);
-        Optional.ofNullable(upperWindowBoundary).ifPresent(merged::setUpperWindowBoundary);
-        Optional.ofNullable(lowerWindowBoundary).ifPresent(merged::setLowerWindowBoundary);
-        merged.setHasAGapFillMessage(isGapFillValue);
-      }
-
-      /*
-      Check if the merged value contains type 1 computations, if not then we do not output as this will result in TSAccum without some features.
-      This can happen as the type 2 window is a sliding one , which will slide forward until the last known type 1 computation passes the tail of the sliding window.
-      */
-
-      if (merged
-              .getDataStoreOrDefault(
-                  Indicators.DATA_POINT_COUNT.name(), Data.newBuilder().setLongVal(0).build())
-              .getLongVal()
-          > 0) {
-        pc.output(KV.of(pc.element().getKey(), merged.setKey(pc.element().getKey()).build()));
-      }
-    }
+        .apply(ParDo.of(new MergeTSAccum()))
+        /*
+        Check if the merged value contains type 1 computations, if not then we do not output as this will result in TSAccum without some features.
+        This can happen as the type 2 window is a sliding one , which will slide forward until the last known type 1 computation passes the tail of the sliding window.
+        */
+        .apply(
+            Filter.by(
+                x ->
+                    x.getValue()
+                        .getMetadataOrDefault(TSBaseCombiner._BASE_COMBINER, "f")
+                        .equals("t")));
   }
 }
