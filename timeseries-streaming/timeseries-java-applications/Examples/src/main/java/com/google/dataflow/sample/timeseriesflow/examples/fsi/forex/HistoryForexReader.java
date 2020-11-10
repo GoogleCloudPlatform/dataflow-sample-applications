@@ -24,7 +24,6 @@ import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
-import org.joda.time.Instant;
 
 @AutoValue
 public abstract class HistoryForexReader

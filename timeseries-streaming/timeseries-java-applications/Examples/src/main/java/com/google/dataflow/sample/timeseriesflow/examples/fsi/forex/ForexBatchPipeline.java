@@ -17,46 +17,19 @@
  */
 package com.google.dataflow.sample.timeseriesflow.examples.fsi.forex;
 
+import static java.lang.Boolean.TRUE;
+
 import com.google.common.collect.ImmutableSet;
 import com.google.dataflow.sample.timeseriesflow.AllComputationsExamplePipeline;
-import com.google.dataflow.sample.timeseriesflow.ExampleTimeseriesPipelineOptions;
-import com.google.dataflow.sample.timeseriesflow.TimeSeriesData;
-import com.google.dataflow.sample.timeseriesflow.io.tfexample.OutPutTFExampleToFile;
-import com.google.dataflow.sample.timeseriesflow.io.tfexample.OutPutTFExampleToPubSub;
-import com.google.dataflow.sample.timeseriesflow.io.tfexample.TSAccumIterableToTFExample;
 import com.google.dataflow.sample.timeseriesflow.metrics.utils.AllMetricsWithDefaults;
 import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.dataflow.sample.timeseriesflow.transforms.PerfectRectangles;
-import java.io.File;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Date;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.ThreadLocalRandom;
-
-import com.google.dataflow.sample.timeseriesflow.transforms.TSAccumToJson;
-import com.google.dataflow.sample.timeseriesflow.transforms.TSAccumToRow;
-import com.google.protobuf.Timestamp;
-import com.google.protobuf.util.Timestamps;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.GenerateSequence;
-import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.PTransform;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.Values;
 import org.apache.beam.sdk.values.*;
-import org.joda.time.Duration;
-import org.joda.time.Instant;
-import org.tensorflow.example.Example;
-import org.tensorflow.op.core.Print;
-
-import static java.lang.Boolean.TRUE;
 
 public class ForexBatchPipeline {
 
@@ -68,9 +41,8 @@ public class ForexBatchPipeline {
      * ***********************************************************************************************************
      */
     ExampleForexPipelineOptions options =
-            PipelineOptionsFactory.fromArgs(args).as(ExampleForexPipelineOptions.class);
+        PipelineOptionsFactory.fromArgs(args).as(ExampleForexPipelineOptions.class);
     options.setAppName("ForexExample");
-
 
     LocalDateTime ldt = LocalDateTime.parse("2020-05-12T00:00:00");
     String timezone = options.getTimezone();
@@ -85,11 +57,13 @@ public class ForexBatchPipeline {
     options.setTypeTwoComputationsLengthInSecs(options.getWindowSec());
     options.setSequenceLengthInSeconds(options.getWindowSec());
 
-    // Absolute time is required for batch jobs to determine when to stop filling gaps in bound datasets
+    // Absolute time is required for batch jobs to determine when to stop filling gaps in bound
+    // datasets
     options.setAbsoluteStopTimeMSTimestamp(millis);
     options.setEnableHoldAndPropogate(TRUE);
 
-    // We fill gaps for 24 hours during quiet periods of forex markets, before reaching the absolute stop time
+    // We fill gaps for 24 hours during quiet periods of forex markets, before reaching the absolute
+    // stop time
     options.setTTLDurationSecs(86400);
 
     Pipeline p = Pipeline.create(options);
@@ -104,9 +78,9 @@ public class ForexBatchPipeline {
      * ***********************************************************************************************************
      */
     GenerateComputations.Builder generateComputations =
-              GenerateComputations.fromPiplineOptions(options)
-                      .setType1NumericComputations(AllMetricsWithDefaults.getAllType1Combiners())
-                      .setType2NumericComputations(AllMetricsWithDefaults.getAllType2Computations());
+        GenerateComputations.fromPiplineOptions(options)
+            .setType1NumericComputations(AllMetricsWithDefaults.getAllType1Combiners())
+            .setType2NumericComputations(AllMetricsWithDefaults.getAllType2Computations());
 
     /**
      * ***********************************************************************************************************
@@ -117,17 +91,16 @@ public class ForexBatchPipeline {
      */
     generateComputations.setPerfectRectangles(PerfectRectangles.fromPipelineOptions(options));
 
-    p
-            .apply(
-                    HistoryForexReader.builder()
-                            .setSourceFilesURI(absolutePath)
-                            .setTickers(ImmutableSet.of("EURUSD"))
-                            .build())
-            .apply(
-                    AllComputationsExamplePipeline.builder()
-                            .setTimeseriesSourceName("Forex")
-                            .setGenerateComputations(generateComputations.build())
-                            .build());
+    p.apply(
+            HistoryForexReader.builder()
+                .setSourceFilesURI(absolutePath)
+                .setTickers(ImmutableSet.of("EURUSD"))
+                .build())
+        .apply(
+            AllComputationsExamplePipeline.builder()
+                .setTimeseriesSourceName("Forex")
+                .setGenerateComputations(generateComputations.build())
+                .build());
 
     p.run();
   }

@@ -26,12 +26,10 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.protobuf.util.Timestamps;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 import java.util.Set;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.schemas.JavaFieldSchema;
@@ -43,9 +41,8 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.Instant;
 
-import static jdk.nashorn.internal.objects.Global.print;
-
-// This class is used for backtesting or bootstrap in batch mode, we would normally implement for streaming workloads
+// This class is used for backtesting or bootstrap in batch mode, we would normally implement for
+// streaming workloads
 public class ForexCSVAdaptor {
 
   public ForexCSVAdaptor() {}
@@ -99,7 +96,8 @@ public class ForexCSVAdaptor {
 
                 TSKey key = TSKey.newBuilder().setMajorKey(forex.ticker).build();
 
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
+                DateTimeFormatter formatter =
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
 
                 LocalDateTime ldt = LocalDateTime.parse(forex.timestamp, formatter);
                 // Setting UTC using Reykjavik time zone
@@ -113,7 +111,8 @@ public class ForexCSVAdaptor {
                         .setKey(key.toBuilder().setMinorKeyString("ASK"))
                         .setTimestamp(Timestamps.fromMillis(millis))
                         .setData(CommonUtils.createNumData(forex.ask))
-                        .build(), Instant.ofEpochMilli(millis));
+                        .build(),
+                    Instant.ofEpochMilli(millis));
 
                 // OUTPUT Bid Price
                 outputReceiver.outputWithTimestamp(
@@ -121,7 +120,8 @@ public class ForexCSVAdaptor {
                         .setKey(key.toBuilder().setMinorKeyString("BID"))
                         .setTimestamp(Timestamps.fromMillis(millis))
                         .setData(CommonUtils.createNumData(forex.bid))
-                        .build(), Instant.ofEpochMilli(millis));
+                        .build(),
+                    Instant.ofEpochMilli(millis));
 
                 // OUTPUT Ask volume
                 outputReceiver.outputWithTimestamp(
@@ -129,7 +129,8 @@ public class ForexCSVAdaptor {
                         .setKey(key.toBuilder().setMinorKeyString("ASK_VOLUME"))
                         .setTimestamp(Timestamps.fromMillis(millis))
                         .setData(CommonUtils.createNumData(forex.ask_volume))
-                        .build(), Instant.ofEpochMilli(millis));
+                        .build(),
+                    Instant.ofEpochMilli(millis));
 
                 // OUTPUT Bid volume
                 outputReceiver.outputWithTimestamp(
@@ -137,7 +138,8 @@ public class ForexCSVAdaptor {
                         .setKey(key.toBuilder().setMinorKeyString("BID_VOLUME"))
                         .setTimestamp(Timestamps.fromMillis(millis))
                         .setData(CommonUtils.createNumData(forex.bid_volume))
-                        .build(), Instant.ofEpochMilli(millis));
+                        .build(),
+                    Instant.ofEpochMilli(millis));
               }
             } catch (Exception ex) {
               System.out.println(String.format("Unable to parse record: %s", ex));
