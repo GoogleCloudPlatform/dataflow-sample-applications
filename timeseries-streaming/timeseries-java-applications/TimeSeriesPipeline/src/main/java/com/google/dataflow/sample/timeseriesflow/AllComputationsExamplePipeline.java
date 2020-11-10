@@ -25,7 +25,7 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.transforms.ConvertAccumToSequence;
 import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
-import com.google.dataflow.sample.timeseriesflow.transforms.GenerateMajorKeyWindowSnapshot;
+import com.google.dataflow.sample.timeseriesflow.transforms.MajorKeyWindowSnapshot;
 import com.google.dataflow.sample.timeseriesflow.transforms.TSAccumToRow;
 import java.util.Optional;
 import org.apache.beam.sdk.annotations.Experimental;
@@ -118,7 +118,7 @@ public abstract class AllComputationsExamplePipeline
     // ----------------- Create a window snapshot of the all the values.
 
     PCollection<Iterable<TSAccumSequence>> multiVariateSpan =
-        sequences.apply(GenerateMajorKeyWindowSnapshot.generateWindowSnapshot());
+        sequences.apply(MajorKeyWindowSnapshot.generateWindowSnapshot());
 
     return multiVariateSpan;
   }

@@ -35,13 +35,25 @@ import org.apache.beam.sdk.values.ValueInSingleWindow;
 import org.apache.beam.sdk.values.WindowingStrategy;
 
 /**
- * Given a set of TSKey's, generate a PCollection of KV where all {@link TSKey#getMajorKey()} within
- * a window context are collapsed together. The Iterable, which is normally a {@link
- * TSAccumSequence} or {@link TSAccum} will be a 'snapshot' of all time series for that window.
+ * Given a set of TSKey's, generate a PCollection of KV where all {@link TSKey#getMinorKeyString()}
+ * ()} within a window context are collapsed together. The Iterable, which is normally a {@link
+ * TSAccumSequence} or {@link TSAccum} will be a 'snapshot' of all features for each {@link
+ * TSKey#getMajorKey()} ()}.
  *
- * <p>This is done by: 1- Change the TSKey in the KV to have major key == the window context 2- GBK
+ * <p>This is useful in situations where we want each major key to become a example and the pool of
+ * all examples is all major keys.
+ *
+ * <p>For example if we have 100 disks, with serial number #000 to #099:
+ *
+ * <p>The user can define the Major Key to be serialID and the Minor keys to be the properties of
+ * the device. This class will collapse all of the metric into a per device dimension which will
+ * result in 100 samples of data. As per norm the TSAccumSequence would end up with shape
+ * [timesteps, metrics].
+ *
+ * <p>The steps to do this would be TSKEY(serialID, metric) --> WithKey TSKEY(window-serialID) -->
+ * GBK --> (TSKEY(window-serialID) Iterable<TSAccumeSequence>)
  */
-public class GenerateMajorKeyWindowSnapshot {
+public class MinorKeyWindowSnapshot {
 
   public static <T> CollapseKeysToWindowContext<T> generateWindowSnapshot() {
     return new CollapseKeysToWindowContext<>();
@@ -85,7 +97,13 @@ public class GenerateMajorKeyWindowSnapshot {
         @Element KV<TSKey, ValueInSingleWindow<T>> input, OutputReceiver<KV<TSKey, T>> o) {
       o.output(
           KV.of(
-              TSKey.newBuilder().setMajorKey(input.getValue().getWindow().toString()).build(),
+              TSKey.newBuilder()
+                  .setMajorKey(
+                      String.join(
+                          "-",
+                          input.getValue().getWindow().toString(),
+                          input.getKey().getMinorKeyString()))
+                  .build(),
               input.getValue().getValue()));
     }
   }

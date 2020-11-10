@@ -25,7 +25,7 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.io.tfexample.FeaturesFromIterableAccumSequence;
-import com.google.dataflow.sample.timeseriesflow.transforms.GenerateMajorKeyWindowSnapshot;
+import com.google.dataflow.sample.timeseriesflow.transforms.MajorKeyWindowSnapshot;
 import com.google.protobuf.util.Durations;
 import com.google.protobuf.util.Timestamps;
 import java.util.List;
@@ -164,7 +164,7 @@ public class TSAccumIterableToTFExampleTest {
 
     PCollectionTuple examples =
         p.apply(Create.of(sequence))
-            .apply(GenerateMajorKeyWindowSnapshot.generateWindowSnapshot())
+            .apply(MajorKeyWindowSnapshot.generateWindowSnapshot())
             .apply(new FeaturesFromIterableAccumSequence(2));
 
     PAssert.that(examples.get(FeaturesFromIterableAccumSequence.TIME_SERIES_EXAMPLES))
@@ -251,7 +251,7 @@ public class TSAccumIterableToTFExampleTest {
 
     PCollectionTuple examples =
         p.apply(Create.of(sequenceA, sequenceB))
-            .apply(GenerateMajorKeyWindowSnapshot.generateWindowSnapshot())
+            .apply(MajorKeyWindowSnapshot.generateWindowSnapshot())
             .apply(new FeaturesFromIterableAccumSequence(2));
 
     PAssert.that(examples.get(FeaturesFromIterableAccumSequence.TIME_SERIES_EXAMPLES))
