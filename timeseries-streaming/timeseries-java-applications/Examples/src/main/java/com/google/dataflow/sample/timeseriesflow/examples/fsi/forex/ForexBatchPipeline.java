@@ -85,30 +85,17 @@ public class ForexBatchPipeline {
     options.setTypeTwoComputationsLengthInSecs(options.getWindowSec());
     options.setSequenceLengthInSeconds(options.getWindowSec());
 
+    // Absolute time is required for batch jobs to determine when to stop filling gaps in bound datasets
     options.setAbsoluteStopTimeMSTimestamp(millis);
     options.setEnableHoldAndPropogate(TRUE);
-    // We fill gaps for 10 min during quiet periods of forex markets
-    options.setTTLDurationSecs(600);
+
+    // We fill gaps for 24 hours during quiet periods of forex markets, before reaching the absolute stop time
+    options.setTTLDurationSecs(86400);
 
     Pipeline p = Pipeline.create(options);
 
-//    String resourceName = "EURUSD-2020-05-11_2020-05-11.csv";
-//
-//    ClassLoader classLoader = ForexBatchPipeline.class.getClassLoader();
-//    File file = null;
-//    try {
-//      file = new File(Objects.requireNonNull(classLoader.getResource(resourceName)).getFile());
-//    } catch (Exception e) {
-//      e.printStackTrace();
-//    }
-//    String absolutePath = null;
-//    try {
-//      absolutePath = file.getAbsolutePath();
-//    } catch (Exception e) {
-//      e.printStackTrace();
-//    }
-
-    String absolutePath = "gs://4f93039d-7a71-48e7-800b-59f642741ebd/MarketData/FX/EURUSD/tick/EURUSD-2020-05-11_2020-05-11.csv";
+    // get absolute path of input dataset, could be local or a cloud bucket
+    String absolutePath = options.getInputPath();
 
     /**
      * ***********************************************************************************************************
@@ -116,13 +103,10 @@ public class ForexBatchPipeline {
      * {@link GenerateComputations#hotKeyFanOut()}
      * ***********************************************************************************************************
      */
-    GenerateComputations.Builder generateComputations = null;
-    if (options.getMetrics() == null) {
-      generateComputations =
+    GenerateComputations.Builder generateComputations =
               GenerateComputations.fromPiplineOptions(options)
                       .setType1NumericComputations(AllMetricsWithDefaults.getAllType1Combiners())
                       .setType2NumericComputations(AllMetricsWithDefaults.getAllType2Computations());
-    };
 
     /**
      * ***********************************************************************************************************
@@ -132,7 +116,6 @@ public class ForexBatchPipeline {
      * ***********************************************************************************************************
      */
     generateComputations.setPerfectRectangles(PerfectRectangles.fromPipelineOptions(options));
-
 
     p
             .apply(

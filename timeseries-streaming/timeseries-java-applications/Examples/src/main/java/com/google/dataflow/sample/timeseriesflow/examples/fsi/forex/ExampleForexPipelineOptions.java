@@ -24,24 +24,23 @@ import org.apache.beam.sdk.annotations.Experimental;
 @Experimental
 public interface ExampleForexPipelineOptions extends TimeseriesStreamingOptions {
 
+  // Option to specify BigQuery target table to push metrics
   String getBigQueryTableForTSAccumOutputLocation();
-
   void setBigQueryTableForTSAccumOutputLocation(String bigQueryTableForTSAccumOutputLocation);
 
-  String[] getMetrics();
-
-  void setMetrics(String[] metrics);
+  // Option to specify absolute path for input dataset
+  String getInputPath();
+  void setInputPath(String inputPath);
 
   String getTimezone();
-
   void setTimezone(String timezone);
 
+  // Option to specify sampling period in seconds
   Integer getResampleSec();
-
   void setResampleSec(Integer resampleSec);
 
+  // Option to specify rolling window to calculate metrics in seconds
   Integer getWindowSec();
-
   void setWindowSec(Integer resampleSec);
 
 }

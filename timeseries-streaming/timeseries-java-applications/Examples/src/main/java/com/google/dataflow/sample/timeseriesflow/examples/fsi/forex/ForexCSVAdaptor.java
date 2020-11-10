@@ -45,6 +45,7 @@ import org.joda.time.Instant;
 
 import static jdk.nashorn.internal.objects.Global.print;
 
+// This class is used for backtesting or bootstrap in batch mode, we would normally implement for streaming workloads
 public class ForexCSVAdaptor {
 
   public ForexCSVAdaptor() {}
