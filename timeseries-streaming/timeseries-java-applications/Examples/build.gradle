@@ -55,6 +55,7 @@ spotless {
     }
 }
 
+// Run example to produce metrics from Forex dataset
 task forex_example(type: JavaExec) {
     classpath sourceSets.main.runtimeClasspath
     main = "com.google.dataflow.sample.timeseriesflow.examples.fsi.forex.ForexBatchPipeline"
