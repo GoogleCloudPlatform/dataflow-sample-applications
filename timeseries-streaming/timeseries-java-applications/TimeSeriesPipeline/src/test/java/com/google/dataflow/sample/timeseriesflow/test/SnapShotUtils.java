@@ -22,7 +22,7 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.transforms.ConvertAccumToSequence;
-import com.google.dataflow.sample.timeseriesflow.transforms.GenerateMajorKeyWindowSnapshot;
+import com.google.dataflow.sample.timeseriesflow.transforms.MajorKeyWindowSnapshot;
 import com.google.protobuf.util.Timestamps;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.transforms.Create;
@@ -66,7 +66,7 @@ public class SnapShotUtils {
                                 Duration.standardSeconds(
                                     options.getTypeOneComputationsLengthInSecs()))))
                 .build())
-        .apply(GenerateMajorKeyWindowSnapshot.generateWindowSnapshot());
+        .apply(MajorKeyWindowSnapshot.generateWindowSnapshot());
   }
 
   private static class GenerateKeys extends DoFn<TSAccum, TSAccum> {
