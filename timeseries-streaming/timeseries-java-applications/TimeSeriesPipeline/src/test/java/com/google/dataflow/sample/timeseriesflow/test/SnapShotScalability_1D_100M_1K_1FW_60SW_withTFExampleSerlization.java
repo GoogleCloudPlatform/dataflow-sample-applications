@@ -47,7 +47,7 @@ public class SnapShotScalability_1D_100M_1K_1FW_60SW_withTFExampleSerlization {
 
     Integer timesteps = CommonUtils.getNumOfSequenceTimesteps(p.getOptions().as(TFXOptions.class));
 
-    examples.apply(new FeaturesFromIterableAccumSequence(timesteps));
+    examples.apply(new FeaturesFromIterableAccumSequence(timesteps, true));
 
     p.run();
   }

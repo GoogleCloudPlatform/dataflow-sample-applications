@@ -41,11 +41,17 @@ public class TSAccumIterableToTFExample
 
   String fileBase;
   Boolean enableMetadataOutput = false;
+  boolean useMajorKeyInFeature = true;
 
   public TSAccumIterableToTFExample() {}
 
   public TSAccumIterableToTFExample(String fileBase) {
     this.fileBase = fileBase;
+  }
+
+  public TSAccumIterableToTFExample(String fileBase, boolean useMajorKeyInFeature) {
+    this.fileBase = fileBase;
+    this.useMajorKeyInFeature = useMajorKeyInFeature;
   }
 
   public TSAccumIterableToTFExample(@Nullable String name, String fileBase) {
@@ -74,7 +80,7 @@ public class TSAccumIterableToTFExample
             input.getPipeline().getOptions().as(TFXOptions.class));
 
     PCollectionTuple exampleAndMetadata =
-        input.apply(new FeaturesFromIterableAccumSequence(timesteps));
+        input.apply(new FeaturesFromIterableAccumSequence(timesteps, useMajorKeyInFeature));
 
     // Send Metadata file to output location
     if (enableMetadataOutput) {

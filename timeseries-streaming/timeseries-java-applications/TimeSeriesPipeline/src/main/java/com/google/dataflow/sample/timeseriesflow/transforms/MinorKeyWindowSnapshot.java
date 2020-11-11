@@ -102,7 +102,7 @@ public class MinorKeyWindowSnapshot {
                       String.join(
                           "-",
                           input.getValue().getWindow().toString(),
-                          input.getKey().getMinorKeyString()))
+                          input.getKey().getMajorKey()))
                   .build(),
               input.getValue().getValue()));
     }

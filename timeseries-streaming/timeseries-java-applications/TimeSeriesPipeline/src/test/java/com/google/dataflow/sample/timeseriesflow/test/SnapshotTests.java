@@ -335,11 +335,11 @@ public class SnapshotTests {
         .inWindow(
             new IntervalWindow(
                 Instant.ofEpochMilli(TSDataTestUtils.START), Duration.standardSeconds(5)))
-        .containsInAnyOrder(2L, 1L)
+        .containsInAnyOrder(3L)
         .inWindow(
             new IntervalWindow(
                 Instant.ofEpochMilli(TSDataTestUtils.PLUS_FIVE_SECS), Duration.standardSeconds(5)))
-        .containsInAnyOrder(1L, 1L, 2L);
+        .containsInAnyOrder(2L, 2L);
 
     p.run();
   }
@@ -347,8 +347,6 @@ public class SnapshotTests {
   public static class ExtractSequenceCountPerMajorKey extends DoFn<Iterable<TSAccum>, Long> {
     @ProcessElement
     public void process(@Element Iterable<TSAccum> accums, OutputReceiver<Long> o) {
-      System.out.println("Yippee");
-      accums.forEach(x -> System.out.println(x.getKey().getMinorKeyString()));
       o.output(StreamSupport.stream(accums.spliterator(), true).count());
     }
   }

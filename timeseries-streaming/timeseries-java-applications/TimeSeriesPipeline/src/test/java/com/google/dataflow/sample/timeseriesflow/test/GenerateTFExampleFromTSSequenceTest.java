@@ -99,7 +99,7 @@ public class GenerateTFExampleFromTSSequenceTest {
                             .build())))
             .apply(GroupByKey.create())
             .apply(Values.create())
-            .apply(new FeaturesFromIterableAccumSequence(3));
+            .apply(new FeaturesFromIterableAccumSequence(3, true));
 
     PAssert.that(examples.get(FeaturesFromIterableAccumSequence.TIME_SERIES_EXAMPLES))
         .containsInAnyOrder(
