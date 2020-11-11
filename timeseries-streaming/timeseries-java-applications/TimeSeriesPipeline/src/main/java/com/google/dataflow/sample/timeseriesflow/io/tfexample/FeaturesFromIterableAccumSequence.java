@@ -22,6 +22,7 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data.DataPointCa
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesTFExampleKeys.ExampleMetadata;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.util.Timestamps;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -43,6 +44,7 @@ import org.apache.beam.sdk.values.TupleTagList;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tensorflow.example.BytesList;
 import org.tensorflow.example.Example;
 import org.tensorflow.example.Feature;
 import org.tensorflow.example.Features;
@@ -79,10 +81,12 @@ public class FeaturesFromIterableAccumSequence
   public static final TupleTag<Example> TIME_SERIES_EXAMPLES = new TupleTag<Example>() {};
 
   public Integer timesteps;
+  public boolean useMajorKeyInFeature;
 
-  public FeaturesFromIterableAccumSequence(Integer timesteps) {
+  public FeaturesFromIterableAccumSequence(Integer timesteps, boolean useMajorKeyInFeature) {
 
     this.timesteps = timesteps;
+    this.useMajorKeyInFeature = useMajorKeyInFeature;
   }
 
   public FeaturesFromIterableAccumSequence(@Nullable String name, Integer timesteps) {
@@ -142,7 +146,9 @@ public class FeaturesFromIterableAccumSequence
         // Convert the data into a single TF.Example object
         example.setFeatures(
             convertAllKeyFeaturesToSingleExample(
-                accumsSequence, featuresFromIterableAccumSequence.timesteps));
+                accumsSequence,
+                featuresFromIterableAccumSequence.timesteps,
+                featuresFromIterableAccumSequence.useMajorKeyInFeature));
 
         // Extract the feature names to output as metadata
         for (String key : example.getFeatures().getFeatureMap().keySet()) {
@@ -165,14 +171,21 @@ public class FeaturesFromIterableAccumSequence
     }
   }
 
-  /** Returns {@link Features} with order based on sequence time boundaries */
+  /**
+   * Returns {@link Features} with order based on sequence time boundaries. If the minor key is the
+   * pivot, mainly in iot use cases, then pass true to useMajorKeyInFeature. This will create
+   * feature names which are == to metric names.
+   */
   public static Features convertAllKeyFeaturesToSingleExample(
-      Iterable<TSAccumSequence> accums, Integer timesteps) throws UnsupportedEncodingException {
+      Iterable<TSAccumSequence> accums, Integer timesteps, boolean useMajorKeyInFeatureName)
+      throws UnsupportedEncodingException {
 
     Builder features = Features.newBuilder();
 
     Long upperBoundary = null;
     Long lowerBoundary = null;
+
+    String majorKey = "";
 
     List<String> numericFeatureNames = new ArrayList<>();
 
@@ -184,8 +197,13 @@ public class FeaturesFromIterableAccumSequence
       // The feature name is a combined key of MajorKey-MinorKey-Metric
       // For example iotdevice001-batterylevel-MIN
       String timeseriesName = accumSequence.getKey().getMajorKey();
-      String featureName =
-          String.join("-", timeseriesName, accumSequence.getKey().getMinorKeyString());
+
+      String featureName = accumSequence.getKey().getMinorKeyString();
+      majorKey = accumSequence.getKey().getMajorKey();
+
+      if (useMajorKeyInFeatureName) {
+        featureName = String.join("-", timeseriesName, featureName);
+      }
 
       addNumericFeatures(featureName, features, accumSequence);
       numericFeatureNames.addAll(storeKey(featureName, features, accumSequence));
@@ -207,6 +225,14 @@ public class FeaturesFromIterableAccumSequence
     features.putFeature(
         ExampleMetadata.METADATA_SPAN_END_TS.name(),
         Feature.newBuilder().setInt64List(Int64List.newBuilder().addValue(upperBoundary)).build());
+
+    if (!useMajorKeyInFeatureName) {
+      features.putFeature(
+          ExampleMetadata.METADATA_MAJOR_KEY.name(),
+          Feature.newBuilder()
+              .setBytesList(BytesList.newBuilder().addValue(ByteString.copyFromUtf8(majorKey)))
+              .build());
+    }
 
     // This is a workaround as we are not able to use SequenceExample, this workaround will be
     // removed once SequenceExample is available within TFX.
