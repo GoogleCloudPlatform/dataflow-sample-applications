@@ -19,30 +19,33 @@ package com.google.dataflow.sample.timeseriesflow.examples.fsi.forex;
 
 import com.google.dataflow.sample.timeseriesflow.TimeseriesStreamingOptions;
 import org.apache.beam.sdk.annotations.Experimental;
+import org.apache.beam.sdk.options.Description;
 
 @Experimental
 public interface ExampleForexPipelineOptions extends TimeseriesStreamingOptions {
 
-  // Option to specify BigQuery target table to push metrics
+  @Description("Option to specify BigQuery target table to push metrics")
   String getBigQueryTableForTSAccumOutputLocation();
 
   void setBigQueryTableForTSAccumOutputLocation(String bigQueryTableForTSAccumOutputLocation);
 
-  // Option to specify absolute path for input dataset
+  @Description("Option to specify absolute path for input dataset")
   String getInputPath();
 
   void setInputPath(String inputPath);
 
-  String getTimezone();
+  @Description(
+      "Option to specify the end timestamp to stop filling gaps, e.g., end of time series dataset")
+  String getEndTimestamp();
 
-  void setTimezone(String timezone);
+  void setEndTimestamp(String endTimestamp);
 
-  // Option to specify sampling period in seconds
+  @Description("Option to specify sampling period in seconds")
   Integer getResampleSec();
 
   void setResampleSec(Integer resampleSec);
 
-  // Option to specify rolling window to calculate metrics in seconds
+  @Description("Option to specify rolling window to calculate metrics in seconds")
   Integer getWindowSec();
 
   void setWindowSec(Integer resampleSec);

@@ -24,12 +24,9 @@ import com.google.dataflow.sample.timeseriesflow.AllComputationsExamplePipeline;
 import com.google.dataflow.sample.timeseriesflow.metrics.utils.AllMetricsWithDefaults;
 import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.dataflow.sample.timeseriesflow.transforms.PerfectRectangles;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.values.*;
 
 public class ForexBatchPipeline {
 
@@ -44,14 +41,13 @@ public class ForexBatchPipeline {
         PipelineOptionsFactory.fromArgs(args).as(ExampleForexPipelineOptions.class);
     options.setAppName("ForexExample");
 
-    LocalDateTime ldt = LocalDateTime.parse("2020-05-12T00:00:00");
-    String timezone = options.getTimezone();
-    if (timezone == null) {
-      throw new IllegalArgumentException("Please specify timezone parameter");
+    // Absolute UTC timestamp to stop filling gaps, e.g., end of time series dataset
+    Instant timestamp = Instant.parse(options.getEndTimestamp());
+    if (timestamp == null) {
+      Instant.parse("2020-05-12T00:00:00"); // Default to example dataset end of day
     }
-    ZonedDateTime zdt = ldt.atZone(ZoneId.of(timezone));
 
-    long millis = zdt.toInstant().toEpochMilli();
+    long millis = timestamp.toEpochMilli();
 
     options.setTypeOneComputationsLengthInSecs(options.getResampleSec());
     options.setTypeTwoComputationsLengthInSecs(options.getWindowSec());
@@ -62,9 +58,10 @@ public class ForexBatchPipeline {
     options.setAbsoluteStopTimeMSTimestamp(millis);
     options.setEnableHoldAndPropogate(TRUE);
 
-    // We fill gaps for 24 hours during quiet periods of forex markets, before reaching the absolute
-    // stop time
-    options.setTTLDurationSecs(86400);
+    // We fill gaps for 50 hours during quiet periods of forex markets, and including weekend when
+    // markets are closed,
+    // before reaching the absolute stop time
+    options.setTTLDurationSecs(18000);
 
     Pipeline p = Pipeline.create(options);
 
