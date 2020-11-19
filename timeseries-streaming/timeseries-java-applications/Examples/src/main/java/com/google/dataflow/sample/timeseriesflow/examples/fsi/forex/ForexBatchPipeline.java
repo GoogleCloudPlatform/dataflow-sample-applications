@@ -17,6 +17,8 @@
  */
 package com.google.dataflow.sample.timeseriesflow.examples.fsi.forex;
 
+import static com.google.dataflow.sample.timeseriesflow.examples.fsi.forex.HistoryForexReader.deadLetterTag;
+import static com.google.dataflow.sample.timeseriesflow.examples.fsi.forex.HistoryForexReader.successfulParse;
 import static java.lang.Boolean.TRUE;
 
 import com.google.common.collect.ImmutableSet;
@@ -26,7 +28,11 @@ import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations
 import com.google.dataflow.sample.timeseriesflow.transforms.PerfectRectangles;
 import java.time.Instant;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.TypeDescriptors;
 
 public class ForexBatchPipeline {
 
@@ -42,9 +48,12 @@ public class ForexBatchPipeline {
     options.setAppName("ForexExample");
 
     // Absolute UTC timestamp to stop filling gaps, e.g., end of time series dataset
-    Instant timestamp = Instant.parse(options.getEndTimestamp());
-    if (timestamp == null) {
-      Instant.parse("2020-05-12T00:00:00"); // Default to example dataset end of day
+    String timestampString = options.getEndTimestamp();
+    Instant timestamp;
+    if (timestampString == null) {
+      timestamp = Instant.parse("2020-05-12T00:00:00.00Z"); // Default to example dataset end of day
+    } else {
+      timestamp = Instant.parse(timestampString);
     }
 
     long millis = timestamp.toEpochMilli();
@@ -88,17 +97,34 @@ public class ForexBatchPipeline {
      */
     generateComputations.setPerfectRectangles(PerfectRectangles.fromPipelineOptions(options));
 
-    p.apply(
+    PCollectionTuple tsCollection =
+        p.apply(
             HistoryForexReader.builder()
                 .setSourceFilesURI(absolutePath)
                 .setTickers(ImmutableSet.of("EURUSD"))
-                .build())
+                .build());
+    // Compute all metrics from TSDataPoints
+    tsCollection
+        .get(successfulParse)
         .apply(
             AllComputationsExamplePipeline.builder()
                 .setTimeseriesSourceName("Forex")
                 .setGenerateComputations(generateComputations.build())
                 .build());
 
+    // Output records that failed the TSDataPoint conversion as basic deadletter queue pattern
+    tsCollection
+        .get(deadLetterTag)
+        .setCoder(StringUtf8Coder.of())
+        .apply(
+            "WriteFailedRecords",
+            MapElements.into(TypeDescriptors.strings())
+                .via(
+                    x -> {
+                      System.out.println(
+                          " The element that failed conversion to TSDataPoint was " + x);
+                      return "";
+                    }));
     p.run();
   }
 }

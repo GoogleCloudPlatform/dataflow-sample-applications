@@ -23,11 +23,11 @@ import java.util.Set;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PBegin;
-import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.TupleTag;
 
 @AutoValue
-public abstract class HistoryForexReader
-    extends PTransform<PBegin, PCollection<TimeSeriesData.TSDataPoint>> {
+public abstract class HistoryForexReader extends PTransform<PBegin, PCollectionTuple> {
 
   public abstract String getSourceFilesURI();
 
@@ -47,8 +47,13 @@ public abstract class HistoryForexReader
     public abstract HistoryForexReader build();
   }
 
+  // Tags to implement basic example of deadletter queue pattern
+  static final TupleTag<TimeSeriesData.TSDataPoint> successfulParse =
+      new TupleTag<TimeSeriesData.TSDataPoint>();
+  static final TupleTag<String> deadLetterTag = new TupleTag<String>();
+
   @Override
-  public PCollection<TimeSeriesData.TSDataPoint> expand(PBegin input) {
+  public PCollectionTuple expand(PBegin input) {
     return input
         .apply(TextIO.read().from(getSourceFilesURI()))
         .apply(new ForexCSVAdaptor.ConvertCSVForex(getTickers()));

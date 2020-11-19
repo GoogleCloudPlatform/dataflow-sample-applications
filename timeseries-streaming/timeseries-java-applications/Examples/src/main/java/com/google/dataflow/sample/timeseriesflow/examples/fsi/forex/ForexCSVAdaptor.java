@@ -17,6 +17,9 @@
  */
 package com.google.dataflow.sample.timeseriesflow.examples.fsi.forex;
 
+import static com.google.dataflow.sample.timeseriesflow.examples.fsi.forex.HistoryForexReader.deadLetterTag;
+import static com.google.dataflow.sample.timeseriesflow.examples.fsi.forex.HistoryForexReader.successfulParse;
+
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
@@ -30,6 +33,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.schemas.JavaFieldSchema;
@@ -39,16 +44,22 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.TupleTagList;
 import org.joda.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-// This class is used for backtesting or bootstrap in batch mode, we would normally implement for
-// streaming workloads
+// This class is used for backtesting or bootstrap in batch mode.
+// The primary usage of the time series library being for live stream mode processing.
 public class ForexCSVAdaptor {
+
+  // Instantiate Logger.
+  private static final Logger LOG = LoggerFactory.getLogger(ForexCSVAdaptor.class);
 
   public ForexCSVAdaptor() {}
 
-  public static class ConvertCSVForex
-      extends PTransform<PCollection<String>, PCollection<TSDataPoint>> {
+  public static class ConvertCSVForex extends PTransform<PCollection<String>, PCollectionTuple> {
 
     Set<String> tickers;
 
@@ -62,8 +73,10 @@ public class ForexCSVAdaptor {
     }
 
     @Override
-    public PCollection<TSDataPoint> expand(PCollection<String> input) {
-      return input.apply(ParDo.of(new ParseCSV(this)));
+    public PCollectionTuple expand(PCollection<String> input) {
+      return input.apply(
+          ParDo.of(new ParseCSV(this))
+              .withOutputTags(successfulParse, TupleTagList.of(deadLetterTag)));
     }
 
     private static class ParseCSV extends DoFn<String, TSDataPoint> {
@@ -76,15 +89,15 @@ public class ForexCSVAdaptor {
 
       ObjectReader objectReader;
 
-      @StartBundle
-      public void startBundle() {
+      @Setup
+      public void setup() {
         CsvMapper mapper = new CsvMapper();
         objectReader =
             mapper.readerFor(Forex.class).with(Forex.getCsvSchema().withColumnSeparator(','));
       }
 
       @ProcessElement
-      public void process(@Element String input, OutputReceiver<TSDataPoint> outputReceiver) {
+      public void process(@Element String input, MultiOutputReceiver multiOutputReceiver) {
         try {
           MappingIterator<Forex> object = objectReader.readValues(input);
           if (object.hasNext()) {
@@ -98,56 +111,52 @@ public class ForexCSVAdaptor {
 
                 DateTimeFormatter formatter =
                     DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
-
+                // We need to use local time which includes time zone,
+                // in order to use a particular formatter for the parser
                 LocalDateTime ldt = LocalDateTime.parse(forex.timestamp, formatter);
                 // Setting UTC using Reykjavik time zone
                 ZonedDateTime zdt = ldt.atZone(ZoneId.of("Atlantic/Reykjavik"));
 
                 long millis = zdt.toInstant().toEpochMilli();
+                Instant instant = Instant.ofEpochMilli(millis);
+                com.google.protobuf.Timestamp timestamp = Timestamps.fromMillis(millis);
 
-                // OUTPUT Ask Price
-                outputReceiver.outputWithTimestamp(
-                    TSDataPoint.newBuilder()
-                        .setKey(key.toBuilder().setMinorKeyString("ASK"))
-                        .setTimestamp(Timestamps.fromMillis(millis))
-                        .setData(CommonUtils.createNumData(forex.ask))
-                        .build(),
-                    Instant.ofEpochMilli(millis));
+                HashMap<String, Double> minorKeys = new HashMap<>();
 
-                // OUTPUT Bid Price
-                outputReceiver.outputWithTimestamp(
-                    TSDataPoint.newBuilder()
-                        .setKey(key.toBuilder().setMinorKeyString("BID"))
-                        .setTimestamp(Timestamps.fromMillis(millis))
-                        .setData(CommonUtils.createNumData(forex.bid))
-                        .build(),
-                    Instant.ofEpochMilli(millis));
+                minorKeys.put("ASK", forex.ask);
+                minorKeys.put("BID", forex.bid);
+                minorKeys.put("ASK_VOLUME", forex.ask_volume);
+                minorKeys.put("BID_VOLUME", forex.bid_volume);
 
-                // OUTPUT Ask volume
-                outputReceiver.outputWithTimestamp(
-                    TSDataPoint.newBuilder()
-                        .setKey(key.toBuilder().setMinorKeyString("ASK_VOLUME"))
-                        .setTimestamp(Timestamps.fromMillis(millis))
-                        .setData(CommonUtils.createNumData(forex.ask_volume))
-                        .build(),
-                    Instant.ofEpochMilli(millis));
-
-                // OUTPUT Bid volume
-                outputReceiver.outputWithTimestamp(
-                    TSDataPoint.newBuilder()
-                        .setKey(key.toBuilder().setMinorKeyString("BID_VOLUME"))
-                        .setTimestamp(Timestamps.fromMillis(millis))
-                        .setData(CommonUtils.createNumData(forex.bid_volume))
-                        .build(),
-                    Instant.ofEpochMilli(millis));
+                for (Map.Entry<String, Double> entry : minorKeys.entrySet()) {
+                  String k = entry.getKey();
+                  Double v = entry.getValue();
+                  try {
+                    multiOutputReceiver
+                        .get(successfulParse)
+                        .outputWithTimestamp(
+                            TSDataPoint.newBuilder()
+                                .setKey(key.toBuilder().setMinorKeyString(k))
+                                .setTimestamp(timestamp)
+                                .setData(CommonUtils.createNumData(v))
+                                .build(),
+                            instant);
+                  } catch (Exception e) {
+                    LOG.error(
+                        String.format(
+                            "Unable to build TSDataPoint with exception, adding to DeadLetter queue: %s",
+                            e));
+                    multiOutputReceiver.get(deadLetterTag).output(forex.toString());
+                  }
+                }
               }
-            } catch (Exception ex) {
-              System.out.println(String.format("Unable to parse record: %s", ex));
+            } catch (Exception e) {
+              LOG.error(String.format("Unable to get next element: %s", e));
+              ;
             }
           }
-
         } catch (IOException e) {
-          e.printStackTrace();
+          LOG.error(String.format("Unable to read elements from input: %s", e));
         }
       }
     }
