@@ -1,5 +1,5 @@
 {
-  "datetime":"2020-11-16 22:59:59", 
+  "event_datetime":"2020-11-16 22:59:59", 
   "event": "view_item",
   "user_id": "UID00003",
   "ecommerce": {

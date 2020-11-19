@@ -1,5 +1,5 @@
 {
-  "name": "datalayer-pubsub",
+  "name": "pubsub-proxy",
   "version": "1.0.0",
   "description": "Cloud Run app to send messages to Pub/Sub topic using Node",
   "main": "index.js",

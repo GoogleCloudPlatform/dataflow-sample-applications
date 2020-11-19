@@ -25,7 +25,7 @@ app.get('/', (req, res) => {
   res.send(`Hello ${target}!`);
 });
 
-app.post('/proxy', (req, res) => {
+app.post('/json', (req, res) => {
   const dataLayer = JSON.stringify(req.body)
   console.log(`proxy POST request received dataLayer: ${dataLayer}`)
 
@@ -37,7 +37,7 @@ app.post('/proxy', (req, res) => {
   const {Buffer} = require('safe-buffer');
 
   // Set Pub/Sub topic name
-  let topicName = 'retail-clickstream';
+  let topicName = 'ecommerce-events';
 
   // References an existing topic
   const topic = pubsub.topic(topicName);

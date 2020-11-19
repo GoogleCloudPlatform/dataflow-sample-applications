@@ -1,12 +1,12 @@
 {
-  "datetime":"2020-11-16 20:59:59", 
+  "event_datetime":"2020-11-16 20:59:59", 
   "event": "add_to_cart",
   "user_id": "UID00001",
   "ecommerce": {
     "items": [{
       "item_name": "Donut Friday Scented T-Shirt",
       "item_id": "67890",
-      "price": "33.75",
+      "price": 33.75,
       "item_brand": "Google",
       "item_category": "Apparel",
       "item_category_2": "Mens",
@@ -16,7 +16,7 @@
       "item_list_name": "Search Results",
       "item_list_id": "SR123",
       "index": 1,
-      "quantity": "2"
+      "quantity": 2
     }]
   }
 }
