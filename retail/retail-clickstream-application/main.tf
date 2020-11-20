@@ -34,9 +34,26 @@ resource "google_project_iam_member" "bigquery_role" {
   member = "serviceAccount:${google_service_account.data_pipeline_access.email}"
 }
 
+resource "google_project_service" "compute" {
+  service = "compute.googleapis.com"
+
+  disable_on_destroy = false
+}
 
 resource "google_project_service" "run" {
   service = "run.googleapis.com"
+
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "dataflow" {
+  service = "dataflow.googleapis.com"
+
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "pubsub" {
+  service = "pubsub.googleapis.com"
 
   disable_on_destroy = false
 }
@@ -74,6 +91,8 @@ resource "google_pubsub_topic" "ps_topic" {
   labels = {
     created = "terraform"
   }
+
+  depends_on = [google_project_service.pubsub]
 }
 
 resource "google_pubsub_subscription" "ps_subscription" {
@@ -147,8 +166,10 @@ resource "google_dataflow_job" "dataflow_stream" {
     }
 
     on_delete = "cancel"
+
+    depends_on = [google_project_service.compute, google_project_service.dataflow]
 }
 
-output "url_proxy" {
+output "cloud_run_proxy_url" {
   value = google_cloud_run_service.pubsub_proxy.status[0].url
 }
