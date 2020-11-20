@@ -40,7 +40,8 @@ public class TSDataPointVerifier
   private static class VerifyTSDataPoint extends DoFn<TSDataPoint, TSDataPoint> {
 
     @ProcessElement
-    public void process(@Element TSDataPoint input, @Timestamp Instant time, OutputReceiver<TSDataPoint> o) {
+    public void process(
+        @Element TSDataPoint input, @Timestamp Instant time, OutputReceiver<TSDataPoint> o) {
 
       if (!(input.hasData() && CommonUtils.hasData(input.getData()))) {
         throw new IllegalStateException(
@@ -63,9 +64,12 @@ public class TSDataPointVerifier
             String.format("TSDataPoint has no timestamp. %s", input.toString()));
       }
 
-      if (!(time.isAfter(GlobalWindow.TIMESTAMP_MIN_VALUE) && time.isBefore(GlobalWindow.TIMESTAMP_MAX_VALUE))) {
+      if (!(time.isAfter(GlobalWindow.TIMESTAMP_MIN_VALUE)
+          && time.isBefore(GlobalWindow.TIMESTAMP_MAX_VALUE))) {
         throw new IllegalStateException(
-                String.format("If in Batch mode you must use outputWithTimestamp(), TSDataPoints cannot start in the global window %s", time.toString()));
+            String.format(
+                "If in Batch mode you must use outputWithTimestamp(), TSDataPoints cannot start in the global window %s",
+                time.toString()));
       }
 
       o.output(input);
