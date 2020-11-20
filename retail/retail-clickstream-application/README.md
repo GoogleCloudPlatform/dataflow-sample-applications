@@ -28,7 +28,7 @@ export GOOGLE_CLOUD_PROJECT=my-project-id
 gcloud config set project $GOOGLE_CLOUD_PROJECT
 ```
 
-### Enable Cloud Cloud APIs
+### Enable Google Cloud APIs
 
 ```
 gcloud services enable compute.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
@@ -225,16 +225,6 @@ bq query --use_legacy_sql=false \
 FROM `retail_dataset.ecommerce_events`
 WHERE event = "purchase"
 GROUP BY event'
-```
-
-```sql
-SELECT 
-  event, 
-  COUNT(DISTINCT ecommerce.purchase.transaction_id ) as transactions,
-  SUM(ecommerce.purchase.value) as revenue
-FROM `retail_dataset.ecommerce_events`
-WHERE event = 'purchase'
-GROUP BY event
 ```
 
 ### Terraform Destroy
