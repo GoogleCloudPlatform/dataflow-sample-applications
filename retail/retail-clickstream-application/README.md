@@ -81,7 +81,7 @@ Follow the instructions to [install the Terraform cli](https://learn.hashicorp.c
 
 ### Update Project ID in terraform.tfvars
 
-Update the project ID in terraform.tfvars file to match your project ID
+Rename terraform.tfvars.example file to terraform.tfvars and update the default project ID in terraform.tfvars file to match your project ID
 
 ```
 sed "-i" "" "-e" 's/default-project-id/'"$GOOGLE_CLOUD_PROJECT"'/g' terraform.tfvars
