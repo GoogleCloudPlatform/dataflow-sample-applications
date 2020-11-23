@@ -1,6 +1,6 @@
 # Click stream data - Data Layer to Pub/Sub
 
-![Cloud Run Proxy](cloud_run_pubsub_proxy.png)
+![Cloud Run Proxy](/cloud-run-pubsub-proxy.png)
 
 This repo provides an end to end example for streaming data from a webstore to BigQuery. It contains the following components that can be deployed all at once using Terraform or serve as indvidual examples.
 
