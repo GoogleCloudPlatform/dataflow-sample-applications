@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 provider "google" {
   version = "3.48.0"
 
