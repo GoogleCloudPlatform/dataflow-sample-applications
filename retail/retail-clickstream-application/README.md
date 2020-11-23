@@ -1,10 +1,17 @@
 # Click stream data - Data Layer to Pub/Sub
 
-![Cloud Run Proxy](cloud-run-proxy.png)
+![Cloud Run Proxy](cloud_run_pubsub_proxy.png)
 
-This repo contains example code to show how to send data from a ecommerce website to Pub/Sub using Google Tag Manager, Cloud Run and Pub/Sub.
+This repo provides an end to end example for streaming data from a webstore to BigQuery. It contains the following components that can be deployed all at once using Terraform or serve as indvidual examples.
 
-The data structure uses the [Data Layer Ecommerce](https://developers.google.com/tag-manager/ecommerce-ga4) format recommended for Google Tag Manager
+- Cloud Run service that can be set-up as a custom tag in Google Tag Manager.
+- Pub/Sub topic to consume the data
+- Pub/Sub subscription to pull the data from the topic
+- Dataflow streaming job using a Pub/Sub to BigQuery template
+- BigQuery events table to store the data
+- BigQuery SQL query to analyse the events
+
+The data structure is based on the [Data Layer Ecommerce](https://developers.google.com/tag-manager/ecommerce-ga4) format recommended for Google Tag Manager.
 
 ## Git clone repo
 
@@ -77,11 +84,15 @@ Use Terraform to deploy the folllowing services defined in the `main.tf` file
 
 ### Install Terraform
 
-Follow the instructions to [install the Terraform cli](https://learn.hashicorp.com/tutorials/terraform/install-cli?in=terraform/gcp-get-started)
+Follow the instructions to [install the Terraform cli](https://learn.hashicorp.com/tutorials/terraform/install-cli?in=terraform/gcp-get-started).
+
+This repo has been tested on Terraform version `0.13.5` and the Google provider version `3.48.0`
 
 ### Update Project ID in terraform.tfvars
 
-Rename terraform.tfvars.example file to terraform.tfvars and update the default project ID in terraform.tfvars file to match your project ID
+Rename terraform.tfvars.example file to terraform.tfvars and update the default project ID in terraform.tfvars file to match your project ID.
+
+You can also use this command to replace the default project ID in the terraform.tfvars file.
 
 ```
 sed "-i" "" "-e" 's/default-project-id/'"$GOOGLE_CLOUD_PROJECT"'/g' terraform.tfvars
@@ -113,9 +124,15 @@ rerun this command to reinitialize your working directory. If you forget, other
 commands will detect it and remind you to do so if necessary.
 ```
 
-### Create resoureces in Google Cloud
+### Create resources in Google Cloud
 
-*Note: Since Terraform 0.12 and above you no longer need to run `terraform plan` first.*
+Run the plan cmd to see what resources will be greated in your project.
+
+```
+terraform plan
+```
+
+Run the apply cmd and point to your `.tfvars` file to deploy all the resources in your project.
 
 ```
 terraform apply -var-file terraform.tfvars
@@ -139,41 +156,10 @@ Once everything has succesfully run you should see the following output:
 
 ```
 google_compute_network.vpc_network: Creating...
-google_pubsub_topic.ps_topic: Creating...
-google_service_account.data_pipeline_access: Creating...
-google_project_service.run: Creating...
-google_bigquery_dataset.bq_dataset: Creating...
-google_storage_bucket.dataflow_gcs_bucket: Creating...
-google_bigquery_dataset.bq_dataset: Creation complete after 1s [id=projects/retail-data-demo/datasets/retail_dataset]
-google_bigquery_table.bq_table: Creating...
-google_storage_bucket.dataflow_gcs_bucket: Creation complete after 1s [id=retail-data-demo-ecommerce-events]
-google_service_account.data_pipeline_access: Creation complete after 2s [id=projects/retail-data-demo/serviceAccounts/retailpipeline@retail-data-demo.iam.gserviceaccount.com]
-google_bigquery_table.bq_table: Creation complete after 2s [id=projects/retail-data-demo/datasets/retail_dataset/tables/ecommerce_events]
-google_project_iam_member.dataflow_admin_role: Creating...
-google_project_iam_member.dataflow_worker_role: Creating...
-google_project_iam_member.bigquery_role: Creating...
-google_pubsub_topic.ps_topic: Creation complete after 4s [id=projects/retail-data-demo/topics/ecommerce-events]
-google_pubsub_subscription.ps_subscription: Creating...
-google_project_service.run: Creation complete after 4s [id=retail-data-demo/run.googleapis.com]
-google_cloud_run_service.pubsub_proxy: Creating...
-google_pubsub_subscription.ps_subscription: Creation complete after 4s [id=projects/retail-data-demo/subscriptions/ecommerce-events-pull]
-google_dataflow_job.dataflow_stream: Creating...
-google_compute_network.vpc_network: Still creating... [10s elapsed]
-google_dataflow_job.dataflow_stream: Creation complete after 4s [id=2020-11-19_06_54_47-10288703401036332425]
-google_project_iam_member.bigquery_role: Creation complete after 9s [id=retail-data-demo/roles/bigquery.dataEditor/serviceaccount:retailpipeline@retail-data-demo.iam.gserviceaccount.com]
-google_project_iam_member.dataflow_admin_role: Still creating... [10s elapsed]
-google_project_iam_member.dataflow_worker_role: Still creating... [10s elapsed]
-google_project_iam_member.dataflow_admin_role: Creation complete after 10s [id=retail-data-demo/roles/dataflow.admin/serviceaccount:retailpipeline@retail-data-demo.iam.gserviceaccount.com]
-google_project_iam_member.dataflow_worker_role: Creation complete after 10s [id=retail-data-demo/roles/dataflow.worker/serviceaccount:retailpipeline@retail-data-demo.iam.gserviceaccount.com]
-google_cloud_run_service.pubsub_proxy: Still creating... [10s elapsed]
-google_compute_network.vpc_network: Still creating... [20s elapsed]
-google_cloud_run_service.pubsub_proxy: Still creating... [20s elapsed]
-google_cloud_run_service.pubsub_proxy: Creation complete after 22s [id=locations/us-central1/namespaces/retail-data-demo/services/pubsub-proxy]
-google_cloud_run_service_iam_member.all_users: Creating...
-google_compute_network.vpc_network: Still creating... [30s elapsed]
-google_cloud_run_service_iam_member.all_users: Creation complete after 8s [id=v1/projects/retail-data-demo/locations/us-central1/services/pubsub-proxy/roles/run.invoker/allusers]
-google_compute_network.vpc_network: Still creating... [40s elapsed]
-google_compute_network.vpc_network: Creation complete after 44s [id=projects/retail-data-demo/global/networks/terraform-network]
+.
+.
+.
+google_compute_network.vpc_network: Creation complete after 44s [id=projects/default-project-id/global/networks/terraform-network]
 
 Apply complete! Resources: 14 added, 0 changed, 0 destroyed.
 
@@ -181,6 +167,7 @@ Outputs:
 
 cloud_run_proxy_url = https://pubsub-proxy-my-service-id-uc.a.run.app
 ```
+
 ## Simulate sending ecommerce events to Cloud Run Pub/Sub proxy using curl
 
 Use the url_output value from the Terraform output to simulate sending ecommerce events to the Cloud Run Pub/Sub proxy.
@@ -229,6 +216,8 @@ GROUP BY event'
 
 ### Terraform Destroy
 
-```
 Use Terraform to destroy all resources
+
+```
+terraform destroy
 ```
