@@ -68,7 +68,9 @@ public class TSDataPointVerifier
           && time.isBefore(GlobalWindow.TIMESTAMP_MAX_VALUE))) {
         throw new IllegalStateException(
             String.format(
-                "If in Batch mode you must use outputWithTimestamp(), TSDataPoints cannot start in the global window %s",
+                "Detected TSDataPoints which are at min or max values for the Global Window. "
+                    + "The library expects TSDataPoints with timestamps larger than GlobalWindow.TIMESTAMP_MIN_VALUE "
+                    + "and smaller than GlobalWindow.TIMESTAMP_MAX_VALUE. The timestamp value was %s\"",
                 time.toString()));
       }
 
