@@ -17,23 +17,19 @@
 
 This file defines TFX pipeline and various components in the pipeline.
 """
-
+from typing import Any, Dict, List, Text, Optional
 from ml_metadata.proto import metadata_store_pb2
-from tfx.components import ExampleValidator, ImportExampleGen
-# from tfx.components import Pusher
+from tfx.components import ExampleValidator, ImportExampleGen, Pusher
 from tfx.components import SchemaGen
 from tfx.components import StatisticsGen
 from tfx.components import Trainer
 from tfx.components import Transform
 from tfx.components.base import executor_spec
 from tfx.components.trainer import executor as trainer_executor
-# from tfx.extensions.google_cloud_ai_platform.pusher import executor as ai_platform_pusher_executor
 from tfx.extensions.google_cloud_ai_platform.trainer import executor as ai_platform_trainer_executor
+from tfx.extensions.google_cloud_ai_platform.pusher import executor as ai_platform_pusher_executor
 from tfx.orchestration import pipeline
-# from tfx.proto import pusher_pb2
-from tfx.proto import trainer_pb2
-
-from typing import Any, Dict, List, Text, Optional
+from tfx.proto import trainer_pb2, pusher_pb2
 
 from tfx.utils.dsl_utils import external_input
 
@@ -54,6 +50,7 @@ def create_pipeline(
         ai_platform_training_args: Optional[Dict[Text, Text]] = None,
         ai_platform_serving_args: Optional[Dict[Text, Any]] = None,
         trainer_custom_config: Optional[Dict[Text, Any]] = None,
+        transformer_custom_config: Optional[Dict[Text, Any]] = None,
 ) -> pipeline.Pipeline:
     components = []
 
@@ -81,7 +78,9 @@ def create_pipeline(
     transform = Transform(
             examples=example_gen.outputs['examples'],
             schema=schema_gen.outputs['schema'],
-            preprocessing_fn=preprocessing_fn)
+            preprocessing_fn=preprocessing_fn,
+            custom_config=transformer_custom_config,
+    )
     components.append(transform)
 
     # Uses user-provided Python function that implements a model using TF-Learn.
@@ -98,38 +97,32 @@ def create_pipeline(
     }
 
     if ai_platform_training_args is not None:
+        trainer_custom_config[ai_platform_trainer_executor.TRAINING_ARGS_KEY] = ai_platform_training_args
         trainer_args.update({
                 'custom_executor_spec': executor_spec.ExecutorClassSpec(
                         ai_platform_trainer_executor.GenericExecutor),
-                'custom_config': {
-                        ai_platform_trainer_executor.TRAINING_ARGS_KEY: ai_platform_training_args,
-                }
+                'custom_config': trainer_custom_config
         })
     trainer = Trainer(**trainer_args)
     components.append(trainer)
 
-    # TODO in TFX <= 2.22.0 we need a workaround to enable the pusher. Pusher is disabled until we move sample to >
-    #  TFX==2.22.00
+    pusher_args = {
+            'model': trainer.outputs['model'],
+            'push_destination': pusher_pb2.PushDestination(
+                    filesystem=pusher_pb2.PushDestination.Filesystem(
+                            base_directory=serving_model_dir)),
+    }
 
-    #
-    # pusher_args = {
-    #         'model': trainer.outputs['model'],
-    #         'model_blessing': blessing_importer.outputs['result'],
-    #         'push_destination': pusher_pb2.PushDestination(
-    #                 filesystem=pusher_pb2.PushDestination.Filesystem(
-    #                         base_directory=serving_model_dir)),
-    # }
-    # if ai_platform_serving_args is not None:
-    #     pusher_args.update({
-    #             'custom_executor_spec': executor_spec.ExecutorClassSpec(
-    #                     ai_platform_pusher_executor.Executor),
-    #             'custom_config': {
-    #                     ai_platform_pusher_executor.SERVING_ARGS_KEY: ai_platform_serving_args
-    #             },
-    #     })
-    # pusher = Pusher(**pusher_args)  # pylint: disable=unused-variable
-    # Temporary disable pusher.
-    # components.append(pusher)
+    if ai_platform_serving_args is not None:
+        pusher_args.update({
+                'custom_executor_spec': executor_spec.ExecutorClassSpec(
+                        ai_platform_pusher_executor.Executor),
+                'custom_config': {
+                        ai_platform_pusher_executor.SERVING_ARGS_KEY: ai_platform_serving_args
+                },
+        })
+    pusher = Pusher(**pusher_args)  # pylint: disable=unused-variable
+    components.append(pusher)
 
     return pipeline.Pipeline(
             pipeline_name=pipeline_name,

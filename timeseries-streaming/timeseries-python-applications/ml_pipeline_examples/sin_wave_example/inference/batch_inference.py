@@ -26,7 +26,8 @@ import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
 from tfx_bsl.public.beam import RunInference
 from tfx_bsl.public.proto import model_spec_pb2
-from timeseries.transforms import process_inference_return
+from ml_pipeline.timeseries.encoder_decoder.transforms import process_encdec_inf_rtn
+import ml_pipeline_examples.sin_wave_example.config as config
 
 
 def run(args, pipeline_args):
@@ -47,8 +48,15 @@ def run(args, pipeline_args):
                                 saved_model_spec=model_spec_pb2.SavedModelSpec(
                                         signature_name=['serving_default'],
                                         model_path=args.saved_model_location)))
-                | beam.ParDo(process_inference_return.ProcessReturn())
-                | beam.ParDo(process_inference_return.CheckAnomalous())
+                | beam.ParDo(
+                        process_encdec_inf_rtn.ProcessReturn(
+                                config={
+                                        'tf_transform_graph_dir': args.
+                                        tf_transform_graph_dir,
+                                        'model_config': config.MODEL_CONFIG
+                                }))
+                | beam.ParDo(
+                        process_encdec_inf_rtn.CheckAnomalous(threshold=0.15))
                 | beam.ParDo(print))
 
 
@@ -56,10 +64,8 @@ if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
     import argparse
 
-    sys.argv.append("--saved_model_location=/tmp/serving_model_dir/")
-    sys.argv.append("--tfrecord_folder=/tmp/Timeseries_TFExamples_*")
-
     parser = argparse.ArgumentParser()
+
     parser.add_argument(
             '--tfrecord_folder',
             dest='tfrecord_folder',
@@ -71,6 +77,13 @@ if __name__ == '__main__':
             dest='saved_model_location',
             required=True,
             help='location of save model to be used with this inference pipeline'
+    )
+    parser.add_argument(
+            '--tf_transform_graph_dir',
+            dest='tf_transform_graph_dir',
+            required=True,
+            help=
+            'location of the tf transform graph dir used in post processing to rescale the values'
     )
 
     known_args, pipeline_args = parser.parse_known_args()

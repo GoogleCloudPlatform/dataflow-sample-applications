@@ -13,15 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Text
 import tensorflow as tf
 import tensorflow_transform as tft
 import timeseries.encoder_decoder.encoder_decoder_model as encoder_decoder_model
 
-from typing import Text
 from tfx.components.trainer.executor import TrainerFnArgs
-"""
-RunFn for auto encoder decoder sample.
-"""
 
 
 def _input_fn(
@@ -34,19 +31,24 @@ def _input_fn(
     dataset = tf.data.experimental.make_batched_features_dataset(
             file_pattern=file_pattern,
             batch_size=batch_size,
-            # TODO Document. Shuffle must be set to False.
+            # Shuffle must be False, as Zip operation is not transitive
             shuffle=False,
             features=transformed_feature_spec,
             reader=_gzip_reader_fn)
 
-    dataset = dataset.map(create_training_data)
-    dataset = tf.data.Dataset.zip((dataset, dataset))
+    train_dataset = dataset.map(create_training_data)
+    label_dataset = dataset.map(create_label_data)
+    dataset = tf.data.Dataset.zip((train_dataset, label_dataset))
 
     return dataset
 
 
 def create_training_data(features):
     return features['Float32']
+
+
+def create_label_data(features):
+    return features['LABEL']
 
 
 def _gzip_reader_fn(filenames):
@@ -93,25 +95,29 @@ def run_fn(fn_args: TrainerFnArgs):
 
     # mirrored_strategy = tf.distribute.MirroredStrategy()
     # with mirrored_strategy.scope():
-    model = encoder_decoder_model._build_keras_model(
-            tf_transform_output=tf_transform_output,
+    model = encoder_decoder_model.build_keras_model(
             timesteps=fn_args.timesteps,
             number_features=fn_args.number_features,
             outer_units=fn_args.outer_units,
             inner_units=fn_args.inner_units)
 
+    steps_per_epoch = fn_args.training_example_count / fn_args.train_batches
+
+    tensorboard_callback = tf.keras.callbacks.TensorBoard()
+
     model.fit(
             train_dataset,
-            epochs=fn_args.epochs,
-            steps_per_epoch=fn_args.train_steps,
+            epochs=int(fn_args.train_steps / steps_per_epoch),
+            steps_per_epoch=steps_per_epoch,
             validation_data=eval_dataset,
-            validation_steps=fn_args.eval_steps)
+            validation_steps=fn_args.eval_steps,
+            callbacks=[tensorboard_callback])
 
     signatures = {
             'serving_default': _get_serve_tf_examples_fn(
                     model, tf_transform_output).get_concrete_function(
                             tf.TensorSpec(
-                                    shape=(None),
+                                    shape=[None],
                                     dtype=tf.string,
                                     name='examples')),
     }

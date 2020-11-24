@@ -12,21 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import setuptools
-
-setuptools.setup(
-    name='timeseries_sample_tfx',
-    version='0.0.0',
-    # TODO: These requirements cause dependency conflict upon installation.
-    # We need to fine-tune them and use a range of acceptable deps if possible,
-    # to be less restrictive.
-    install_requires=[
-      'tfx==0.22.0',
-      'kfp==0.5.1',
-      'tensorflow==2.2.0',
-      'apache-beam==2.23.0'
-    ],
-    python_requires='>=3.7',
-    packages=setuptools.find_namespace_packages()
-)

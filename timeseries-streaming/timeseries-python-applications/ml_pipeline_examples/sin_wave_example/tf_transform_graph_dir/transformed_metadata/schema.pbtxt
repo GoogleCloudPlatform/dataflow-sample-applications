@@ -1,0 +1,30 @@
+feature {
+  name: "Float32"
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+  }
+  shape {
+    dim {
+      size: 5
+    }
+    dim {
+      size: 3
+    }
+  }
+}
+feature {
+  name: "LABEL"
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+  }
+  shape {
+    dim {
+      size: 5
+    }
+    dim {
+      size: 3
+    }
+  }
+}

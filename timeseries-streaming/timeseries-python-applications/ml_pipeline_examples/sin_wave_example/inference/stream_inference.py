@@ -18,16 +18,19 @@
 from __future__ import absolute_import
 
 import logging
-import sys
 
 import tensorflow as tf
 
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
+
 from google.protobuf.json_format import Parse
+
 from tfx_bsl.public.beam import RunInference
 from tfx_bsl.public.proto import model_spec_pb2
-from timeseries.transforms import process_inference_return
+
+import ml_pipeline_examples.sin_wave_example.config as config
+from ml_pipeline.timeseries.encoder_decoder.transforms import process_encdec_inf_rtn
 
 
 def run(args, pipeline_args):
@@ -40,15 +43,24 @@ def run(args, pipeline_args):
     with beam.Pipeline(options=pipeline_options) as pipeline:
         _ = (
                 pipeline
-                | 'ReadTFExample' >> beam.io.gcp.pubsub.ReadStringsFromPubSub(subscription=args.pubsub_subscription)
-                | 'ParseExamples' >> beam.Map(lambda x: Parse(x, tf.train.Example()))
+                | 'ReadTFExample' >> beam.io.gcp.pubsub.ReadStringsFromPubSub(
+                        subscription=args.pubsub_subscription)
+                | 'ParseExamples' >>
+                beam.Map(lambda x: Parse(x, tf.train.Example()))
                 | RunInference(
                         model_spec_pb2.InferenceSpecType(
                                 saved_model_spec=model_spec_pb2.SavedModelSpec(
                                         signature_name=['serving_default'],
                                         model_path=args.saved_model_location)))
-                | beam.ParDo(process_inference_return.ProcessReturn())
-                | beam.ParDo(process_inference_return.CheckAnomalous())
+                | beam.ParDo(
+                        process_encdec_inf_rtn.ProcessReturn(
+                                config={
+                                        'tf_transform_graph_dir': args.
+                                        tf_transform_graph_dir,
+                                        'model_config': config.MODEL_CONFIG
+                                }))
+                | beam.ParDo(
+                        process_encdec_inf_rtn.CheckAnomalous(threshold=0.7))
                 | beam.ParDo(print))
 
 
@@ -56,21 +68,26 @@ if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
     import argparse
 
-    # sys.argv.append("--saved_model_location=/tmp/serving_model_dir/")
-    # sys.argv.append("--pubsub_subscription=projects/<your-project>/subscriptions/outlier-detection")
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
             '--pubsub_subscription',
             dest='pubsub_subscription',
             required=True,
             help=
-            'PubSub Subscription of the JSON samples produced by the streaming pipeline')
+            'PubSub Subscription of the JSON samples produced by the streaming pipeline'
+    )
     parser.add_argument(
             '--saved_model_location',
             dest='saved_model_location',
             required=True,
             help='location of save model to be used with this inference pipeline'
+    )
+    parser.add_argument(
+            '--tf_transform_graph_dir',
+            dest='tf_transform_graph_dir',
+            required=True,
+            help=
+            'location of the tf transform graph dir used in post processing to rescale the values'
     )
 
     known_args, pipeline_args = parser.parse_known_args()
