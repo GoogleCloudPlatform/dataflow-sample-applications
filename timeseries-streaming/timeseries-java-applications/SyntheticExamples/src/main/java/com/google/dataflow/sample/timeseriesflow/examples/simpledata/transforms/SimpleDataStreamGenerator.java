@@ -37,7 +37,6 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
-import org.joda.time.DateTimeFieldType;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.tensorflow.example.Example;
@@ -101,7 +100,7 @@ public class SimpleDataStreamGenerator {
                         boolean outlier = (outlierEnabled && (input % 50 == 0 || input % 51 == 0));
 
                         Instant startOfCycle = Instant.parse("2000-01-01T00:00:00Z");
-                        long offset = (now.getMillis() - startOfCycle.getMillis())/500L;
+                        long offset = (now.getMillis() - startOfCycle.getMillis()) / 500L;
 
                         if (outlier) {
                           System.out.println(String.format("Outlier generated at %s", now));
@@ -129,8 +128,9 @@ public class SimpleDataStreamGenerator {
                                                       Math.sin(Math.toRadians(offset % 360))
                                                           * 10000D)
                                                   / 100D))
-                                      // Round to nearest 500 ms
-                                  .setTimestamp(Timestamps.fromMillis((now.getMillis()/500)*500))
+                                  // Round to nearest 500 ms
+                                  .setTimestamp(
+                                      Timestamps.fromMillis((now.getMillis() / 500) * 500))
                                   .build());
                         }
                       }
