@@ -9,11 +9,11 @@ In addition, this repository provides a set of time-series transforms that simpl
  - Upgrade of TFX version to 0.24.0
  - Use runtime values for timesteps and features to preprocessing_fn and input_fn
  - Allow inference to apply scaling to the input for comparision to the output from the model 
-0.3.1  
+
+0.3.1 - Archived to Branch.
  - Options now passed through to all builders.
  - Refactor [PerfectRectangles](timeseries-java-applications/TimeSeriesPipeline/src/main/java/com/google/dataflow/sample/timeseriesflow/transforms/PerfectRectangles.java)
  - [Data Window Snapshot](timeseries-java-applications/TimeSeriesPipeline/src/main/java/com/google/dataflow/sample/timeseriesflow/transforms/MajorKeyWindowSnapshot.java)   
-0.3.0 - Archived to Branch.
 
 # Processing time-series data
 Apache Beam has rich support for streaming data, including support for State and Timers API which enable sophisticated processing of time-series data. In order to effectively process streaming time-series data, practitioners often need to perform time-series data preprocessing. This can involve introducing computed data to fill 'gaps' in the source time-series data. 
