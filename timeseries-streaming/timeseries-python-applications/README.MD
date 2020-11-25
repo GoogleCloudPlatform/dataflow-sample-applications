@@ -12,7 +12,7 @@ It is not intended to demonstrate cutting edge ML model techniques.
 The sample data is very simple repeating pattern, effectively making any train / eval / test void as the data will 
 simply repeat across all samples.  
 
-In these samples we use FIRST, FIRST_TIMESTAMP, LAST, and the EXPONENTIAL_MOVING_AVERAGE data generated from the java pipeline.
+In these samples we use LAST, LAST_TIMESTAMP data generated from the java pipeline.
 
 The training data is without any outliers, the anomaly detection uses data which includes outliers.
 
