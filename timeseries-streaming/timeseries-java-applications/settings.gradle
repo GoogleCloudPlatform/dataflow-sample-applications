@@ -20,4 +20,6 @@ rootProject.name = 'timeseries-java-applications'
 include 'TimeSeriesPipeline'
 include 'TimeSeriesMetricsLibrary'
 include 'SyntheticExamples'
+include 'Examples'
+
 include 'Adapters'

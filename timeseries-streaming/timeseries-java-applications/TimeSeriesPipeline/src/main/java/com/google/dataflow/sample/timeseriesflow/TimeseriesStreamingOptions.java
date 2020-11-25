@@ -26,49 +26,49 @@ import org.apache.beam.sdk.options.Description;
 public interface TimeseriesStreamingOptions extends DataflowPipelineOptions {
 
   @Description("Fixed window length for type 1 computations in seconds")
-  public Integer getTypeOneComputationsLengthInSecs();
+  Integer getTypeOneComputationsLengthInSecs();
 
-  public void setTypeOneComputationsLengthInSecs(Integer typeOneComputationsLengthInSecs);
+  void setTypeOneComputationsLengthInSecs(Integer typeOneComputationsLengthInSecs);
 
   @Description("Sliding window length for type 2 computations in seconds")
-  public Integer getTypeTwoComputationsLengthInSecs();
+  Integer getTypeTwoComputationsLengthInSecs();
 
-  public void setTypeTwoComputationsLengthInSecs(Integer typeTwoComputationsLengthInSecs);
+  void setTypeTwoComputationsLengthInSecs(Integer typeTwoComputationsLengthInSecs);
 
   @Description("Sliding window offset length for type 2 computations in seconds")
-  public Integer getTypeTwoComputationsOffsetLengthInSecs();
+  Integer getTypeTwoComputationsOffsetLengthInSecs();
 
-  public void setTypeTwoComputationsOffsetLengthInSecs(
-      Integer typeTwoComputationsOffsetLengthInSecs);
-
-  @Description("Length of the Sequences, output after type 1 and type 2 computations are complete.")
-  public Integer getSequenceLengthInSeconds();
+  void setTypeTwoComputationsOffsetLengthInSecs(
+          Integer typeTwoComputationsOffsetLengthInSecs);
 
   @Description("Length of the Sequences, output after type 1 and type 2 computations are complete.")
-  public void setSequenceLengthInSeconds(Integer sequenceLengthInSeconds);
+  Integer getSequenceLengthInSeconds();
+
+  @Description("Length of the Sequences, output after type 1 and type 2 computations are complete.")
+  void setSequenceLengthInSeconds(Integer sequenceLengthInSeconds);
 
   @Description(
       "The time to live value for how long after a key does not output values we continue to gap fill.")
-  public Integer getTTLDurationSecs();
+  Integer getTTLDurationSecs();
 
   @Description(
       "The time to live value for how long after a key does not output values we continue to gap fill.")
-  public void setTTLDurationSecs(Integer ttlDurationSecs);
+  void setTTLDurationSecs(Integer ttlDurationSecs);
 
   @Description(
-      "The absolute time EpocjMilli to stop gap filling, used in bootstrap pipelines when working with Bounded sources")
-  public Long getAbsoluteStopTimeMSTimestamp();
+      "The absolute time EpocMilli to stop gap filling, used in bootstrap pipelines when working with Bounded sources")
+  Long getAbsoluteStopTimeMSTimestamp();
 
   @Description(
-      "The absolute time EpocjMilli to stop gap filling, used in bootstrap pipelines when working with Bounded sources")
-  public void setAbsoluteStopTimeMSTimestamp(Long absoluteStopTimeMSTimestamp);
+      "The absolute time EpocMilli to stop gap filling, used in bootstrap pipelines when working with Bounded sources")
+  void setAbsoluteStopTimeMSTimestamp(Long absoluteStopTimeMSTimestamp);
 
   @Description(
       "Enable hold and propagate of last known value for key, within the TTLDurationSec to gaps.")
   @Default.Boolean(false)
-  public Boolean getEnableHoldAndPropogate();
+  Boolean getEnableHoldAndPropogate();
 
   @Description(
       "Enable hold and propagate of last known value for key, within the TTLDurationSec to gaps.")
-  public void setEnableHoldAndPropogate(Boolean enableHoldAndPropogate);
+  void setEnableHoldAndPropogate(Boolean enableHoldAndPropogate);
 }
