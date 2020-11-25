@@ -52,7 +52,7 @@ There are two versions which can be run;
 * Step 1 - Follow the quick start on the Java README to run [SimpleDataStreamGenerator.java](../timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java) with example_2.
 * Step 2 - Run the command with the virtual-env activated, providing values for the location of the ```--saved_model_location``` using the uncompressed provided model, and the location of the generated data from previous step with ```--tfrecord_folder```.
 ```
-python ml_pipeline_examples/sin_wave_example/inference/batch_inference.py --saved_model_location=ml_pipeline_examples/sin_wave_example/saved_model_example/serving_model_dir --tf_transform_output=ml_pipeline_examples/sin_wave_example/tf_transform_graph_dir --tfrecord_folder=/<your-directory>/simple-data/data/*
+python ml_pipeline_examples/sin_wave_example/inference/batch_inference.py --saved_model_location=ml_pipeline_examples/sin_wave_example/saved_model_example/serving_model_dir --tf_transform_graph_dir=ml_pipeline_examples/sin_wave_example/tf_transform_graph_dir --tfrecord_folder=/<your-directory>/simple-data/data/*
 ```
 Dependent on how long you ran the ```SimpleDataStreamGenerator``` you will see outliers in the range of 120 to 300 being detected.
 
@@ -61,7 +61,7 @@ Dependent on how long you ran the ```SimpleDataStreamGenerator``` you will see o
 * Step 2 - Create a subscription in the topic, to the read events generated in previous step
 * Step 3 - Run the command with the virtual-env activated, providing values for the location of the ```--saved_model_location``` using the uncompressed provided model, and set the subscription to read events from ```--pubsub_subscription```.
 ```
-python ml_pipeline_examples/sin_wave_example/inference/stream_inference.py --saved_model_location=ml_pipeline_examples/sin_wave_example/saved_model_example/serving_model_dir --tf_transform_output=ml_pipeline_examples/sin_wave_example/tf_transform_graph_dir --pubsub_subscription=projects/<your-project>/subscriptions/<your-subscription>
+python ml_pipeline_examples/sin_wave_example/inference/stream_inference.py --saved_model_location=ml_pipeline_examples/sin_wave_example/saved_model_example/serving_model_dir --tf_transform_graph_dir=ml_pipeline_examples/sin_wave_example/tf_transform_graph_dir --pubsub_subscription=projects/<your-project>/subscriptions/<your-subscription>
 ``` 
 
 While both are running you will see outliers showing around every 50 ticks. 
