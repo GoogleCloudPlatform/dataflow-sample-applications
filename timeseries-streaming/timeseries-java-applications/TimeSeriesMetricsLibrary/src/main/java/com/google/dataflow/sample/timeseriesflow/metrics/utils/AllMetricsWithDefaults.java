@@ -25,10 +25,9 @@ import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSNumericComb
 import com.google.dataflow.sample.timeseriesflow.metrics.BB;
 import com.google.dataflow.sample.timeseriesflow.metrics.MA;
 import com.google.dataflow.sample.timeseriesflow.metrics.RSI;
+import com.google.dataflow.sample.timeseriesflow.metrics.StdDev;
 import java.math.BigDecimal;
 import java.util.List;
-
-import com.google.dataflow.sample.timeseriesflow.metrics.StdDev;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.Combine.CombineFn;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -78,8 +77,6 @@ public class AllMetricsWithDefaults {
             .setDevFactor(2)
             .build()
             .create(),
-        StdDev.toBuilder()
-            .build()
-            .create());
+        StdDev.toBuilder().build().create());
   }
 }

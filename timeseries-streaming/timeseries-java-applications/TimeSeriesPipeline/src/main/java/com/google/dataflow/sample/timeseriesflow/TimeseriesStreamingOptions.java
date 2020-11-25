@@ -38,8 +38,7 @@ public interface TimeseriesStreamingOptions extends DataflowPipelineOptions {
   @Description("Sliding window offset length for type 2 computations in seconds")
   Integer getTypeTwoComputationsOffsetLengthInSecs();
 
-  void setTypeTwoComputationsOffsetLengthInSecs(
-          Integer typeTwoComputationsOffsetLengthInSecs);
+  void setTypeTwoComputationsOffsetLengthInSecs(Integer typeTwoComputationsOffsetLengthInSecs);
 
   @Description("Length of the Sequences, output after type 1 and type 2 computations are complete.")
   Integer getSequenceLengthInSeconds();
