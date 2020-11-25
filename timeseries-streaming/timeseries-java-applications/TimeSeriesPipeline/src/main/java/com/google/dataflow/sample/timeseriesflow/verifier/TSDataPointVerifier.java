@@ -23,7 +23,9 @@ import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
 import org.apache.beam.sdk.values.PCollection;
+import org.joda.time.Instant;
 
 /** Ensure all TSDataPoint is valid. */
 @Experimental
@@ -38,7 +40,8 @@ public class TSDataPointVerifier
   private static class VerifyTSDataPoint extends DoFn<TSDataPoint, TSDataPoint> {
 
     @ProcessElement
-    public void process(@Element TSDataPoint input, OutputReceiver<TSDataPoint> o) {
+    public void process(
+        @Element TSDataPoint input, @Timestamp Instant time, OutputReceiver<TSDataPoint> o) {
 
       if (!(input.hasData() && CommonUtils.hasData(input.getData()))) {
         throw new IllegalStateException(
@@ -59,6 +62,16 @@ public class TSDataPointVerifier
       if (!(input.hasTimestamp())) {
         throw new IllegalStateException(
             String.format("TSDataPoint has no timestamp. %s", input.toString()));
+      }
+
+      if (!(time.isAfter(GlobalWindow.TIMESTAMP_MIN_VALUE)
+          && time.isBefore(GlobalWindow.TIMESTAMP_MAX_VALUE))) {
+        throw new IllegalStateException(
+            String.format(
+                "Detected TSDataPoints which are at min or max values for the Global Window. "
+                    + "The library expects TSDataPoints with timestamps larger than GlobalWindow.TIMESTAMP_MIN_VALUE "
+                    + "and smaller than GlobalWindow.TIMESTAMP_MAX_VALUE. The timestamp value was %s\"",
+                time.toString()));
       }
 
       o.output(input);
