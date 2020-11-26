@@ -90,13 +90,7 @@ This repo has been tested on Terraform version `0.13.5` and the Google provider 
 
 ### Update Project ID in terraform.tfvars
 
-Rename terraform.tfvars.example file to terraform.tfvars and update the default project ID in terraform.tfvars file to match your project ID.
-
-You can also use this command to replace the default project ID in the terraform.tfvars file.
-
-```
-sed "-i" "" "-e" 's/default-project-id/'"$GOOGLE_CLOUD_PROJECT"'/g' terraform.tfvars
-```
+Rename the `terraform.tfvars.example` file to `terraform.tfvars` and update the default project ID in the file to match your project ID.
 
 ### Initialize Terraform
 
@@ -161,7 +155,7 @@ google_compute_network.vpc_network: Creating...
 .
 google_compute_network.vpc_network: Creation complete after 44s [id=projects/default-project-id/global/networks/terraform-network]
 
-Apply complete! Resources: 14 added, 0 changed, 0 destroyed.
+Apply complete! Resources: 17 added, 0 changed, 0 destroyed.
 
 Outputs:
 
@@ -172,19 +166,27 @@ cloud_run_proxy_url = https://pubsub-proxy-my-service-id-uc.a.run.app
 
 Use the url_output value from the Terraform output to simulate sending ecommerce events to the Cloud Run Pub/Sub proxy.
 
+#### Set Cloud Run Proxy URL
+
 ```
 export CLOUD_RUN_PROXY=https://pubsub-proxy-my-service-id-uc.a.run.app
 ```
+
+#### Send view item event and datalayer
 
 ```
 curl -vX POST ${CLOUD_RUN_PROXY}/json -d @datalayer/view_item.json \
 --header "Content-Type: application/json"
 ```
 
+#### Send add to cart event and datalayer
+
 ```
 curl -vX POST ${CLOUD_RUN_PROXY}/json -d @datalayer/add_to_cart.json \
 --header "Content-Type: application/json"
 ```
+
+#### Send purchase event and datalayer
 
 ```
 curl -vX POST ${CLOUD_RUN_PROXY}/json -d @datalayer/purchase.json \
