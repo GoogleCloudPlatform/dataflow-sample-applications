@@ -18,10 +18,8 @@
 package com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream;
 
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.DeadLetterSink;
-import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
-import org.apache.beam.sdk.schemas.transforms.Convert;
 import org.apache.beam.sdk.schemas.transforms.Group;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.windowing.Sessions;
@@ -37,24 +35,23 @@ import org.slf4j.LoggerFactory;
  * SessionWindows.
  */
 @Experimental
-public class CreateClickStreamSessions
-    extends PTransform<PCollection<ClickStreamEvent>, PCollection<Row>> {
+public class CSSessions extends PTransform<PCollection<Row>, PCollection<Row>> {
 
   private static final Logger LOG = LoggerFactory.getLogger(DeadLetterSink.class);
 
   Duration sessionWindowGapDuration;
 
-  public CreateClickStreamSessions(Duration sessionWindowGapDuration) {
+  public CSSessions(Duration sessionWindowGapDuration) {
     this.sessionWindowGapDuration = sessionWindowGapDuration;
   }
 
-  public CreateClickStreamSessions(@Nullable String name, Duration sessionWindowGapDuration) {
+  public CSSessions(@Nullable String name, Duration sessionWindowGapDuration) {
     super(name);
     this.sessionWindowGapDuration = sessionWindowGapDuration;
   }
 
-  public static CreateClickStreamSessions create(Duration sessionWindowGapDuration) {
-    return new CreateClickStreamSessions(sessionWindowGapDuration);
+  public static CSSessions create(Duration sessionWindowGapDuration) {
+    return new CSSessions(sessionWindowGapDuration);
   }
 
   @Override
@@ -67,10 +64,9 @@ public class CreateClickStreamSessions
    * values	        ITERABLE[ROW[ClickstreamEvent]]
    * }</pre>
    */
-  public PCollection<Row> expand(PCollection<ClickStreamEvent> input) {
+  public PCollection<Row> expand(PCollection<Row> input) {
     return input
         .apply(Window.into(Sessions.withGapDuration(sessionWindowGapDuration)))
-        .apply(Convert.toRows())
         .apply(Group.byFieldNames("sessionId"));
   }
 }

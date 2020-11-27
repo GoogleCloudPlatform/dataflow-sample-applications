@@ -20,11 +20,11 @@ package com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstr
 import com.google.common.collect.ImmutableList;
 import com.google.dataflow.sample.retail.businesslogic.externalservices.RetailCompanyServices;
 import com.google.dataflow.sample.retail.businesslogic.externalservices.RetailCompanyServices.LatLng;
-import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.beam.sdk.annotations.Experimental;
+import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -33,6 +33,7 @@ import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.TupleTag;
 import org.apache.beam.sdk.values.TupleTagList;
 import org.joda.time.Instant;
@@ -46,47 +47,52 @@ import org.joda.time.Instant;
  * <p>Check if lat / long are missing, if they are look up user in the user table.
  */
 @Experimental
-public class ValidateAndCorrectClickStreamEvents
-    extends PTransform<PCollection<ClickStreamEvent>, PCollection<ClickStreamEvent>> {
+public class ValidateAndCorrectCSEvt extends PTransform<PCollection<Row>, PCollection<Row>> {
 
-  private TupleTag<ClickStreamEvent> main = new TupleTag<ClickStreamEvent>() {};
+  private TupleTag<Row> main = new TupleTag<Row>() {};
 
-  private TupleTag<ClickStreamEvent> requiresCorrection = new TupleTag<ClickStreamEvent>() {};
+  private TupleTag<Row> requiresCorrection = new TupleTag<Row>() {};
 
-  private TupleTag<ClickStreamEvent> deadLetter = new TupleTag<ClickStreamEvent>() {};
-
-  private TupleTagList tags = TupleTagList.of(ImmutableList.of(requiresCorrection, deadLetter));
+  private TupleTag<Row> deadLetter = new TupleTag<Row>() {};
 
   /**
    * When using finishbundle we need information outside of just the element that we wish to output.
    * This is because Beam bundles can have different key / window per bundle.
    */
   private static class _WindowWrappedEvent {
-    ClickStreamEvent eventData;
+    Row eventData;
     BoundedWindow eventWindow;
     Instant timestamp;
   }
 
   @Override
-  public PCollection<ClickStreamEvent> expand(PCollection<ClickStreamEvent> input) {
+  public PCollection<Row> expand(PCollection<Row> input) {
     PCollectionTuple tuple =
-        input.apply("ValidateClickEvent", ParDo.of(new ValidateEvent()).withOutputTags(main, tags));
+        input.apply(
+            "ValidateClickEvent",
+            ParDo.of(new ValidateEvent(input.getSchema()))
+                .withOutputTags(main, TupleTagList.of(ImmutableList.of(requiresCorrection))));
 
     // Fix missing UID
 
-    PCollection<ClickStreamEvent> fixedUID =
+    PCollection<Row> fixedUID =
         tuple
             .get(requiresCorrection)
+            .setRowSchema(input.getSchema())
             .apply(
                 "AttachUIDBasedOnSession",
-                ParDo.of(new AttachUIDBasedOnSessionIDUsingRetailService()));
+                ParDo.of(new AttachUIDBasedOnSessionIDUsingRetailService()))
+            .setRowSchema(input.getSchema());
 
     // Fix Lat/Lng
+    PCollection<Row> fixedLatLng =
+        fixedUID
+            .apply("AttachLatLng", ParDo.of(new AttachLatLongUsingRetailService()))
+            .setRowSchema(input.getSchema());
 
-    PCollection<ClickStreamEvent> fixedLatLng =
-        fixedUID.apply("AttachLatLng", ParDo.of(new AttachLatLongUsingRetailService()));
-
-    return PCollectionList.of(tuple.get(main)).and(fixedLatLng).apply(Flatten.pCollections());
+    return PCollectionList.of(tuple.get(main).setRowSchema(input.getSchema()))
+        .and(fixedLatLng)
+        .apply(Flatten.pCollections());
   }
 
   /**
@@ -98,17 +104,24 @@ public class ValidateAndCorrectClickStreamEvents
    *
    * <p>3 - Events which have a missing Lat/Long
    */
-  public class ValidateEvent extends DoFn<ClickStreamEvent, ClickStreamEvent> {
+  public class ValidateEvent extends DoFn<Row, Row> {
+
+    Schema schema = null;
+
+    public ValidateEvent(Schema schema) {
+      this.schema = schema;
+    }
+
     @ProcessElement
-    public void process(@Element ClickStreamEvent input, MultiOutputReceiver o) {
+    public void process(@Element Row input, MultiOutputReceiver o) {
       // Check if Uid is set and we have a sessionId
       // If there is missing UID and SessionID then nothing can be done to fix.
-      if (input.getUid() == null && input.getSessionId() != null) {
+      if (input.getValue("user_id") == null && input.getValue("sessionId") != null) {
         o.get(requiresCorrection).output(input);
         return;
       }
 
-      if (input.getLat() == null || input.getLng() == null) {
+      if (input.getValue("lat") == null || input.getValue("lng") == null) {
         o.get(requiresCorrection).output(input);
         return;
       }
@@ -117,8 +130,7 @@ public class ValidateAndCorrectClickStreamEvents
     }
   }
 
-  public class AttachUIDBasedOnSessionIDUsingRetailService
-      extends DoFn<ClickStreamEvent, ClickStreamEvent> {
+  public class AttachUIDBasedOnSessionIDUsingRetailService extends DoFn<Row, Row> {
 
     List<_WindowWrappedEvent> cache;
     RetailCompanyServices services;
@@ -134,19 +146,16 @@ public class ValidateAndCorrectClickStreamEvents
 
     @ProcessElement
     public void process(
-        @Element ClickStreamEvent event,
-        BoundedWindow w,
-        @Timestamp Instant time,
-        OutputReceiver<ClickStreamEvent> o) {
+        @Element Row input, BoundedWindow w, @Timestamp Instant time, OutputReceiver<Row> o) {
 
       // Pass through if UID ok.
-      if (event.getUid() != null) {
-        o.output(event);
+      if (input.getValue("user_id") != null) {
+        o.output(input);
         return;
       }
 
       _WindowWrappedEvent packagedEvent = new _WindowWrappedEvent();
-      packagedEvent.eventData = event;
+      packagedEvent.eventData = input;
       packagedEvent.eventWindow = w;
       packagedEvent.timestamp = time;
 
@@ -158,10 +167,9 @@ public class ValidateAndCorrectClickStreamEvents
       Map<String, Long> correctedEvents = services.convertSessionIdsToUids(populateIds(cache));
       for (_WindowWrappedEvent event : cache) {
         fbc.output(
-            event
-                .eventData
-                .toBuilder()
-                .setUid(correctedEvents.get(event.eventData.getSessionId()))
+            Row.fromRow(event.eventData)
+                .withFieldValue(
+                    "user_id", correctedEvents.get(event.eventData.getString("sessionId")))
                 .build(),
             event.timestamp,
             event.eventWindow);
@@ -171,7 +179,7 @@ public class ValidateAndCorrectClickStreamEvents
     }
   }
 
-  public class AttachLatLongUsingRetailService extends DoFn<ClickStreamEvent, ClickStreamEvent> {
+  public class AttachLatLongUsingRetailService extends DoFn<Row, Row> {
     List<_WindowWrappedEvent> cache;
     RetailCompanyServices services;
 
@@ -185,19 +193,16 @@ public class ValidateAndCorrectClickStreamEvents
 
     @ProcessElement
     public void process(
-        @Element ClickStreamEvent event,
-        BoundedWindow w,
-        @Timestamp Instant time,
-        OutputReceiver<ClickStreamEvent> o) {
+        @Element Row input, BoundedWindow w, @Timestamp Instant time, OutputReceiver<Row> o) {
 
       // Bypass if element ok.
-      if (event.getLat() != null && event.getLng() != null) {
-        o.output(event);
+      if (input.getValue("lat") != null && input.getValue("lng") != null) {
+        o.output(input);
         return;
       }
 
       _WindowWrappedEvent packagedEvent = new _WindowWrappedEvent();
-      packagedEvent.eventData = event;
+      packagedEvent.eventData = input;
       packagedEvent.eventWindow = w;
       packagedEvent.timestamp = time;
 
@@ -209,9 +214,12 @@ public class ValidateAndCorrectClickStreamEvents
 
       Map<String, LatLng> correctedEvents = services.convertMissingLatLongUids(populateIds(cache));
       for (_WindowWrappedEvent event : cache) {
-        LatLng latLng = correctedEvents.get(event.eventData.getSessionId());
+        LatLng latLng = correctedEvents.get(event.eventData.getString("sessionId"));
         fbc.output(
-            event.eventData.toBuilder().setLat(latLng.lat).setLng(latLng.lng).build(),
+            Row.fromRow(event.eventData)
+                .withFieldValue("lat", latLng.lat)
+                .withFieldValue("lng", latLng.lng)
+                .build(),
             event.timestamp,
             event.eventWindow);
       }
@@ -222,7 +230,7 @@ public class ValidateAndCorrectClickStreamEvents
 
   private List<String> populateIds(List<_WindowWrappedEvent> events) {
     List<String> ids = new ArrayList<>();
-    events.forEach(x -> ids.add(x.eventData.getSessionId()));
+    events.forEach(x -> ids.add(x.eventData.getString("sessionId")));
     return ids;
   }
 }

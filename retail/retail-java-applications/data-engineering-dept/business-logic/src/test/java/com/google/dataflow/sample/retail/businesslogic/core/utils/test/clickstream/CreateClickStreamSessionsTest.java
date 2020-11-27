@@ -17,11 +17,12 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.utils.test.clickstream;
 
-import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.CreateClickStreamSessions;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.CSSessions;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.apache.beam.sdk.schemas.transforms.Convert;
 import org.apache.beam.sdk.schemas.transforms.Select;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
@@ -94,7 +95,8 @@ public class CreateClickStreamSessionsTest {
                     CLICK_STREAM_EVENT_0_MINS,
                     CLICK_STREAM_EVENT_3_MINS,
                     CLICK_STREAM_EVENT_10_MINS))
-            .apply(new CreateClickStreamSessions(windowDuration))
+            .apply(Convert.toRows())
+            .apply(new CSSessions(windowDuration))
             .apply(Select.fieldNames("value.timestamp"))
             .apply(ParDo.of(new RowKVDoFn()));
 

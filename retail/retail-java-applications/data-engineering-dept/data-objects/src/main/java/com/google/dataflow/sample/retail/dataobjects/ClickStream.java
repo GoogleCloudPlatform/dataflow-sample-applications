@@ -18,6 +18,7 @@
 package com.google.dataflow.sample.retail.dataobjects;
 
 import com.google.auto.value.AutoValue;
+import java.util.List;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
@@ -39,12 +40,16 @@ public class ClickStream {
    */
   public abstract static class ClickStreamEvent {
 
-    // TODO : Add IP , remove Lat Lng
+    @SchemaFieldName("event_datetime")
+    public @Nullable abstract String getEventTime();
+
+    @SchemaFieldName("event")
+    public @Nullable abstract String getEvent();
 
     @SchemaFieldName("timestamp")
     public @Nullable abstract Long getTimestamp();
 
-    @SchemaFieldName("uid")
+    @SchemaFieldName("user_id")
     public @Nullable abstract Long getUid();
 
     @SchemaFieldName("sessionId")
@@ -65,8 +70,8 @@ public class ClickStream {
     @SchemaFieldName("agent")
     public @Nullable abstract String getAgent();
 
-    @SchemaFieldName("event")
-    public @Nullable abstract String getEvent();
+    @SchemaFieldName("items")
+    public @Nullable abstract List<Items> getItems();
 
     public abstract Builder toBuilder();
 
@@ -76,6 +81,10 @@ public class ClickStream {
 
     @AutoValue.Builder
     public abstract static class Builder {
+
+      public abstract Builder setEventTime(String value);
+
+      public abstract Builder setEvent(String value);
 
       public abstract Builder setTimestamp(Long value);
 
@@ -93,7 +102,7 @@ public class ClickStream {
 
       public abstract Builder setAgent(String value);
 
-      public abstract Builder setEvent(String value);
+      public abstract Builder setItems(List<Items> value);
 
       public abstract ClickStreamEvent build();
     }
@@ -108,6 +117,85 @@ public class ClickStream {
     public static final String PAGE_VIEW_AGGREGATION_COL_FAMILY = "pageViewAgg";
     public static final String PAGE_VIEW_AGGREGATION_COL_PAGE_VIEW_REF = "pageViewRef";
     public static final String PAGE_VIEW_AGGREGATION_COL_PAGE_VIEW_COUNT = "pageViewCount";
+  }
+
+  @AutoValue
+  @DefaultSchema(AutoValueSchema.class)
+  public abstract static class Items {
+
+    @SchemaFieldName("item_name")
+    public @Nullable abstract String getItemName();
+
+    @SchemaFieldName("item_id")
+    public @Nullable abstract String getItemId();
+
+    @SchemaFieldName("price")
+    public @Nullable abstract String getPrice();
+
+    @SchemaFieldName("item_brand")
+    public @Nullable abstract String getItemBrand();
+
+    @SchemaFieldName("item_category_2")
+    public @Nullable abstract String getItemCat02();
+
+    @SchemaFieldName("item_category_3")
+    public @Nullable abstract String getItemCat03();
+
+    @SchemaFieldName("item_category_4")
+    public @Nullable abstract String getItemCat04();
+
+    @SchemaFieldName("item_category_5")
+    public @Nullable abstract String getItemCat05();
+
+    @SchemaFieldName("item_variant")
+    public @Nullable abstract String getItemVariant();
+
+    @SchemaFieldName("item_list_name")
+    public @Nullable abstract String getItemListName();
+
+    @SchemaFieldName("item_list_id")
+    public @Nullable abstract String getItemListId();
+
+    @SchemaFieldName("index")
+    public @Nullable abstract String getIndex();
+
+    @SchemaFieldName("quantity")
+    public @Nullable abstract String getQuantity();
+
+    public static Builder builder() {
+      return new AutoValue_ClickStream_Items.Builder();
+    }
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract Builder setItemName(String newItemName);
+
+      public abstract Builder setItemId(String newItemId);
+
+      public abstract Builder setPrice(String newPrice);
+
+      public abstract Builder setItemBrand(String newItemBrand);
+
+      public abstract Builder setItemCat02(String newItemCat02);
+
+      public abstract Builder setItemCat03(String newItemCat03);
+
+      public abstract Builder setItemCat04(String newItemCat04);
+
+      public abstract Builder setItemCat05(String newItemCat05);
+
+      public abstract Builder setItemVariant(String newItemVariant);
+
+      public abstract Builder setItemListName(String newItemListName);
+
+      public abstract Builder setItemListId(String newItemListId);
+
+      public abstract Builder setIndex(String newIndex);
+
+      public abstract Builder setQuantity(String newQuantity);
+
+      public abstract Items build();
+    }
   }
 
   @AutoValue

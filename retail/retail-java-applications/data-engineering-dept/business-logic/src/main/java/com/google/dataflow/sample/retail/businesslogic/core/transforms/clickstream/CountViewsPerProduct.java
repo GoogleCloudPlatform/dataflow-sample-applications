@@ -17,7 +17,6 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream;
 
-import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.PageViewAggregator;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
@@ -47,7 +46,7 @@ import org.joda.time.Instant;
  */
 @Experimental
 public class CountViewsPerProduct
-    extends PTransform<PCollection<ClickStreamEvent>, PCollection<PageViewAggregator>> {
+    extends PTransform<PCollection<Row>, PCollection<PageViewAggregator>> {
 
   Duration pageViewCountWindowDuration;
 
@@ -61,15 +60,15 @@ public class CountViewsPerProduct
   }
 
   @Override
-  public PCollection<PageViewAggregator> expand(PCollection<ClickStreamEvent> input) {
+  public PCollection<PageViewAggregator> expand(PCollection<Row> input) {
 
     return input
         // Remove all events but browse events.
-        .apply(Filter.<ClickStreamEvent>create().whereFieldName("event", c -> c.equals("browse")))
+        .apply(Filter.<Row>create().whereFieldName("event", c -> c.equals("browse")))
         // Group By pageRef and count the results.
         .apply(Window.into(FixedWindows.of(pageViewCountWindowDuration)))
         .apply(
-            Group.<ClickStreamEvent>byFieldNames("pageRef")
+            Group.<Row>byFieldNames("pageRef")
                 .aggregateField("pageRef", Count.combineFn(), "count"))
         .apply(CreatePageViewAggregatorMetadata.create(pageViewCountWindowDuration.getMillis()));
   }

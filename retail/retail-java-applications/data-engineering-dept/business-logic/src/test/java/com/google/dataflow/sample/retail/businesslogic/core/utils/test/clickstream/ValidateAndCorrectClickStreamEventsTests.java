@@ -17,8 +17,9 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.utils.test.clickstream;
 
-import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.ValidateAndCorrectClickStreamEvents;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.ValidateAndCorrectCSEvt;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
+import org.apache.beam.sdk.schemas.transforms.Convert;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
@@ -31,7 +32,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** Unit tests for {@link ValidateAndCorrectClickStreamEvents}. */
+/** Unit tests for {@link ValidateAndCorrectCSEvt}. TODO Remove Convert to / from left over code. */
 @RunWith(JUnit4.class)
 public class ValidateAndCorrectClickStreamEventsTests {
   private static final Long TIME = Instant.parse("2000-01-01T00:00:00").getMillis();
@@ -92,7 +93,11 @@ public class ValidateAndCorrectClickStreamEventsTests {
   public void testCleanValidation() {
 
     PCollection<ClickStreamEvent> result =
-        pipeline.apply(Create.of(CLEAN_DATA)).apply(new ValidateAndCorrectClickStreamEvents());
+        pipeline
+            .apply(Create.of(CLEAN_DATA))
+            .apply("From", Convert.toRows())
+            .apply(new ValidateAndCorrectCSEvt())
+            .apply(Convert.fromRows(ClickStreamEvent.class));
 
     PAssert.that(result).containsInAnyOrder(CLEAN_DATA);
     pipeline.run();
@@ -102,7 +107,11 @@ public class ValidateAndCorrectClickStreamEventsTests {
   public void testLatLng() {
 
     PCollection<ClickStreamEvent> result =
-        pipeline.apply(Create.of(MISSING_LAT_LNG)).apply(new ValidateAndCorrectClickStreamEvents());
+        pipeline
+            .apply(Create.of(MISSING_LAT_LNG))
+            .apply("From", Convert.toRows())
+            .apply(new ValidateAndCorrectCSEvt())
+            .apply(Convert.fromRows(ClickStreamEvent.class));
 
     PAssert.that(result).containsInAnyOrder(CLEAN_DATA);
     pipeline.run();
@@ -112,7 +121,11 @@ public class ValidateAndCorrectClickStreamEventsTests {
   public void testMissingUID() {
 
     PCollection<ClickStreamEvent> result =
-        pipeline.apply(Create.of(MISSING_UID)).apply(new ValidateAndCorrectClickStreamEvents());
+        pipeline
+            .apply(Create.of(MISSING_UID))
+            .apply("From", Convert.toRows())
+            .apply(new ValidateAndCorrectCSEvt())
+            .apply(Convert.fromRows(ClickStreamEvent.class));
 
     // Random number is attached to UID in this sample app. So can not test for the whole object.
 
@@ -131,7 +144,9 @@ public class ValidateAndCorrectClickStreamEventsTests {
     PCollection<ClickStreamEvent> result =
         pipeline
             .apply(Create.of(MISSING_UID_LAT_LNG))
-            .apply(new ValidateAndCorrectClickStreamEvents());
+            .apply("From", Convert.toRows())
+            .apply(new ValidateAndCorrectCSEvt())
+            .apply(Convert.fromRows(ClickStreamEvent.class));
 
     // Random number is attached to UID in this sample app. So can not test for the whole object.
 

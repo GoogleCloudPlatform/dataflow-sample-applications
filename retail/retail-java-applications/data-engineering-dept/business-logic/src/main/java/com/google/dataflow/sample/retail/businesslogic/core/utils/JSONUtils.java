@@ -17,6 +17,7 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.utils;
 
+import com.google.auto.value.AutoValue;
 import com.google.dataflow.sample.retail.businesslogic.core.DeploymentAnnotations.NoPartialResultsOnDrain;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.DeadLetterSink;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.DeadLetterSink.SinkType;
@@ -41,13 +42,85 @@ import org.slf4j.LoggerFactory;
 
 @Experimental
 public class JSONUtils {
+  /**
+   * Convert an object to a ROW, on failure send JSON String to DeadLetter sink.
+   *
+   * <p>Thin wrapper around the {@link JsonToRow} utility which takes care of sending data to
+   * deadletter sink.
+   *
+   * @param <T>
+   */
+
+  /** Convert an object to a POJO, on failure send JSON String to DeadLetter output. */
+  @NoPartialResultsOnDrain
+  @AutoValue
+  public abstract static class JSONtoRowWithDeadLetterSink
+      extends PTransform<PCollection<String>, PCollection<Row>> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ConvertJSONtoPOJO.class);
+
+    abstract @Nullable SinkType getSinkType();
+
+    abstract Schema getSchema();
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract Builder setSinkType(SinkType newSinkType);
+
+      public abstract Builder setSchema(Schema newSchema);
+
+      public abstract JSONtoRowWithDeadLetterSink build();
+    }
+
+    public static Builder builder() {
+      return new AutoValue_JSONUtils_JSONtoRowWithDeadLetterSink.Builder();
+    }
+
+    public static JSONtoRowWithDeadLetterSink withSchema(Schema schema) {
+      return new AutoValue_JSONUtils_JSONtoRowWithDeadLetterSink.Builder()
+          .setSchema(schema)
+          .build();
+    }
+
+    @Override
+    public PCollection<Row> expand(PCollection<String> input) {
+      Schema errMessageSchema = null;
+
+      try {
+        errMessageSchema = input.getPipeline().getSchemaRegistry().getSchema(ErrorMsg.class);
+      } catch (NoSuchSchemaException e) {
+        LOG.error(e.getMessage());
+        throw new IllegalArgumentException(
+            String.format("Could not find schema for %s", ErrorMsg.class.getCanonicalName()));
+      }
+
+      ParseResult result =
+          input.apply(JsonToRow.withExceptionReporting(getSchema()).withExtendedErrorInfo());
+
+      // We need to deal with json strings that have failed to parse.
+
+      PCollection<ErrorMsg> errorMsgs =
+          result
+              .getFailedToParseLines()
+              .apply("CreateErrorMessages", ParDo.of(new CreateErrorEvents(errMessageSchema)))
+              .setRowSchema(errMessageSchema)
+              .apply("ConvertErrMsgToRows", Convert.fromRows(ErrorMsg.class));
+
+      if (getSinkType() == SinkType.BIGQUERY) {
+        errorMsgs.apply(DeadLetterSink.createSink(getSinkType()));
+      } else {
+        // Always output parse issues, minimum area will be to logging.
+        errorMsgs.apply(DeadLetterSink.createSink(SinkType.LOG));
+      }
+      // Convert the parsed results to the POJO using Convert operation.
+      return result.getResults();
+    }
+  }
 
   /**
    * Convert an object to a POJO, on failure send JSON String to DeadLetter output.
    *
    * <p>TODO convert to AutoValue for configuration.
-   *
-   * @param <T>
    */
   @NoPartialResultsOnDrain
   public static class ConvertJSONtoPOJO<T> extends PTransform<PCollection<String>, PCollection<T>> {
