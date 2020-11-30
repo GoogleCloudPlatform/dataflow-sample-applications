@@ -18,25 +18,28 @@
 package com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream;
 
 import com.google.common.collect.ImmutableList;
-import com.google.dataflow.sample.retail.businesslogic.externalservices.RetailCompanyServices;
-import com.google.dataflow.sample.retail.businesslogic.externalservices.RetailCompanyServices.LatLng;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.DeadLetterSink;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.DeadLetterSink.SinkType;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.ErrorMsg;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.validation.EventDateTimeCorrectionService;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.validation.EventItemCorrectionService;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.validation.ValidateEventDateTime;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.validation.ValidateEventItems;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.validation.ValidationUtils;
+import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.Schema;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.Flatten;
+import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.TupleTag;
 import org.apache.beam.sdk.values.TupleTagList;
-import org.joda.time.Instant;
+import org.apache.beam.sdk.values.TypeDescriptors;
 
 /**
  * Clean clickstream:
@@ -49,188 +52,86 @@ import org.joda.time.Instant;
 @Experimental
 public class ValidateAndCorrectCSEvt extends PTransform<PCollection<Row>, PCollection<Row>> {
 
-  private TupleTag<Row> main = new TupleTag<Row>() {};
+  public static final TupleTag<Row> MAIN = new TupleTag<Row>() {};
 
-  private TupleTag<Row> requiresCorrection = new TupleTag<Row>() {};
+  public static final TupleTag<ErrorMsg> DEAD_LETTER = new TupleTag<ErrorMsg>() {};
 
-  private TupleTag<Row> deadLetter = new TupleTag<Row>() {};
+  public static final TupleTag<Row> NEEDS_CORRECTIONS = new TupleTag<Row>() {};
 
-  /**
-   * When using finishbundle we need information outside of just the element that we wish to output.
-   * This is because Beam bundles can have different key / window per bundle.
-   */
-  private static class _WindowWrappedEvent {
-    Row eventData;
-    BoundedWindow eventWindow;
-    Instant timestamp;
+  private final DeadLetterSink.SinkType sinkType;
+
+  public ValidateAndCorrectCSEvt(SinkType sinkType) {
+    this.sinkType = sinkType;
+  }
+
+  public ValidateAndCorrectCSEvt(@Nullable String name, SinkType sinkType) {
+    super(name);
+    this.sinkType = sinkType;
   }
 
   @Override
   public PCollection<Row> expand(PCollection<Row> input) {
-    PCollectionTuple tuple =
-        input.apply(
-            "ValidateClickEvent",
-            ParDo.of(new ValidateEvent(input.getSchema()))
-                .withOutputTags(main, TupleTagList.of(ImmutableList.of(requiresCorrection))));
 
-    // Fix missing UID
+    // Chain the validation steps
 
-    PCollection<Row> fixedUID =
-        tuple
-            .get(requiresCorrection)
-            .setRowSchema(input.getSchema())
+    Schema wrapperSchema = ValidationUtils.getValidationWrapper(input.getSchema());
+
+    // First we wrap the object
+    PCollection<Row> wrappedInput =
+        input
             .apply(
-                "AttachUIDBasedOnSession",
-                ParDo.of(new AttachUIDBasedOnSessionIDUsingRetailService()))
+                "AddWrapper",
+                MapElements.into(TypeDescriptors.rows())
+                    .via(x -> Row.withSchema(wrapperSchema).withFieldValue("data", x).build()))
+            .setRowSchema(wrapperSchema);
+
+    // Next we chain the object through the validation transforms
+    PCollectionTuple validateEventItems =
+        wrappedInput.apply(
+            "ValidateEventDateTime",
+            ParDo.of(new ValidateEventItems())
+                .withOutputTags(MAIN, TupleTagList.of(ImmutableList.of(DEAD_LETTER))));
+
+    PCollection<Row> validateItems =
+        validateEventItems
+            .get(MAIN)
+            .setRowSchema(wrapperSchema)
+            .apply("ValidateEventItems", ParDo.of(new ValidateEventDateTime()))
+            .setRowSchema(wrapperSchema);
+
+    // DeadLetter issues are not fixable
+    PCollectionList.of(validateEventItems.get(DEAD_LETTER))
+        .apply("FlattenDeadLetter", Flatten.pCollections())
+        .apply(DeadLetterSink.createSink(sinkType));
+
+    // Next we chain the items through the correction transforms, if they have errors
+
+    PCollectionTuple validatedCollections =
+        validateItems.apply(
+            ParDo.of(new ValidationUtils.ValidationRouter())
+                .withOutputTags(MAIN, TupleTagList.of(ImmutableList.of(NEEDS_CORRECTIONS))));
+
+    // Fix bad Items
+    PCollection<Row> eventItemsFixed =
+        validatedCollections
+            .get(NEEDS_CORRECTIONS)
+            .setRowSchema(wrapperSchema)
+            .apply("CorrectEventItems", ParDo.of(new EventItemCorrectionService()))
+            .setRowSchema(wrapperSchema);
+
+    // Fix Timestamp
+    PCollection<Row> eventDateTimeFixed =
+        eventItemsFixed
+            .apply("CorrectEventDateTime", ParDo.of(new EventDateTimeCorrectionService()))
+            .setRowSchema(wrapperSchema);
+
+    PCollection<Row> extractCleanedRows =
+        PCollectionList.of(validatedCollections.get(MAIN).setRowSchema(wrapperSchema))
+            .and(eventDateTimeFixed)
+            .apply(Flatten.pCollections())
+            .apply(MapElements.into(TypeDescriptors.rows()).via(x -> x.getRow("data")))
             .setRowSchema(input.getSchema());
 
-    // Fix Lat/Lng
-    PCollection<Row> fixedLatLng =
-        fixedUID
-            .apply("AttachLatLng", ParDo.of(new AttachLatLongUsingRetailService()))
-            .setRowSchema(input.getSchema());
-
-    return PCollectionList.of(tuple.get(main).setRowSchema(input.getSchema()))
-        .and(fixedLatLng)
-        .apply(Flatten.pCollections());
-  }
-
-  /**
-   * Will validate each event and out put
-   *
-   * <p>1 - Healthy events
-   *
-   * <p>2 - Events which have a missing UID
-   *
-   * <p>3 - Events which have a missing Lat/Long
-   */
-  public class ValidateEvent extends DoFn<Row, Row> {
-
-    Schema schema = null;
-
-    public ValidateEvent(Schema schema) {
-      this.schema = schema;
-    }
-
-    @ProcessElement
-    public void process(@Element Row input, MultiOutputReceiver o) {
-      // Check if Uid is set and we have a sessionId
-      // If there is missing UID and SessionID then nothing can be done to fix.
-      if (input.getValue("user_id") == null && input.getValue("sessionId") != null) {
-        o.get(requiresCorrection).output(input);
-        return;
-      }
-
-      if (input.getValue("lat") == null || input.getValue("lng") == null) {
-        o.get(requiresCorrection).output(input);
-        return;
-      }
-
-      o.get(main).output(input);
-    }
-  }
-
-  public class AttachUIDBasedOnSessionIDUsingRetailService extends DoFn<Row, Row> {
-
-    List<_WindowWrappedEvent> cache;
-    RetailCompanyServices services;
-
-    @Setup
-    public void setup() {
-      // Starting up super doper heavy service... ;-) well it is just a demo...
-      services = new RetailCompanyServices();
-
-      // setup our cache, in batch mode this
-      cache = new ArrayList<>();
-    }
-
-    @ProcessElement
-    public void process(
-        @Element Row input, BoundedWindow w, @Timestamp Instant time, OutputReceiver<Row> o) {
-
-      // Pass through if UID ok.
-      if (input.getValue("user_id") != null) {
-        o.output(input);
-        return;
-      }
-
-      _WindowWrappedEvent packagedEvent = new _WindowWrappedEvent();
-      packagedEvent.eventData = input;
-      packagedEvent.eventWindow = w;
-      packagedEvent.timestamp = time;
-
-      cache.add(packagedEvent);
-    }
-
-    @FinishBundle
-    public void finishBundle(FinishBundleContext fbc) {
-      Map<String, Long> correctedEvents = services.convertSessionIdsToUids(populateIds(cache));
-      for (_WindowWrappedEvent event : cache) {
-        fbc.output(
-            Row.fromRow(event.eventData)
-                .withFieldValue(
-                    "user_id", correctedEvents.get(event.eventData.getString("sessionId")))
-                .build(),
-            event.timestamp,
-            event.eventWindow);
-      }
-      // Clear down the cache
-      cache.clear();
-    }
-  }
-
-  public class AttachLatLongUsingRetailService extends DoFn<Row, Row> {
-    List<_WindowWrappedEvent> cache;
-    RetailCompanyServices services;
-
-    @Setup
-    public void setup() {
-      // Starting up super doper heavy service... ;-) well it is just a sample!...
-      services = new RetailCompanyServices();
-      // setup our cache, in batch mode this
-      cache = new ArrayList<>();
-    }
-
-    @ProcessElement
-    public void process(
-        @Element Row input, BoundedWindow w, @Timestamp Instant time, OutputReceiver<Row> o) {
-
-      // Bypass if element ok.
-      if (input.getValue("lat") != null && input.getValue("lng") != null) {
-        o.output(input);
-        return;
-      }
-
-      _WindowWrappedEvent packagedEvent = new _WindowWrappedEvent();
-      packagedEvent.eventData = input;
-      packagedEvent.eventWindow = w;
-      packagedEvent.timestamp = time;
-
-      cache.add(packagedEvent);
-    }
-
-    @FinishBundle
-    public void finishBundle(FinishBundleContext fbc) {
-
-      Map<String, LatLng> correctedEvents = services.convertMissingLatLongUids(populateIds(cache));
-      for (_WindowWrappedEvent event : cache) {
-        LatLng latLng = correctedEvents.get(event.eventData.getString("sessionId"));
-        fbc.output(
-            Row.fromRow(event.eventData)
-                .withFieldValue("lat", latLng.lat)
-                .withFieldValue("lng", latLng.lng)
-                .build(),
-            event.timestamp,
-            event.eventWindow);
-      }
-
-      cache.clear();
-    }
-  }
-
-  private List<String> populateIds(List<_WindowWrappedEvent> events) {
-    List<String> ids = new ArrayList<>();
-    events.forEach(x -> ids.add(x.eventData.getString("sessionId")));
-    return ids;
+    return extractCleanedRows;
   }
 }

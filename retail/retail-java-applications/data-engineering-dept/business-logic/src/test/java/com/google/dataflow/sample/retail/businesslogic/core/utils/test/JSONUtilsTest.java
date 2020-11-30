@@ -42,10 +42,8 @@ public class JSONUtilsTest {
   private static final ClickStreamEvent AUTO_VALUE_EVENT =
       ClickStreamEvent.builder()
           .setUid(1L)
-          .setSessionId("1")
+          .setClientId("1")
           .setAgent("A")
-          .setLng(1D)
-          .setLat(1D)
           .setPageRef("pageRef")
           .setPageTarget("pageTarget")
           .setEvent("event")
@@ -55,11 +53,9 @@ public class JSONUtilsTest {
 
   private ClickStreamEventAVRO getEventAVRO() {
     ClickStreamEventAVRO event = new ClickStreamEventAVRO();
-    event.sessionId = "1";
+    event.clientId = "1";
     event.uid = 1L;
     event.agent = "A";
-    event.lat = 1D;
-    event.lng = 1D;
     event.pageRef = "pageRef";
     event.pageTarget = "pageTarget";
     event.event = "event";

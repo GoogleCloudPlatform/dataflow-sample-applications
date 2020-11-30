@@ -30,10 +30,13 @@ public class ClickStreamEventAVRO {
   @SerializedName(value = "user_id")
   public @Nullable Long uid;
 
-  public @Nullable String sessionId;
+  @SerializedName(value = "client_id")
+  public @Nullable String clientId;
+
+  @SerializedName(value = "event_datetime")
+  public @Nullable String eventDateTime;
+
   public @Nullable String pageRef;
-  public @Nullable Double lat;
-  public @Nullable Double lng;
   public @Nullable String pageTarget;
   public @Nullable String agent;
   public @Nullable String event;

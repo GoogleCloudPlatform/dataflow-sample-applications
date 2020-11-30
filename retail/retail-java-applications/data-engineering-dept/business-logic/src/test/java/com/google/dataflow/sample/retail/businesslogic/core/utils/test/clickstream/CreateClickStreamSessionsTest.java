@@ -49,10 +49,8 @@ public class CreateClickStreamSessionsTest {
   private static final ClickStreamEvent EVENT =
       ClickStreamEvent.builder()
           .setUid(1L)
-          .setSessionId("1")
+          .setClientId("1")
           .setAgent("A")
-          .setLng(1D)
-          .setLat(1D)
           .setPageRef("pageRef")
           .setPageTarget("pageTarget")
           .setEvent("browse")

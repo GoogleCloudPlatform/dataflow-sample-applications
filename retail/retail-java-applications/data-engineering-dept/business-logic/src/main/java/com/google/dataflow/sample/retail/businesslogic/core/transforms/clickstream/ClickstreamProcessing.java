@@ -20,6 +20,7 @@ package com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstr
 import com.google.api.services.bigquery.model.TimePartitioning;
 import com.google.dataflow.sample.retail.businesslogic.core.DeploymentAnnotations.PartialResultsExpectedOnDrain;
 import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.DeadLetterSink.SinkType;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.JSONUtils;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.Print;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.WriteRawJSONMessagesToBigQuery;
@@ -84,7 +85,7 @@ public class ClickstreamProcessing extends PTransform<PCollection<String>, PColl
 
     /**
      * **********************************************************************************************
-     * Parse Messages to Beam SCHEMAS
+     * Parse Messages to SCHEMAS
      * **********************************************************************************************
      */
     PCollection<Row> csEvtRows =
@@ -106,7 +107,10 @@ public class ClickstreamProcessing extends PTransform<PCollection<String>, PColl
      *
      * <p>*********************************************************************************************
      */
-    PCollection<Row> cleanCSRow = csEvtRows.apply(new ValidateAndCorrectCSEvt());
+    PCollection<Row> cleanCSRow =
+        csEvtRows.apply(
+            new ValidateAndCorrectCSEvt(
+                ((options.getTestModeEnabled()) ? SinkType.LOG : SinkType.BIGQUERY)));
 
     /**
      * *********************************************************************************************

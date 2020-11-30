@@ -31,7 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This transform creates sessions from the incoming clickstream using the sessionid and
+ * This transform creates sessions from the incoming clickstream using the cliendId and
  * SessionWindows.
  */
 @Experimental
@@ -60,13 +60,13 @@ public class CSSessions extends PTransform<PCollection<Row>, PCollection<Row>> {
    *
    * <pre>{@code
    * Field Name	    Field Type
-   * key	        ROW{sessionId:STRING}
+   * key	        ROW{clientID:STRING}
    * values	        ITERABLE[ROW[ClickstreamEvent]]
    * }</pre>
    */
   public PCollection<Row> expand(PCollection<Row> input) {
     return input
         .apply(Window.into(Sessions.withGapDuration(sessionWindowGapDuration)))
-        .apply(Group.byFieldNames("sessionId"));
+        .apply(Group.byFieldNames("client_id"));
   }
 }

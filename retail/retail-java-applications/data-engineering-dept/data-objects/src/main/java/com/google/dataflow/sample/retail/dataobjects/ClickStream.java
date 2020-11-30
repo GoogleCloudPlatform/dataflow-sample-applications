@@ -52,8 +52,8 @@ public class ClickStream {
     @SchemaFieldName("user_id")
     public @Nullable abstract Long getUid();
 
-    @SchemaFieldName("sessionId")
-    public @Nullable abstract String getSessionId();
+    @SchemaFieldName("client_id")
+    public @Nullable abstract String getClientId();
 
     @SchemaFieldName("pageRef")
     public @Nullable abstract String getPageRef();
@@ -61,17 +61,11 @@ public class ClickStream {
     @SchemaFieldName("pageTarget")
     public @Nullable abstract String getPageTarget();
 
-    @SchemaFieldName("lat")
-    public @Nullable abstract Double getLat();
-
-    @SchemaFieldName("lng")
-    public @Nullable abstract Double getLng();
-
     @SchemaFieldName("agent")
     public @Nullable abstract String getAgent();
 
     @SchemaFieldName("items")
-    public @Nullable abstract List<Items> getItems();
+    public @Nullable abstract List<Item> getItems();
 
     public abstract Builder toBuilder();
 
@@ -90,19 +84,15 @@ public class ClickStream {
 
       public abstract Builder setUid(Long value);
 
-      public abstract Builder setSessionId(String value);
+      public abstract Builder setClientId(String value);
 
       public abstract Builder setPageRef(String value);
 
       public abstract Builder setPageTarget(String value);
 
-      public abstract Builder setLat(Double value);
-
-      public abstract Builder setLng(Double value);
-
       public abstract Builder setAgent(String value);
 
-      public abstract Builder setItems(List<Items> value);
+      public abstract Builder setItems(List<Item> value);
 
       public abstract ClickStreamEvent build();
     }
@@ -121,7 +111,7 @@ public class ClickStream {
 
   @AutoValue
   @DefaultSchema(AutoValueSchema.class)
-  public abstract static class Items {
+  public abstract static class Item {
 
     @SchemaFieldName("item_name")
     public @Nullable abstract String getItemName();
@@ -134,6 +124,9 @@ public class ClickStream {
 
     @SchemaFieldName("item_brand")
     public @Nullable abstract String getItemBrand();
+
+    @SchemaFieldName("item_category")
+    public @Nullable abstract String getItemCat01();
 
     @SchemaFieldName("item_category_2")
     public @Nullable abstract String getItemCat02();
@@ -163,7 +156,7 @@ public class ClickStream {
     public @Nullable abstract String getQuantity();
 
     public static Builder builder() {
-      return new AutoValue_ClickStream_Items.Builder();
+      return new AutoValue_ClickStream_Item.Builder();
     }
 
     @AutoValue.Builder
@@ -175,6 +168,8 @@ public class ClickStream {
       public abstract Builder setPrice(String newPrice);
 
       public abstract Builder setItemBrand(String newItemBrand);
+
+      public abstract Builder setItemCat01(String newItemCat01);
 
       public abstract Builder setItemCat02(String newItemCat02);
 
@@ -194,7 +189,7 @@ public class ClickStream {
 
       public abstract Builder setQuantity(String newQuantity);
 
-      public abstract Items build();
+      public abstract Item build();
     }
   }
 
