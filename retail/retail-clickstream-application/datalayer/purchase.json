@@ -1,7 +1,10 @@
 {
   "event_datetime":"2020-11-16 20:59:59", 
   "event": "purchase",
-  "user_id": "UID00001",
+  "user_id": "UID00001", 
+  "client_id": "CID00003", 
+  "page":"/checkout",
+  "page_previous": "/order-confirmation",
   "ecommerce": {
     "purchase": {
       "transaction_id": "T12345",
