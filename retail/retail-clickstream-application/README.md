@@ -35,6 +35,12 @@ export GOOGLE_CLOUD_PROJECT=my-project-id
 gcloud config set project $GOOGLE_CLOUD_PROJECT
 ```
 
+### Check Google Cloud Project config set correctly
+
+```
+gcloud config list
+```
+
 ### Enable Google Cloud APIs
 
 ```
@@ -122,6 +128,8 @@ commands will detect it and remind you to do so if necessary.
 
 Run the plan cmd to see what resources will be greated in your project.
 
+**Important: Make sure you have updated the Project ID in terraform.tfvars before running this**
+
 ```
 terraform plan
 ```
@@ -135,7 +143,7 @@ terraform apply -var-file terraform.tfvars
 This will show you a plan of everything that will be created and then the following notification where you should enter `yes` to proceed:
 
 ```
-Plan: 17 to add, 0 to change, 0 to destroy.
+Plan: 13 to add, 0 to change, 0 to destroy.
 
 Do you want to perform these actions?
   Terraform will perform the actions described above.
