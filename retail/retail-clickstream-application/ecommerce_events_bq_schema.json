@@ -15,6 +15,21 @@
     "mode": "REQUIRED"
   },
   {
+    "name": "client_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "page",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "page_previous",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
     "name": "ecommerce",
     "type": "RECORD",
     "mode": "NULLABLE",

@@ -1,7 +1,10 @@
 {
   "event_datetime":"2020-11-16 22:59:59", 
   "event": "view_item",
-  "user_id": "UID00003",
+  "user_id": "UID00003", 
+  "client_id": "CID00003",
+  "page":"/product-67890",
+  "page_previous": "/category-tshirts",
   "ecommerce": {
     "items": [{
       "item_name": "Donut Friday Scented T-Shirt", 
