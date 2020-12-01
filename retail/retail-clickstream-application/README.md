@@ -24,6 +24,8 @@ cd dataflow-sample-applications/retail/retail-clickstream-application
 
 ### Initilize your account and project
 
+If you are using the Google Cloud Shell you can skip this step.
+
 ```shell
 gcloud init
 ```
@@ -44,7 +46,7 @@ gcloud config list
 ### Enable Google Cloud APIs
 
 ```
-gcloud services enable compute.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+gcloud services enable compute.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com dataflow.googleapis.com
 ```
 
 ### Set compute zone
@@ -90,6 +92,8 @@ Use Terraform to deploy the folllowing services defined in the `main.tf` file
 
 ### Install Terraform
 
+If you are using the Google Cloud Shell Terraform is already installed.
+
 Follow the instructions to [install the Terraform cli](https://learn.hashicorp.com/tutorials/terraform/install-cli?in=terraform/gcp-get-started).
 
 This repo has been tested on Terraform version `0.13.5` and the Google provider version `3.48.0`
@@ -97,6 +101,12 @@ This repo has been tested on Terraform version `0.13.5` and the Google provider 
 ### Update Project ID in terraform.tfvars
 
 Rename the `terraform.tfvars.example` file to `terraform.tfvars` and update the default project ID in the file to match your project ID.
+
+Check that the file has been saved with the updated project ID value
+
+```
+cat terraform.tfvars
+```
 
 ### Initialize Terraform
 
@@ -143,7 +153,7 @@ terraform apply -var-file terraform.tfvars
 This will show you a plan of everything that will be created and then the following notification where you should enter `yes` to proceed:
 
 ```
-Plan: 13 to add, 0 to change, 0 to destroy.
+Plan: 17 to add, 0 to change, 0 to destroy.
 
 Do you want to perform these actions?
   Terraform will perform the actions described above.
@@ -172,7 +182,7 @@ cloud_run_proxy_url = https://pubsub-proxy-my-service-id-uc.a.run.app
 
 ## Simulate sending ecommerce events to Cloud Run Pub/Sub proxy using curl
 
-Use the url_output value from the Terraform output to simulate sending ecommerce events to the Cloud Run Pub/Sub proxy.
+Use the `cloud_run_proxy_url` value from the Terraform output to simulate sending ecommerce events to the Cloud Run Pub/Sub proxy.
 
 #### Set Cloud Run Proxy URL
 

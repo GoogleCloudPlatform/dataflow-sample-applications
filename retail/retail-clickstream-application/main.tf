@@ -29,7 +29,7 @@ resource "google_compute_network" "vpc_network" {
 resource "google_service_account" "data_pipeline_access" {
   project = var.project_id
   account_id = "retailpipeline"
-  display_name = "My Tutorial Data pipeline access"
+  display_name = "Retail app data pipeline access"
 }
 
 resource "google_project_iam_member" "dataflow_admin_role" {
