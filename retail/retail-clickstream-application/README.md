@@ -46,7 +46,7 @@ gcloud config list
 ### Enable Google Cloud APIs
 
 ```
-gcloud services enable compute.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+gcloud services enable compute.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com dataflow.googleapis.com
 ```
 
 ### Set compute zone
