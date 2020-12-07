@@ -1,0 +1,201 @@
+[
+  {
+    "name": "event_datetime",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "event",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "user_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "client_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "page",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "page_previous",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "ecommerce",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "fields": [ 
+      {
+        "mode": "REPEATED",
+        "name": "items",
+        "type": "RECORD",
+        "fields": [
+          {
+            "mode": "NULLABLE",
+            "name": "index",
+            "type": "INTEGER"
+          },
+
+          {
+            "mode": "NULLABLE",
+            "name": "item_id",
+            "type": "INTEGER"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "item_name",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "item_list_name",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "item_list_id",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "price",
+            "type": "FLOAT"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "item_variant",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "quantity",
+            "type": "INTEGER"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "item_brand",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "item_category",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "item_category_2",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "item_category_3",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "item_category_4",
+            "type": "STRING"
+          }
+        ]
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "purchase",
+        "type": "RECORD",
+        "fields": [
+          {
+            "fields": [
+              {
+                "mode": "NULLABLE",
+                "name": "item_coupon",
+                "type": "STRING"
+              },
+              {
+                "mode": "NULLABLE",
+                "name": "quantity",
+                "type": "INTEGER"
+              },
+              {
+                "mode": "NULLABLE",
+                "name": "item_variant",
+                "type": "STRING"
+              },
+              {
+                "mode": "NULLABLE",
+                "name": "item_category",
+                "type": "STRING"
+              },
+              {
+                "mode": "NULLABLE",
+                "name": "item_name",
+                "type": "STRING"
+              },
+              {
+                "mode": "NULLABLE",
+                "name": "item_id",
+                "type": "INTEGER"
+              },
+              {
+                "mode": "NULLABLE",
+                "name": "item_brand",
+                "type": "STRING"
+              },
+              {
+                "mode": "NULLABLE",
+                "name": "item_price",
+                "type": "FLOAT"
+              }
+            ],
+            "mode": "REPEATED",
+            "name": "items",
+            "type": "RECORD"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "coupon",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "tax",
+            "type": "FLOAT"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "shipping",
+            "type": "FLOAT"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "value",
+            "type": "FLOAT"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "affiliation",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "currency",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "transaction_id",
+            "type": "STRING"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,37 @@
+{
+  "event_datetime":"2020-11-16 20:59:59", 
+  "event": "purchase",
+  "user_id": "UID00001", 
+  "client_id": "CID00003", 
+  "page":"/checkout",
+  "page_previous": "/order-confirmation",
+  "ecommerce": {
+    "purchase": {
+      "transaction_id": "T12345",
+      "affiliation": "Online Store",
+      "value": 35.43,
+      "tax": 4.90,
+      "shipping": 5.99,
+      "currency": "EUR",
+      "coupon": "SUMMER_SALE",
+      "items": [{
+        "item_name": "Triblend Android T-Shirt",
+        "item_id": "12345",
+        "item_price": 15.25,
+        "item_brand": "Google",
+        "item_category": "Apparel",
+        "item_variant": "Gray",
+        "quantity": 1,
+        "item_coupon": ""
+      }, {
+        "item_name": "Donut Friday Scented T-Shirt",
+        "item_id": "67890",
+        "item_price": 33.75,
+        "item_brand": "Google",
+        "item_category": "Apparel",
+        "item_variant": "Black",
+        "quantity": 1
+      }]
+    }
+  }
+}

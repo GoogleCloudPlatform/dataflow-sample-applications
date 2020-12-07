@@ -1,0 +1,25 @@
+{
+  "event_datetime":"2020-11-16 22:59:59", 
+  "event": "view_item",
+  "user_id": "UID00003", 
+  "client_id": "CID00003",
+  "page":"/product-67890",
+  "page_previous": "/category-tshirts",
+  "ecommerce": {
+    "items": [{
+      "item_name": "Donut Friday Scented T-Shirt", 
+      "item_id": "67890",
+      "price": 33.75,
+      "item_brand": "Google",
+      "item_category": "Apparel",
+      "item_category_2": "Mens",
+      "item_category_3": "Shirts",
+      "item_category_4": "Tshirts",
+      "item_variant": "Black",
+      "item_list_name": "Search Results",  
+      "item_list_id": "SR123",  
+      "index": 1,  
+      "quantity": 1
+    }]
+  }
+}
