@@ -44,8 +44,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Given n streams, this will create a {@link Iterable<TSDataPoint>} for each {@link
- * MergeSparseStreamsToSingleDenseStream#getDownSampleWindowLength()} }. Gap filling will be used
- * once a key has been seen for the first time until {@link
+ * MergeSparseStreamsToSingleDenseStream#getDownSampleWindowLength()} }.
+ *
+ * <p>Gap filling will be used once a key has been seen for the first time until {@link
  * MergeSparseStreamsToSingleDenseStream#getAbsoluteStopTime() } or {@link
  * MergeSparseStreamsToSingleDenseStream#getTimeToLive()} }
  */

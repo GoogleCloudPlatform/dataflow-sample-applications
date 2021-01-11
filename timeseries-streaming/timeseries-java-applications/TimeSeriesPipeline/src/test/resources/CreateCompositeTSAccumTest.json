@@ -1,0 +1,25 @@
+[
+  {
+    "key": {
+      "major_key": "Key-A",
+      "minor_key_string": "MKey-a"
+    },
+    "data": {"double_val": 1.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-A",
+      "minor_key_string": "MKey-b"
+    },
+    "data": {
+      "double_val": 10.0
+    },
+    "time": {
+      "advance_watermark_seconds": 5
+    },
+    "time": {
+      "advance_watermark_expression": "INFINITY"
+    }
+  }
+]

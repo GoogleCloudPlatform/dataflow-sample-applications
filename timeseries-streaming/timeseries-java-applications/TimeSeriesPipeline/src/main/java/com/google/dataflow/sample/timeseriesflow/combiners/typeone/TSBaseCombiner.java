@@ -37,6 +37,9 @@ import org.apache.beam.sdk.transforms.Combine.CombineFn;
 @Experimental
 public abstract class TSBaseCombiner extends CombineFn<TSDataPoint, TSAccum, TSAccum> {
 
+  // Indicator stored in the internal proto.
+  public static final String _BASE_COMBINER = "_BC";
+
   @Override
   public TSAccum createAccumulator() {
     return TimeSeriesData.TSAccum.newBuilder().build();
@@ -109,10 +112,15 @@ public abstract class TSBaseCombiner extends CombineFn<TSDataPoint, TSAccum, TSA
   public TimeSeriesData.TSAccum extractOutput(TimeSeriesData.TSAccum accum) {
     // Check HB condition, if HB is set and count == 1 then this is a HB accum
     AccumCoreMetadataBuilder accumBuilder = new AccumCoreMetadataBuilder(accum);
+
+    TSAccum.Builder output = accum.toBuilder();
+
     if (accumBuilder.getCountValueOrZero() > 1) {
-      return accum.toBuilder().setHasAGapFillMessage(false).build();
+      output.setHasAGapFillMessage(false).build();
     }
-    return accum;
+    output.putMetadata(_BASE_COMBINER, "t");
+
+    return output.build();
   }
 
   private TSAccum mergeRightAccum(TSAccum leftAccum, TSAccum rightAccum) {

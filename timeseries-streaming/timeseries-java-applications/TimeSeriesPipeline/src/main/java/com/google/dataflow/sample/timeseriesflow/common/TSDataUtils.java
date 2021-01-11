@@ -52,6 +52,20 @@ public class TSDataUtils {
     }
   }
 
+  /** Multiply two Data points, returning a BigDecimal */
+  public static BigDecimal multiply(Data a, Data b) {
+    return getBigDecimalFromData(a).multiply(getBigDecimalFromData(b));
+  }
+
+  /** Add Data points, returning a BigDecimal */
+  public static BigDecimal add(Data... data) {
+    BigDecimal bigDecimal = new BigDecimal(0);
+    for (Data value : data) {
+      bigDecimal = bigDecimal.add(getBigDecimalFromData(value));
+    }
+    return bigDecimal;
+  }
+
   /**
    * Returns {@link Data.DataPointCase} from either of the Data points that has case set. TODO
    * Determine if better way to solve for this usage.

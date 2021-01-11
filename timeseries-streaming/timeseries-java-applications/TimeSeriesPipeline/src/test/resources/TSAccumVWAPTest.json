@@ -1,0 +1,57 @@
+[
+  {
+    "key": {
+      "major_key": "Key-A",
+      "minor_key_string": "Price"
+    },
+    "data": {"double_val": 2.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-A",
+      "minor_key_string": "QTY"
+    },
+    "data": {"int_val": 5.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-A",
+      "minor_key_string": "Price"
+    },
+    "data": {"double_val": 3.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-A",
+      "minor_key_string": "QTY"
+    },
+    "data": {"int_val": 2.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-A",
+      "minor_key_string": "Price"
+    },
+    "data": {"double_val": 4.0
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-A",
+      "minor_key_string": "QTY"
+    },
+    "data": {
+      "int_val": 10.0
+    },
+    "time": {
+      "advance_watermark_seconds": 5
+    },
+    "time": {
+      "advance_watermark_expression": "INFINITY"
+    }
+  }
+]

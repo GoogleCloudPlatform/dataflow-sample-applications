@@ -76,6 +76,7 @@ message TSAccum {
 
     // Storage of all Data types.
     map<string, Data> data_store = 11;
+    map<string, string> metadata = 12;
 
 }
 

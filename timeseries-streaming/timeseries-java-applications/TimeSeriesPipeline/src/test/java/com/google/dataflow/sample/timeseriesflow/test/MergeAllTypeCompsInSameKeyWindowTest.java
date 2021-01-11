@@ -21,6 +21,7 @@ import com.google.dataflow.sample.timeseriesflow.DerivedAggregations.Indicators;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
+import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSBaseCombiner;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.transforms.MergeAllTypeCompsInSameKeyWindow;
 import com.google.protobuf.util.Timestamps;
@@ -72,6 +73,7 @@ public class MergeAllTypeCompsInSameKeyWindowTest {
                             Data.newBuilder().setLongVal(1).build())
                         .putDataStore("METRIC_A", Data.newBuilder().setIntVal(1).build())
                         .putDataStore("METRIC_B", Data.newBuilder().setIntVal(1).build())
+                        .putMetadata(TSBaseCombiner._BASE_COMBINER, "t")
                         .build()))
             .advanceWatermarkToInfinity();
 
@@ -92,6 +94,7 @@ public class MergeAllTypeCompsInSameKeyWindowTest {
                             Data.newBuilder().setLongVal(1).build())
                         .putDataStore("METRIC_B", Data.newBuilder().setIntVal(1).build())
                         .putDataStore("METRIC_C", Data.newBuilder().setIntVal(1).build())
+                        .putMetadata(TSBaseCombiner._BASE_COMBINER, "t")
                         .build()))
             .advanceWatermarkToInfinity();
 
@@ -106,7 +109,7 @@ public class MergeAllTypeCompsInSameKeyWindowTest {
     PAssert.that(
             allAccum.apply(
                 MapElements.into(TypeDescriptor.of(TSAccum.class))
-                    .via(x -> x.getValue().toBuilder().clearDataStore().build())))
+                    .via(x -> x.getValue().toBuilder().clearDataStore().clearMetadata().build())))
         .containsInAnyOrder(
             TSAccum.newBuilder()
                 .setKey(TSDataTestUtils.KEY_A_A)
