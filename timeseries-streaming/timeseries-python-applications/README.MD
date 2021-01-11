@@ -81,7 +81,7 @@ python ml_pipeline_examples/sin_wave_example/timeseries_local_simple_data.py
 This will output a serving_model_dir and a tf_transform_graph under the location you specified for ```PIPELINE_ROOT``` in the config.py file. With this you can now follow the rest of the steps outlines in Option 1 but using your own model.
 For example:
 ```
-python MLPipelineExamples/test_pipelines/batch_inference.py --saved_model_location=<PIPELINE_ROOT>/serving_model_dir --tfrecord_folder=/<your-directory>/simple-data/data/*
+python ml_pipeline_examples/sin_wave_example/inference/batch_inference.py --saved_model_location=<PIPELINE_ROOT>/serving_model_dir --tfrecord_folder=/<your-directory>/simple-data/data/*
 ```
 
 # TODO - Complete instructions for using KFP with the library  
