@@ -39,7 +39,6 @@ import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.Combine.CombineFn;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.Flatten;
-import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.Reify;
@@ -54,7 +53,6 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.TupleTagList;
-import org.apache.beam.sdk.values.TypeDescriptors;
 import org.apache.beam.sdk.values.ValueInSingleWindow;
 import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions;
 import org.joda.time.Duration;
@@ -333,16 +331,6 @@ public abstract class GenerateComputations
                       sequencedAccumsCompKey
                           .apply(x)
                           .apply("SetInternalState", ParDo.of(new SetInternalState()))));
-
-          type2computations
-              .get(0)
-              .apply(
-                  MapElements.into(TypeDescriptors.strings())
-                      .via(
-                          x -> {
-                            System.out.println(x.getValue());
-                            return "";
-                          }));
         }
       }
 
