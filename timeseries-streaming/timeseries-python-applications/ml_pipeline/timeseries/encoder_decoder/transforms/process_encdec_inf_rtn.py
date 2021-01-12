@@ -101,8 +101,6 @@ class ProcessReturn(beam.DoFn):
 
         inputs = self.tft_layer(batched_example)
 
-        print(request_outputs)
-
         # Determine which of the features was used in the model
         feature_labels = timeseries_transform_utils.create_feature_list_from_list(
                 features=batched_example.keys(), config=self.model_config)
