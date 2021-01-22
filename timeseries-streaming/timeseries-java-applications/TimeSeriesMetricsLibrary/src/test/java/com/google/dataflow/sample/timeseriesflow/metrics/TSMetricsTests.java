@@ -23,6 +23,7 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSNumericCombiner;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
+import com.google.dataflow.sample.timeseriesflow.test.TSDataTestUtils;
 import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.gson.stream.JsonReader;
 import common.TSTestData;
@@ -31,6 +32,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
@@ -39,6 +41,7 @@ import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testing.TestStream;
 import org.apache.beam.sdk.transforms.Filter;
 import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.windowing.IntervalWindow;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.TypeDescriptor;
@@ -501,6 +504,93 @@ public class TSMetricsTests {
         .containsInAnyOrder(
             KV.of(TSTestDataBaseline.KEY_A_A, 2.9439202888D),
             KV.of(TSTestDataBaseline.KEY_A_B, 3.2659863237D),
+            KV.of(TSTestDataBaseline.KEY_A_C, 0D));
+
+    p.run();
+  }
+
+  @Test
+  /* Simple test to check Exponential Moving Average Technical is created correctly */
+  public void testCreateLogRtn() throws IOException {
+
+    String resourceName = "TSTestDataHints.json";
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource(resourceName).getFile());
+    String absolutePath = file.getAbsolutePath();
+
+    TSTestData tsTestData =
+        TSTestData.toBuilder()
+            .setInputTSDataFromJSON(
+                new JsonReader(new FileReader(absolutePath)),
+                Duration.standardSeconds(5),
+                Duration.standardSeconds(15))
+            .build();
+
+    TestStream<TSDataPoint> stream = tsTestData.inputTSData();
+
+    PCollection<KV<TSKey, TSAccum>> techAccum =
+        p.apply(stream)
+            .apply(
+                GenerateComputations.builder()
+                    .setType1FixedWindow(Duration.standardSeconds(5))
+                    .setType2SlidingWindowDuration(Duration.standardSeconds(15))
+                    .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
+                    .setType2NumericComputations(
+                        ImmutableList.of(LogRtn.builder().build().create()))
+                    .build());
+
+    // The sliding window will create partial values, to keep testing simple we just test
+    // correctness of BB for the full value
+
+    PCollection<KV<TSKey, Double>> logRtn =
+        techAccum.apply(
+            "LogRtn",
+            MapElements.into(
+                    TypeDescriptors.kvs(TypeDescriptor.of(TSKey.class), TypeDescriptors.doubles()))
+                .via(
+                    x ->
+                        KV.of(
+                            x.getKey(),
+                            new BigDecimal(
+                                    x.getValue()
+                                        .getDataStoreOrThrow(FsiTechnicalIndicators.LOG_RTN.name())
+                                        .getDoubleVal())
+                                .setScale(4, RoundingMode.CEILING)
+                                .doubleValue())));
+
+    /*
+    LogRtn = Log(lead-lag)
+    Key_A_A = [1, 3] = [1.0987]
+    Key_A_B = [16, 12] = [-0.2876]
+    Key_A_C = [12, 12] = [0]
+
+    Key_A_A = [1, 3, 8] = [0.9808]
+    Key_A_B = [16, 12, 8] = [-0.4054]
+    Key_A_C = [12, 12, 12] = [0]
+
+
+     */
+    PAssert.that(logRtn)
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START), Duration.standardSeconds(5)))
+        .containsInAnyOrder(
+            KV.of(TSTestDataBaseline.KEY_A_A, 0D),
+            KV.of(TSTestDataBaseline.KEY_A_B, 0D),
+            KV.of(TSTestDataBaseline.KEY_A_C, 0D))
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 5000), Duration.standardSeconds(5)))
+        .containsInAnyOrder(
+            KV.of(TSTestDataBaseline.KEY_A_A, 1.0987),
+            KV.of(TSTestDataBaseline.KEY_A_B, -0.2876),
+            KV.of(TSTestDataBaseline.KEY_A_C, 0D))
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 10000), Duration.standardSeconds(5)))
+        .containsInAnyOrder(
+            KV.of(TSTestDataBaseline.KEY_A_A, 0.9809),
+            KV.of(TSTestDataBaseline.KEY_A_B, -0.4054),
             KV.of(TSTestDataBaseline.KEY_A_C, 0D));
 
     p.run();
