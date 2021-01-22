@@ -47,6 +47,7 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.Values;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.TypeDescriptor;
 import org.apache.beam.sdk.values.TypeDescriptors;
 import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 import org.joda.time.Duration;
@@ -65,57 +66,6 @@ public class CreateCompositeTSAccmTest {
 
   private static final String PRICE = "Price";
   private static final String QTY = "QTY";
-
-  /** */
-  @Test
-  public void testKeyCreation() throws Exception {
-
-    //    String resourceName = "CreateCompositeTSAccumTest.json";
-    //    ClassLoader classLoader = getClass().getClassLoader();
-    //    File file = new File(classLoader.getResource(resourceName).getFile());
-    //    String absolutePath = file.getAbsolutePath();
-    //
-    //    TSTestData tsTestData =
-    //        TSTestData.toBuilder()
-    //            .setInputTSDataFromJSON(
-    //                new JsonReader(new FileReader(absolutePath)),
-    //                Duration.standardSeconds(5),
-    //                Duration.standardSeconds(5))
-    //            .build();
-    //
-    //    TestStream<TSDataPoint> stream = tsTestData.inputTSData();
-    //
-    //    GenerateComputations generateComputations =
-    //        GenerateComputations.builder()
-    //            .setType1FixedWindow(Duration.standardSeconds(5))
-    //            .setType2SlidingWindowDuration(Duration.standardSeconds(5))
-    //            .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
-    //            .setType1KeyMerge(
-    //                ImmutableList.of(
-    //                    CreateCompositeTSAccum.builder()
-    //                        .setKeysToCombineList(
-    //                            ImmutableList.of(TSDataTestUtils.KEY_A_A,
-    // TSDataTestUtils.KEY_A_B))
-    //                        .build()))
-    //            .build();
-    //
-    //    PCollection<TSDataPoint> testStream = p.apply(stream);
-    //
-    //    PCollection<TSKey> result = testStream.apply(generateComputations).apply(Keys.create());
-    //
-    //    TSKey compositeKey =
-    //        TSDataTestUtils.KEY_A_A.toBuilder().setMinorKeyString("MKey-a-MKey-b").build();
-    //
-    //    result.apply(new Print<>());
-    //
-    //    PAssert.that(result)
-    //        .inWindow(
-    //            new IntervalWindow(
-    //                Instant.ofEpochMilli(TSDataTestUtils.START), Duration.standardSeconds(5)))
-    //        .containsInAnyOrder(TSDataTestUtils.KEY_A_A, TSDataTestUtils.KEY_A_B, compositeKey);
-    //
-    //    p.run();
-  }
 
   @Test
   /**
@@ -160,21 +110,113 @@ public class CreateCompositeTSAccmTest {
 
     PCollection<TSDataPoint> testStream = p.apply(stream);
 
-    PCollection<Double> result =
+    PCollection<TSAccum> result = testStream.apply(generateComputations).apply(Values.create());
+
+    PCollection<KV<String, Double>> output1 =
+        result
+            .apply(
+                "Filter A",
+                Filter.by(x -> x.getKey().getMinorKeyString().equals(PRICE + "-" + QTY)))
+            .apply(
+                "MAP A",
+                MapElements.into(
+                        TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptors.doubles()))
+                    .via(
+                        x ->
+                            KV.of(
+                                String.join(
+                                    "-", x.getKey().getMajorKey(), x.getKey().getMinorKeyString()),
+                                new CreateCompositeTSAccmTest.VWAPExampleType2.VWAPBuilder(
+                                        x, QTY, PRICE)
+                                    .getVWAP()
+                                    .getDoubleVal())));
+
+    PCollection<TSKey> output2 =
+        result
+            .apply(
+                "Filter B",
+                Filter.by(x -> !x.getKey().getMinorKeyString().equals(PRICE + "-" + QTY)))
+            .apply("MAP B", MapElements.into(TypeDescriptor.of(TSKey.class)).via(x -> x.getKey()));
+
+    PAssert.that(output1).containsInAnyOrder(KV.of("Key-A-Price-QTY", 3d));
+    PAssert.that(output2)
+        .containsInAnyOrder(
+            TSDataTestUtils.KEY_A_A.toBuilder().setMinorKeyString(PRICE).build(),
+            TSDataTestUtils.KEY_A_A.toBuilder().setMinorKeyString(QTY).build(),
+            TSDataTestUtils.KEY_B_A.toBuilder().setMinorKeyString(PRICE).build(),
+            TSDataTestUtils.KEY_B_A.toBuilder().setMinorKeyString(QTY).build());
+
+    p.run();
+  }
+
+  @Test
+  /**
+   * This is an integration test which will simulate a real computation type Volume Weighted Average
+   * Price
+   */
+  public void testVWAPMultipleKeysExample() throws Exception {
+
+    String resourceName = "TSAccumVWAPTest.json";
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource(resourceName).getFile());
+    String absolutePath = file.getAbsolutePath();
+
+    TSTestData tsTestData =
+        TSTestData.toBuilder()
+            .setInputTSDataFromJSON(
+                new JsonReader(new FileReader(absolutePath)),
+                Duration.standardSeconds(5),
+                Duration.standardSeconds(5))
+            .build();
+
+    TestStream<TSDataPoint> stream = tsTestData.inputTSData();
+
+    GenerateComputations generateComputations =
+        GenerateComputations.builder()
+            .setType1FixedWindow(Duration.standardSeconds(5))
+            .setType2SlidingWindowDuration(Duration.standardSeconds(5))
+            .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
+            .setType1KeyMerge(
+                ImmutableList.of(
+                    CreateCompositeTSAccum.builder()
+                        .setKeysToCombineList(
+                            ImmutableList.of(
+                                TSDataTestUtils.KEY_A_A
+                                    .toBuilder()
+                                    .setMinorKeyString(PRICE)
+                                    .build(),
+                                TSDataTestUtils.KEY_A_A.toBuilder().setMinorKeyString(QTY).build(),
+                                TSDataTestUtils.KEY_B_A
+                                    .toBuilder()
+                                    .setMinorKeyString(PRICE)
+                                    .build(),
+                                TSDataTestUtils.KEY_B_A.toBuilder().setMinorKeyString(QTY).build()))
+                        .build()))
+            .setType2NumericComputations(ImmutableList.of(new VWAPExampleType2(QTY, PRICE)))
+            .build();
+
+    PCollection<TSDataPoint> testStream = p.apply(stream);
+
+    PCollection<KV<String, Double>> result =
         testStream
             .apply(generateComputations)
             .apply(Values.create())
             .apply(Filter.by(x -> x.getKey().getMinorKeyString().equals(PRICE + "-" + QTY)))
             .apply(
-                MapElements.into(TypeDescriptors.doubles())
+                MapElements.into(
+                        TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptors.doubles()))
                     .via(
                         x ->
-                            new CreateCompositeTSAccmTest.VWAPExampleType2.VWAPBuilder(
-                                    x, QTY, PRICE)
-                                .getVWAP()
-                                .getDoubleVal()));
+                            KV.of(
+                                String.join(
+                                    "-", x.getKey().getMajorKey(), x.getKey().getMinorKeyString()),
+                                new CreateCompositeTSAccmTest.VWAPExampleType2.VWAPBuilder(
+                                        x, QTY, PRICE)
+                                    .getVWAP()
+                                    .getDoubleVal())));
 
-    PAssert.that(result).containsInAnyOrder(3d);
+    PAssert.that(result)
+        .containsInAnyOrder(KV.of("Key-A-Price-QTY", 3d), KV.of("Key-B-Price-QTY", 3d));
 
     p.run();
   }
