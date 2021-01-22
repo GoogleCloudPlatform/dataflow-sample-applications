@@ -18,11 +18,11 @@
 package com.google.dataflow.sample.timeseriesflow.transforms;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.collect.Lists;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSBaseCombiner;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,7 +90,7 @@ public abstract class CreateCompositeTSAccum
   public static class GenerateCompositeKey extends DoFn<KV<TSKey, TSAccum>, KV<TSKey, TSAccum>> {
 
     CreateCompositeTSAccum createCompositeKey;
-    String compositeKey = "";
+    final Map<String, String> compositeKey;
 
     public GenerateCompositeKey(CreateCompositeTSAccum convertAccumToSequence) {
       Preconditions.checkArgument(
@@ -113,7 +113,12 @@ public abstract class CreateCompositeTSAccum
                 (key, value) ->
                     map.put(String.join("-", element.getKey().getMinorKeyString(), key), value));
 
-        TSKey key = element.getKey().toBuilder().setMinorKeyString(compositeKey).build();
+        TSKey key =
+            element
+                .getKey()
+                .toBuilder()
+                .setMinorKeyString(compositeKey.get(element.getKey().getMajorKey()))
+                .build();
 
         o.output(
             KV.of(
@@ -126,20 +131,27 @@ public abstract class CreateCompositeTSAccum
                     .putAllDataStore(map)
                     .putMetadata(TSBaseCombiner._BASE_COMBINER, "t")
                     .build()));
-
-      } else {
-        LOG.error(
-            String.format(
-                "Did not find keys in TSAccum matching the key list. Key list was %s, keys in TSAccum is %s",
-                createCompositeKey.getKeysToCombineList(), element.getKey()));
       }
     }
   }
 
-  public static String keyList(List<TSKey> keys) {
-    List<String> values = new ArrayList<>();
-    keys.forEach(x -> values.add(x.getMinorKeyString()));
-    values.sort(String::compareTo);
-    return String.join("-", values);
+  public static Map<String, String> keyList(List<TSKey> keys) {
+
+    Map<String, List<String>> map = new HashMap<>();
+
+    for (TSKey key : keys) {
+      map.computeIfAbsent(key.getMajorKey(), x -> Lists.newArrayList())
+          .add(key.getMinorKeyString());
+    }
+
+    Map<String, String> lookup = new HashMap<>();
+
+    for (String key : map.keySet()) {
+      List<String> values = map.get(key);
+      values.sort(String::compareTo);
+      lookup.put(key, String.join("-", values));
+    }
+
+    return lookup;
   }
 }
