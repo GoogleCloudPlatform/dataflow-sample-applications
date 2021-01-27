@@ -42,7 +42,7 @@ public abstract class TSBaseCombiner extends CombineFn<TSDataPoint, TSAccum, TSA
 
   @Override
   public TSAccum createAccumulator() {
-    return TimeSeriesData.TSAccum.newBuilder().build();
+    return TimeSeriesData.TSAccum.newBuilder().setIsAllGapFillMessages(true).build();
   }
 
   /*
@@ -90,7 +90,9 @@ public abstract class TSBaseCombiner extends CombineFn<TSDataPoint, TSAccum, TSA
       return accum.toBuilder().setKey(dataPoint.getKey()).setHasAGapFillMessage(true).build();
     }
 
-    return accum.toBuilder().setKey(dataPoint.getKey()).build();
+    // As no HB value was set we can mark that at least one value in the TSAccum computation was not
+    // a gap fill value
+    return accum.toBuilder().setKey(dataPoint.getKey()).setIsAllGapFillMessages(false).build();
   }
 
   @Override
@@ -132,6 +134,10 @@ public abstract class TSBaseCombiner extends CombineFn<TSDataPoint, TSAccum, TSA
     // If the right accum has seen a gapfill message then set the left item as well.
     if (rightAccum.getHasAGapFillMessage()) {
       leftAccum = leftAccum.toBuilder().setHasAGapFillMessage(true).build();
+    }
+
+    if (!rightAccum.getIsAllGapFillMessages()) {
+      leftAccum = leftAccum.toBuilder().setIsAllGapFillMessages(false).build();
     }
 
     AccumCoreMetadataBuilder leftAccumMetadata = new AccumCoreMetadataBuilder(leftAccum);

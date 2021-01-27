@@ -72,7 +72,9 @@ message TSAccum {
     // Corresponds to beam window...
     google.protobuf.Timestamp lower_window_boundary = 5;
     google.protobuf.Timestamp upper_window_boundary = 6;
+
     bool has_a_gap_fill_message = 7;
+    bool is_all_gap_fill_messages = 13;
 
     // Storage of all Data types.
     map<string, Data> data_store = 11;

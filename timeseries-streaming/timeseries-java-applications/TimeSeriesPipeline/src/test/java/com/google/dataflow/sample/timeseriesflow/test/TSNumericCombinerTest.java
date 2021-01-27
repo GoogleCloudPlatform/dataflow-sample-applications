@@ -88,4 +88,55 @@ public class TSNumericCombinerTest {
     PAssert.that(collection).containsInAnyOrder(output.build());
     p.run();
   }
+
+  @Test
+  /**
+   * Test to check that if all inputs are gap fill values the output TSAccum has
+   * isAllGapFillMessages set to true.
+   */
+  public void testNumericCombineWithAllGapFill() {
+
+    Instant instant = Instant.parse("2000-01-01T00:00:00");
+    Timestamp timeA = Timestamps.fromMillis(instant.getMillis());
+    Timestamp timeB = Timestamps.fromMillis(instant.plus(Duration.standardSeconds(10)).getMillis());
+
+    Pipeline p = Pipeline.create(PipelineOptionsFactory.create());
+    TSKey key = TSKey.newBuilder().setMajorKey("Major").setMajorKey("Minor").build();
+    TSDataPoint a =
+        TSDataPoint.newBuilder()
+            .setKey(key)
+            .setTimestamp(timeA)
+            .setData(Data.newBuilder().setIntVal(1))
+            .setIsAGapFillMessage(true)
+            .build();
+    TSDataPoint b =
+        TSDataPoint.newBuilder(a)
+            .setTimestamp(timeB)
+            .setData(Data.newBuilder().setIntVal(2))
+            .setIsAGapFillMessage(true)
+            .build();
+    PCollection<TSAccum> collection =
+        p.apply(Create.of(a, b))
+            .apply(WithKeys.of(TSDataPoint::getKey))
+            .setCoder(CommonUtils.getKvTSDataPointCoder())
+            .apply(Combine.perKey(TSNumericCombiner.combine()))
+            .apply(Values.create());
+
+    TSAccum.Builder output = TSAccum.newBuilder().setKey(key).setIsAllGapFillMessages(true);
+
+    output.putDataStore(
+        Indicators.FIRST_TIMESTAMP.name(), CommonUtils.createNumData(Timestamps.toMillis(timeA)));
+    output.putDataStore(
+        Indicators.LAST_TIMESTAMP.name(), CommonUtils.createNumData(Timestamps.toMillis(timeB)));
+    output.putDataStore(Indicators.FIRST.name(), CommonUtils.createNumData(1));
+    output.putDataStore(Indicators.LAST.name(), CommonUtils.createNumData(2));
+    output.putDataStore(Indicators.SUM.name(), CommonUtils.createNumData(3));
+    output.putDataStore(Indicators.MAX.name(), CommonUtils.createNumData(2));
+    output.putDataStore(Indicators.MIN.name(), CommonUtils.createNumData(1));
+    output.putDataStore(Indicators.DATA_POINT_COUNT.name(), CommonUtils.createNumData(2L));
+    output.putMetadata(TSBaseCombiner._BASE_COMBINER, "t");
+
+    PAssert.that(collection).containsInAnyOrder(output.build());
+    p.run();
+  }
 }
