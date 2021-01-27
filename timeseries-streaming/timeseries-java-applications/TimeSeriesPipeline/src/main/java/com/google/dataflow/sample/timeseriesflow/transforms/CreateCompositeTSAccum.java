@@ -113,6 +113,13 @@ public abstract class CreateCompositeTSAccum
                 (key, value) ->
                     map.put(String.join("-", element.getKey().getMinorKeyString(), key), value));
 
+        // We need to also pass in data to downstream to indicate if this TSAccum is all gapFilled
+        // values
+        int heartBeat = (element.getValue().getIsAllGapFillMessages()) ? 1 : 0;
+        map.put(
+            String.join("-", element.getKey().getMinorKeyString(), "hb"),
+            Data.newBuilder().setIntVal(heartBeat).build());
+
         TSKey key =
             element
                 .getKey()

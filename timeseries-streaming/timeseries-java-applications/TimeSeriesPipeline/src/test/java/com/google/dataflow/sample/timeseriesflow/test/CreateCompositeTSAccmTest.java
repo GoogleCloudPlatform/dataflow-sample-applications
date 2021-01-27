@@ -267,14 +267,17 @@ public class CreateCompositeTSAccmTest {
         while (accums.hasNext()) {
           TSAccum accum = accums.next();
           VWAPBuilder accumDataMap = new VWAPBuilder(accum, QTY, PRICE);
-          BigDecimal price =
-              TSDataUtils.add(
-                  accumDataMap.getLow(), accumDataMap.getHigh(), accumDataMap.getClose());
-          price = price.divide(BigDecimal.valueOf(3), 4);
-          BigDecimal qty = TSDataUtils.getBigDecimalFromData(accumDataMap.getQuantity());
-          price = price.multiply(qty);
-          cumPriceQty = cumPriceQty.add(price);
-          cumQty = cumQty.add(qty);
+          if (accumDataMap.getPriceIsHB().getIntVal() == 0
+              && accumDataMap.getQuantityIsHB().getIntVal() == 0) {
+            BigDecimal price =
+                TSDataUtils.add(
+                    accumDataMap.getLow(), accumDataMap.getHigh(), accumDataMap.getClose());
+            price = price.divide(BigDecimal.valueOf(3), 4);
+            BigDecimal qty = TSDataUtils.getBigDecimalFromData(accumDataMap.getQuantity());
+            price = price.multiply(qty);
+            cumPriceQty = cumPriceQty.add(price);
+            cumQty = cumQty.add(qty);
+          }
         }
 
         VWAPBuilder output =
@@ -314,6 +317,14 @@ public class CreateCompositeTSAccmTest {
 
       public Data getClose() {
         return getValueOrNull(priceName + "-" + Indicators.LAST.name());
+      }
+
+      public Data getPriceIsHB() {
+        return getValueOrNull(priceName + "-" + "hb");
+      }
+
+      public Data getQuantityIsHB() {
+        return getValueOrNull(quantityName + "-" + "hb");
       }
 
       public Data getVWAP() {
