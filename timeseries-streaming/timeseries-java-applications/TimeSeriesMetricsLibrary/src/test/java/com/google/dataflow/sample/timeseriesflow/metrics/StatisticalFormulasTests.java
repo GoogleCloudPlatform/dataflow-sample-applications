@@ -54,7 +54,7 @@ public class StatisticalFormulasTests {
     Iterator<TimeSeriesData.TSAccum> it =
         new ArrayList<>(Arrays.asList(NEGATIVE_ACCUM, NEGATIVE_ACCUM, NEGATIVE_ACCUM)).iterator();
 
-    assertEquals(StatisticalFormulas.ComputeStandardDeviation(it), BigDecimal.ZERO);
+    assertEquals(StatisticalFormulas.computeStandardDeviation(it), BigDecimal.ZERO);
   }
 
   @Test
@@ -63,7 +63,7 @@ public class StatisticalFormulasTests {
     Iterator<TimeSeriesData.TSAccum> it =
         new ArrayList<>(Arrays.asList(ZERO_ACCUM, ZERO_ACCUM, ZERO_ACCUM)).iterator();
 
-    assertEquals(StatisticalFormulas.ComputeStandardDeviation(it), BigDecimal.ZERO);
+    assertEquals(StatisticalFormulas.computeStandardDeviation(it), BigDecimal.ZERO);
   }
 
   @Test

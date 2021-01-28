@@ -35,7 +35,7 @@ class ComputeSimpleMovingAverageDoFn extends DoFn<TSAccumSequence, KV<TSKey, TSA
 
     Iterator<TSAccum> it = pc.element().getAccumsList().iterator();
 
-    BigDecimal avg = StatisticalFormulas.ComputeSimpleMovingAverage(it);
+    BigDecimal avg = StatisticalFormulas.computeSimpleMovingAverage(it);
 
     AccumMABuilder maBuilder =
         new AccumMABuilder(TSAccum.newBuilder().setKey(pc.element().getKey()).build());

@@ -35,7 +35,7 @@ class ComputeStdDevDoFn extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>> {
 
     Iterator<TSAccum> it = pc.element().getAccumsList().iterator();
 
-    BigDecimal stdDev = StatisticalFormulas.ComputeStandardDeviation(it);
+    BigDecimal stdDev = StatisticalFormulas.computeStandardDeviation(it);
 
     AccumStdDevBuilder stdDevBuilder =
         new AccumStdDevBuilder(TSAccum.newBuilder().setKey(pc.element().getKey()).build());

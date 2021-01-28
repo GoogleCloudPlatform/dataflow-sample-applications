@@ -55,8 +55,8 @@ class ComputeBollingerBandsDoFn extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>
     BigDecimal movingAverage;
 
     if (averageComputationMethod == EXPONENTIAL_MOVING_AVERAGE) {
-      movingAverage = StatisticalFormulas.ComputeExponentialMovingAverage(itAvg, this.alpha);
-      BigDecimal stdDev = StatisticalFormulas.ComputeStandardDeviation(itStdDev);
+      movingAverage = StatisticalFormulas.computeExponentialMovingAverage(itAvg, this.alpha);
+      BigDecimal stdDev = StatisticalFormulas.computeStandardDeviation(itStdDev);
 
       bbBuilder
           .setMovementCount(CommonUtils.createNumData(pc.element().getAccumsCount()))
@@ -72,8 +72,8 @@ class ComputeBollingerBandsDoFn extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>
                       .subtract(stdDev.multiply(BigDecimal.valueOf(this.devFactor)))
                       .doubleValue()));
     } else { // By default we use Simple Moving Average
-      movingAverage = StatisticalFormulas.ComputeSimpleMovingAverage(itAvg);
-      BigDecimal stdDev = StatisticalFormulas.ComputeStandardDeviation(itStdDev);
+      movingAverage = StatisticalFormulas.computeSimpleMovingAverage(itAvg);
+      BigDecimal stdDev = StatisticalFormulas.computeStandardDeviation(itStdDev);
 
       bbBuilder
           .setMovementCount(CommonUtils.createNumData(pc.element().getAccumsCount()))

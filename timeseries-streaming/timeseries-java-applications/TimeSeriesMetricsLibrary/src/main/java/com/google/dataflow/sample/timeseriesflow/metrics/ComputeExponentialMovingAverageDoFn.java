@@ -60,7 +60,7 @@ public class ComputeExponentialMovingAverageDoFn extends DoFn<TSAccumSequence, K
     Iterator<TimeSeriesData.TSAccum> it = pc.element().getAccumsList().iterator();
     AccumCoreNumericBuilder current;
 
-    BigDecimal ema = StatisticalFormulas.ComputeExponentialMovingAverage(it, this.alpha);
+    BigDecimal ema = StatisticalFormulas.computeExponentialMovingAverage(it, this.alpha);
     AccumMABuilder maBuilder =
         new AccumMABuilder(
             TimeSeriesData.TSAccum.newBuilder().setKey(pc.element().getKey()).build());

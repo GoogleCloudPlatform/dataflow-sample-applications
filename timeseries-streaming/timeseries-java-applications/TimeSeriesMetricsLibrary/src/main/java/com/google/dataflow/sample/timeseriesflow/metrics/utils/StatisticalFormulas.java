@@ -28,7 +28,7 @@ import java.util.Iterator;
 
 public class StatisticalFormulas {
 
-  public static BigDecimal ComputeExponentialMovingAverage(
+  public static BigDecimal computeExponentialMovingAverage(
       Iterator<TimeSeriesData.TSAccum> it, BigDecimal alpha) {
 
     BigDecimal currentWeightedSum = BigDecimal.valueOf(0);
@@ -60,7 +60,7 @@ public class StatisticalFormulas {
     return ema;
   }
 
-  public static BigDecimal ComputeSimpleMovingAverage(Iterator<TimeSeriesData.TSAccum> it) {
+  public static BigDecimal computeSimpleMovingAverage(Iterator<TimeSeriesData.TSAccum> it) {
 
     AccumCoreNumericBuilder current = new AccumCoreNumericBuilder(it.next());
 
@@ -111,7 +111,7 @@ public class StatisticalFormulas {
     return x1;
   }
 
-  public static BigDecimal ComputeStandardDeviation(Iterator<TimeSeriesData.TSAccum> it) {
+  public static BigDecimal computeStandardDeviation(Iterator<TimeSeriesData.TSAccum> it) {
 
     AccumCoreNumericBuilder current = new AccumCoreNumericBuilder(it.next());
 
