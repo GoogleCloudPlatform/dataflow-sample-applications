@@ -211,7 +211,10 @@ public abstract class PerfectRectangles
     // Apply fixed window domain and combine to get the last known value in Event time.
 
     PCollection<KV<TSKey, TSDataPoint>> windowedInput =
-        input.apply("GapFillWindow", Window.into(FixedWindows.of(getFixedWindowDuration())));
+        input.apply(
+            "GapFillWindow",
+            Window.<KV<TSKey, TSDataPoint>>into(FixedWindows.of(getFixedWindowDuration()))
+                .withAllowedLateness(Duration.ZERO));
 
     PCollection<KV<TSKey, TSDataPoint>> lastValueInWindow =
         windowedInput.apply(LatestEventTimeDataPoint.perKey());
@@ -227,8 +230,7 @@ public abstract class PerfectRectangles
                 "Global Window With Process Time output.",
                 Window.<KV<TSKey, ValueInSingleWindow<TSDataPoint>>>into(new GlobalWindows())
                     .triggering(Repeatedly.forever(AfterProcessingTime.pastFirstElementInPane()))
-                    .discardingFiredPanes()
-                    .withAllowedLateness(Duration.ZERO));
+                    .discardingFiredPanes());
 
     //     Ensure all output is ordered and gaps are filed and previous values propagated
 
@@ -363,17 +365,37 @@ public abstract class PerfectRectangles
     @TimerFamily("actionTimers")
     private final TimerSpec timer = TimerSpecs.timerMap(TimeDomain.EVENT_TIME);
 
-    /** */
+    /**
+     * At most one element is seen per window. This value is never used in the window it arrives in.
+     * It is only a signal that a real value was seen in a window, its data point can be reused
+     * later on.
+     *
+     * <p>It is possible that the event timestamp in the data point, is not within the boundaries of
+     * the window that it arrived in. This can happen when the source is using process time vs event
+     * time, for example when TimestampID is not set for PubSub. The timestamp in the even is
+     * therefore reset to be the current window timestamp.
+     */
     @ProcessElement
     public void processElement(
         ProcessContext c,
+        @Timestamp Instant windowTimestamp,
         @StateId("newElementsBag") BagState<KV<TSKey, TSDataPoint>> newElementsBag,
         @StateId("trailingWWM") CombiningState<Long, long[], Long> trailingWWM,
         @StateId("isTimerActive") ValueState<Boolean> isTimerActive,
         @TimerFamily("actionTimers") TimerMap timers) {
 
+      TSDataPoint timeFixedDataPoint =
+          c.element()
+              .getValue()
+              .getValue()
+              .toBuilder()
+              .setTimestamp(
+                  Timestamps.fromMillis(
+                      c.element().getValue().getWindow().maxTimestamp().getMillis() - 1))
+              .build();
+
       // Add the new TSDataPoint to our holding queue
-      newElementsBag.add(KV.of(c.element().getKey(), c.element().getValue().getValue()));
+      newElementsBag.add(KV.of(c.element().getKey(), timeFixedDataPoint));
 
       // Update our trailingWWM, this value can never be NULL.
       trailingWWM.add(c.element().getValue().getWindow().maxTimestamp().getMillis());
