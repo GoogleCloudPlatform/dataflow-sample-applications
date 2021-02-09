@@ -79,10 +79,11 @@ public abstract class OutPutTFExampleToPubSub extends PTransform<PCollection<Exa
                   @ProcessElement
                   public void processElement(@Element Example example, OutputReceiver<String> o) {
                     try {
-                      String jsonFormat = JsonFormat.printer().print(example);
+                      String jsonFormat =
+                          JsonFormat.printer().omittingInsignificantWhitespace().print(example);
                       o.output(jsonFormat);
                     } catch (InvalidProtocolBufferException e) {
-                      e.printStackTrace();
+                      LOG.error(e.getMessage());
                     }
                   }
                 }))

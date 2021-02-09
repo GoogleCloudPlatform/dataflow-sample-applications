@@ -119,7 +119,7 @@ public class PerfectRectanglesTests {
                         .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 1000))
                         .build()),
                 new Instant(TSDataTestUtils.START + 1000)))
-        //        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 2000))
+        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 2000))
         .addElements(
             TimestampedValue.of(
                 KV.of(
@@ -129,7 +129,7 @@ public class PerfectRectanglesTests {
                         .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 3000))
                         .build()),
                 new Instant(TSDataTestUtils.START + 3000)))
-        //        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 4000))
+        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 4000))
         .addElements(
             TimestampedValue.of(
                 KV.of(
@@ -292,13 +292,63 @@ public class PerfectRectanglesTests {
     PAssert.that(perfectRectangle)
         .inWindow(
             new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START))
+                .setIsAGapFillMessage(false)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 1000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 1000))
+                .setIsAGapFillMessage(false)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 2000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 3000 - 1))
+                .setIsAGapFillMessage(true)
+                .build())
+        .inWindow(
+            new IntervalWindow(
                 Instant.ofEpochMilli(TSDataTestUtils.START + 3000), Duration.standardSeconds(1)))
         .containsInAnyOrder(
             DATA_POINT_A_B
                 .toBuilder()
                 .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 3000))
                 .setIsAGapFillMessage(false)
-                .build());
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 4000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 4000))
+                .setIsAGapFillMessage(false)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 5000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 6000 - 1))
+                .setIsAGapFillMessage(true)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 6000), Duration.standardSeconds(1)))
+        .empty();
+
     p.run();
   }
 
