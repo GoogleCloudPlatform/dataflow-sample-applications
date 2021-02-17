@@ -201,3 +201,5 @@ VALUES
 * Create a BigTable instance within your project
 #### Create a table
 * Create the "PageView5MinAggregates" table with Column family "pageViewAgg"
+# Deploy Using Terraform
+Please refer to [this document](terraform/README.MD) to deploy resources using terraform
