@@ -90,3 +90,9 @@ sdks/python/postcommit_requirements.txt
 
 .pytest_cache
 .pytest_cache/**/*
+
+# Terraform intermediate artifacts
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
