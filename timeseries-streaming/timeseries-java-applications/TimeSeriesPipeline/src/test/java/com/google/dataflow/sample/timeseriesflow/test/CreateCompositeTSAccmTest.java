@@ -31,6 +31,7 @@ import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations
 import com.google.dataflow.sample.timeseriesflow.transforms.TypeTwoComputation;
 import com.google.dataflow.sample.timeseriesflow.transforms.TypeTwoComputation.ComputeType;
 import com.google.gson.stream.JsonReader;
+import com.google.protobuf.util.Timestamps;
 import common.TSTestData;
 import java.io.File;
 import java.io.FileReader;
@@ -197,12 +198,15 @@ public class CreateCompositeTSAccmTest {
 
     PCollection<TSDataPoint> testStream = p.apply(stream);
 
-    PCollection<KV<String, Double>> result =
-        testStream
-            .apply(generateComputations)
-            .apply(Values.create())
-            .apply(Filter.by(x -> x.getKey().getMinorKeyString().equals(PRICE + "-" + QTY)))
+    PCollection<TSAccum> result = testStream.apply(generateComputations).apply(Values.create());
+
+    PCollection<KV<String, Double>> vwap =
+        result
             .apply(
+                "Assert-VWAP-Filter-1",
+                Filter.by(x -> x.getKey().getMinorKeyString().equals(PRICE + "-" + QTY)))
+            .apply(
+                "Assert-VWAP-Extract-Value-1",
                 MapElements.into(
                         TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptors.doubles()))
                     .via(
@@ -210,14 +214,35 @@ public class CreateCompositeTSAccmTest {
                             KV.of(
                                 String.join(
                                     "-", x.getKey().getMajorKey(), x.getKey().getMinorKeyString()),
-                                new CreateCompositeTSAccmTest.VWAPExampleType2.VWAPBuilder(
-                                        x, QTY, PRICE)
+                                new VWAPExampleType2.VWAPBuilder(x, QTY, PRICE)
                                     .getVWAP()
                                     .getDoubleVal())));
 
-    PAssert.that(result)
+    PAssert.that(vwap)
         .containsInAnyOrder(KV.of("Key-A-Price-QTY", 3d), KV.of("Key-B-Price-QTY", 3d));
 
+    PCollection<KV<String, String>> dates =
+        result
+            .apply(
+                "Assert-VWAP-Filter-2",
+                Filter.by(x -> x.getKey().getMinorKeyString().equals(PRICE + "-" + QTY)))
+            .apply(
+                "Assert-VWAP-Extract-Value-2",
+                MapElements.into(
+                        TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptors.strings()))
+                    .via(
+                        x ->
+                            KV.of(
+                                String.join(
+                                    "-", x.getKey().getMajorKey(), x.getKey().getMinorKeyString()),
+                                String.join(
+                                    ",",
+                                    Timestamps.toString(x.getLowerWindowBoundary()),
+                                    Timestamps.toString(x.getUpperWindowBoundary())))));
+    PAssert.that(dates)
+        .containsInAnyOrder(
+            KV.of("Key-A-Price-QTY", "2000-01-01T00:00:00Z,2000-01-01T00:00:05Z"),
+            KV.of("Key-B-Price-QTY", "2000-01-01T00:00:00Z,2000-01-01T00:00:05Z"));
     p.run();
   }
 

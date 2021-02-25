@@ -246,8 +246,8 @@ public abstract class GenerateComputations
                         pc.output(pc.element());
                       }
                     }))
-            .apply(Reify.windowsInValue())
-            .apply(ParDo.of(new AddWindowBoundaryToTSAccum()));
+            .apply("Type1Reify", Reify.windowsInValue())
+            .apply("Type1AddWin", ParDo.of(new AddWindowBoundaryToTSAccum()));
 
     // Set output if there are no more computations we are done.
     PCollection<KV<TSKey, TSAccum>> output = type1Computations;
@@ -330,6 +330,8 @@ public abstract class GenerateComputations
                   type2computations.add(
                       sequencedAccumsCompKey
                           .apply(x)
+                          .apply("CompKeyReify", Reify.windowsInValue())
+                          .apply("CompKeyAddWin", ParDo.of(new AddWindowBoundaryToTSAccum()))
                           .apply("SetInternalState", ParDo.of(new SetInternalState()))));
         }
       }
