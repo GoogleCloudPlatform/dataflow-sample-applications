@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,93 +28,13 @@ provider "google" {
   region  = var.region
 }
 
-//enable pubsub API
-resource "google_project_service" "pubsub" {
-  service = "pubsub.googleapis.com"
-  disable_on_destroy = false
-}
-
-//create pubsub resources
-resource "google_pubsub_topic" "topic_clickstream_inbound" {
-  name = var.topic_clickstream_inbound
-  labels = {
-    created = "terraform"
-  }
-
-  depends_on = [google_project_service.pubsub]
-}
-
-resource "google_pubsub_topic" "topic_transactions_inbound" {
-  name = var.topic_transactions_inbound
-
-  labels = {
-    created = "terraform"
-  }
-
-  depends_on = [google_project_service.pubsub]
-}
-
-resource "google_pubsub_topic" "topic_inventory_inbound" {
-  name = var.topic_inventory_inbound
-
-  labels = {
-    created = "terraform"
-  }
-
-  depends_on = [google_project_service.pubsub]
-}
-
-resource "google_pubsub_topic" "topic_inventory_outbound" {
-  name = var.topic_inventory_outbound
-
-  labels = {
-    created = "terraform"
-  }
-
-  depends_on = [google_project_service.pubsub]
-}
-
-resource "google_pubsub_subscription" "clickstream_inbound_sub" {
-  name  = var.clickstream_inbound_sub
-  topic = google_pubsub_topic.topic_clickstream_inbound.name
-
-  labels = {
-    created = "terraform"
-  }
-  
-  retain_acked_messages      = false
-
-  ack_deadline_seconds       = 20
-
-  enable_message_ordering    = false
-}
-
-resource "google_pubsub_subscription" "transactions_inbound_sub" {
-  name  = var.transactions_inbound_sub
-  topic = google_pubsub_topic.topic_transactions_inbound.name
-
-  labels = {
-    created = "terraform"
-  }
-  
-  retain_acked_messages      = false
-
-  ack_deadline_seconds       = 20
-
-  enable_message_ordering    = false
-}
-
-resource "google_pubsub_subscription" "inventory_inbound_sub" {
-  name  = var.inventory_inbound_sub
-  topic = google_pubsub_topic.topic_inventory_inbound.name
-
-  labels = {
-    created = "terraform"
-  }
-  
-  retain_acked_messages      = false
-
-  ack_deadline_seconds       = 20
-
-  enable_message_ordering    = false
+module "pubsub" {
+  source                     = "./modules/pubsub"
+  topic_clickstream_inbound  = var.topic_clickstream_inbound
+  topic_transactions_inbound = var.topic_transactions_inbound
+  topic_inventory_inbound    = var.topic_inventory_inbound
+  topic_inventory_outbound   = var.topic_inventory_outbound
+  clickstream_inbound_sub    = var.clickstream_inbound_sub
+  transactions_inbound_sub   = var.transactions_inbound_sub
+  inventory_inbound_sub      = var.inventory_inbound_sub
 }
