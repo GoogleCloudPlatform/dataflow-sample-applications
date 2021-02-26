@@ -38,3 +38,4 @@ module "pubsub" {
   transactions_inbound_sub   = var.transactions_inbound_sub
   inventory_inbound_sub      = var.inventory_inbound_sub
 }
+

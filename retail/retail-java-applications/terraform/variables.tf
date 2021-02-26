@@ -20,42 +20,42 @@ variable "project_id" {
 }
 
 variable "region" {
-  type    = string
+  type        = string
   description = "Name of the selected region"
 }
 
 variable "topic_clickstream_inbound" {
-  type    = string
+  type        = string
   description = "Topic name for clickstream inbound"
 }
 
 variable "topic_transactions_inbound" {
-  type    = string
+  type        = string
   description = "Topic name for transactions inbound"
 }
 
 variable "topic_inventory_inbound" {
-  type    = string
+  type        = string
   description = "Topic name for inventory inbound"
 }
 
 variable "topic_inventory_outbound" {
-  type    = string
+  type        = string
   description = "Topic name for inventory outbound"
 }
 
 variable "clickstream_inbound_sub" {
-  type    = string
+  type        = string
   description = "Subscription for clickstream inbound"
 }
 
 variable "transactions_inbound_sub" {
-  type    = string
+  type        = string
   description = "Subscription for transactions inbound"
 }
 
 variable "inventory_inbound_sub" {
-  type    = string
+  type        = string
   description = "Subscription for inventory inbound"
 }
 
