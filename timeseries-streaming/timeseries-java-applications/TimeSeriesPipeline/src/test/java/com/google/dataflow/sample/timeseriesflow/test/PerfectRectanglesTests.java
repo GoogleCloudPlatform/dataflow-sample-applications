@@ -37,6 +37,7 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.TimestampedValue;
+import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.junit.Test;
@@ -52,11 +53,13 @@ public class PerfectRectanglesTests {
       TSDataPoint.newBuilder()
           .setKey(TSKey.newBuilder().setMajorKey("A").setMinorKeyString("A").build())
           .setTimestamp(Timestamps.fromMillis(NOW.getMillis()))
+          .setData(CommonUtils.createNumData(5))
           .build();
 
   static final TSDataPoint DATA_POINT_A_B =
       TSDataPoint.newBuilder()
           .setKey(TSKey.newBuilder().setMajorKey("A").setMinorKeyString("B").build())
+          .setData(CommonUtils.createNumData(5))
           .setTimestamp(Timestamps.fromMillis(NOW.getMillis()))
           .build();
 
@@ -269,6 +272,68 @@ public class PerfectRectanglesTests {
             DATA_POINT_A_B
                 .toBuilder()
                 .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 2999))
+                .setIsAGapFillMessage(true)
+                .build());
+    p.run();
+  }
+
+  @Test
+  public void testGapsMidPointWithExcludeList() {
+
+    Duration ttlDuration = Duration.standardSeconds(1);
+
+    Pipeline p = Pipeline.create(PipelineOptionsFactory.create());
+
+    PCollection<TSDataPoint> perfectRectangle =
+        p.apply(getStreamWithGap())
+            .apply(
+                PerfectRectangles.withWindowAndTTLDuration(Duration.standardSeconds(1), ttlDuration)
+                    .enablePreviousValueFill()
+                    .withPreviousValueFillExcludeList(ImmutableList.of(DATA_POINT_A_B.getKey())))
+            .apply(Values.create())
+            .apply(Window.into(FixedWindows.of(Duration.standardSeconds(1))));
+
+    PAssert.that(perfectRectangle)
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 2000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 2999))
+                .setData(CommonUtils.createNumData(0))
+                .setIsAGapFillMessage(true)
+                .build());
+    p.run();
+  }
+
+  @Test
+  public void testGapsMidPointWithExcludeListMinorKey() {
+
+    Duration ttlDuration = Duration.standardSeconds(1);
+
+    Pipeline p = Pipeline.create(PipelineOptionsFactory.create());
+
+    PCollection<TSDataPoint> perfectRectangle =
+        p.apply(getStreamWithGap())
+            .apply(
+                PerfectRectangles.withWindowAndTTLDuration(Duration.standardSeconds(1), ttlDuration)
+                    .enablePreviousValueFill()
+                    .withPreviousValueFillExcludeList(
+                        ImmutableList.of(
+                            DATA_POINT_A_B.getKey().toBuilder().clearMajorKey().build())))
+            .apply(Values.create())
+            .apply(Window.into(FixedWindows.of(Duration.standardSeconds(1))));
+
+    PAssert.that(perfectRectangle)
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 2000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 2999))
+                .setData(CommonUtils.createNumData(0))
                 .setIsAGapFillMessage(true)
                 .build());
     p.run();
