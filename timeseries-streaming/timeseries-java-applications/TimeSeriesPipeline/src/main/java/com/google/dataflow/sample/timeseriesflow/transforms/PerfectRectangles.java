@@ -79,9 +79,18 @@ import org.slf4j.LoggerFactory;
  * fixed window value into a generated value for the fixed window.
  *
  * <p>{@link PerfectRectangles#getTtlDuration()} ()} is the duration after the last value for a key
- * is seen that the gap filling will be completed for. {@link
- * PerfectRectangles#getAbsoluteStopTime()} ()} if this is set then the gap filling will stop at
- * exactly this time. This is useful for bootstrap pipelines.
+ * is seen that the gap filling will be completed for.
+ *
+ * <p>{@link PerfectRectangles#getAbsoluteStopTime()} ()} if this is set then the gap filling will
+ * stop at exactly this time. This is useful for bootstrap pipelines.
+ *
+ * <p>{@link PerfectRectangles#enablePreviousValueFill()} enables the use of the last known value as
+ * the value to be used to fill gaps.
+ *
+ * <p>{@link PerfectRectangles#getPreviousValueFillExcludeList(List<TSKey>)} An Optional list of
+ * TSKey's can be provided which will be excluded from the {@link
+ * PerfectRectangles#enablePreviousValueFill()} policy if set. If the TSKey Major Key is not set
+ * then the minorkey will be assumed to match all major keys.
  *
  * <p>In order to do the gap filling we make use of known characteristics of the data coming into
  * this transform
@@ -114,6 +123,8 @@ public abstract class PerfectRectangles
 
   abstract Boolean getEnableHoldAndPropogate();
 
+  abstract @Nullable List<TSKey> getPreviousValueFillExcludeList();
+
   abstract @Nullable Duration getTtlDuration();
 
   abstract @Nullable Instant getAbsoluteStopTime();
@@ -131,6 +142,8 @@ public abstract class PerfectRectangles
     public abstract Builder setFixedWindowDuration(Duration value);
 
     public abstract Builder setEnableHoldAndPropogate(Boolean value);
+
+    public abstract Builder setPreviousValueFillExcludeList(List<TSKey> excludeList);
 
     public abstract Builder setTtlDuration(Duration value);
 
@@ -193,6 +206,16 @@ public abstract class PerfectRectangles
    */
   public PerfectRectangles enablePreviousValueFill() {
     return this.toBuilder().setEnableHoldAndPropogate(true).build();
+  }
+
+  /**
+   * An Optional list of TSKey's can be provided which will be excluded from the {@link
+   * PerfectRectangles#enablePreviousValueFill()} policy if set. If the TSKey Major Key is not set
+   * then the minorkey will be assumed to match all major keys.
+   */
+  public PerfectRectangles withPreviousValueFillExcludeList(List<TSKey> excludeList) {
+    checkNotNull(excludeList);
+    return this.toBuilder().setPreviousValueFillExcludeList(excludeList).build();
   }
 
   /**
@@ -364,6 +387,19 @@ public abstract class PerfectRectangles
 
     @TimerFamily("actionTimers")
     private final TimerSpec timer = TimerSpecs.timerMap(TimeDomain.EVENT_TIME);
+
+    private final List<String> minorKeyExcludeList = new ArrayList<>();
+
+    @Setup
+    public void setup() {
+      if (perfectRectangles().getPreviousValueFillExcludeList() != null) {
+        for (TSKey key : perfectRectangles().getPreviousValueFillExcludeList()) {
+          if (key.getMajorKey().equals("")) {
+            this.minorKeyExcludeList.add(key.getMinorKeyString());
+          }
+        }
+      }
+    }
 
     /**
      * At most one element is seen per window. This value is never used in the window it arrives in.
@@ -660,7 +696,8 @@ public abstract class PerfectRectangles
       // Check if we have a last known value, if its Null, then the first value from our sorted list
       // is the value.
 
-      if (perfectRectangles().getEnableHoldAndPropogate()) {
+      if (perfectRectangles().getEnableHoldAndPropogate()
+          && checkIfValueNotInExcludeList(lastValue.getKey())) {
         c.output(
             KV.of(
                 lastValue.getKey(),
@@ -714,6 +751,17 @@ public abstract class PerfectRectangles
       sortedList.clear();
 
       return sortedList;
+    }
+
+    @VisibleForTesting
+    public boolean checkIfValueNotInExcludeList(TSKey key) {
+
+      if (perfectRectangles().getPreviousValueFillExcludeList() == null) {
+        return true;
+      }
+
+      return !perfectRectangles().getPreviousValueFillExcludeList().contains(key)
+          && !minorKeyExcludeList.contains(key.getMinorKeyString());
     }
   }
 }
