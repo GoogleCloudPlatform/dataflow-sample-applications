@@ -19,8 +19,10 @@ package com.google.dataflow.sample.timeseriesflow.transforms;
 
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.Timestamps;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +39,9 @@ public class ParseTSDataPointFromBytes extends DoFn<byte[], TSDataPoint> {
   @ProcessElement
   public void process(@Element byte[] input, OutputReceiver<TSDataPoint> o) {
     try {
-      o.output(TSDataPoint.parseFrom(input));
+      TSDataPoint dataPoint = TSDataPoint.parseFrom(input);
+      o.outputWithTimestamp(
+          dataPoint, Instant.ofEpochMilli(Timestamps.toMillis(dataPoint.getTimestamp())));
     } catch (InvalidProtocolBufferException e) {
       LOG.error(e.getMessage());
     }
