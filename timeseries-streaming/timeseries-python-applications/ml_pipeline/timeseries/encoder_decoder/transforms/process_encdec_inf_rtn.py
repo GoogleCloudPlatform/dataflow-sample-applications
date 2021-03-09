@@ -42,32 +42,11 @@ class ProcessReturn(beam.DoFn):
         self.batching_size = batching_size
 
     def setup(self):
+        # TODO switch to shared.py
         self.transform_output = tft.TFTransformOutput(self.tf_transform_graph_dir)
-        self.tft_layer = self.transform_output.transform_features_layer()
+        # self.tft_layer = self.transform_output.transform_features_layer()
 
-    def start_bundle(self):
-        self.batch: [WindowedValue] = []
-
-    def finish_bundle(self):
-        for prediction in self.process_result(self.batch):
-            yield prediction
-
-    def process(
-            self,
-            element: prediction_log_pb2.PredictionLog,
-            window=beam.DoFn.WindowParam,
-            timestamp=beam.DoFn.TimestampParam):
-        if len(element.predict_log.request.inputs['examples'].string_val) > 1:
-            raise Exception("Only support single input string.")
-
-        if len(self.batch) > self.batching_size:
-            for k in self.process_result(self.batch):
-                yield k
-            self.batch.clear()
-        else:
-            self.batch.append(WindowedValue(element, timestamp, [window]))
-
-    def process_result(self, element: [WindowedValue]):
+    def process(self, element: prediction_log_pb2.PredictionLog):
         """
         A input example has shape : [timesteps, all_features] all_features is
          not always == to features used in model.
@@ -79,18 +58,22 @@ class ProcessReturn(beam.DoFn):
         There are also Metadata fields which provide context
 
         """
-        element_value = [k.value for k in element]
+
+        if len(element.predict_log.request.inputs['examples'].string_val) > 1:
+            raise Exception("Only support single input string.")
+
         processed_inputs = []
         request_inputs = []
+        request_inputs_tft = []
         request_outputs = []
 
-        for k in element_value:
-            request_inputs.append(
-                    k.predict_log.request.inputs['examples'].string_val[0])
-            request_outputs.append(k.predict_log.response.outputs['output_0'])
+        request_inputs.append(
+                element.predict_log.request.inputs['examples'].string_val[0])
+        request_outputs.append(element.predict_log.response.outputs['output_0'])
+        request_inputs_tft.append(element.predict_log.response.outputs['output_1'])
 
         # The output of tf.io.parse_example is a set of feature tensors which
-        # have shape for non Metadata of [batch,
+        # have shape for non-metadata values of [batch,
         # timestep]
 
         batched_example = tf.io.parse_example(
@@ -99,7 +82,9 @@ class ProcessReturn(beam.DoFn):
         # The tft layer gives us two labels 'FLOAT32' and 'LABEL' which have
         # shape [batch, timestep, model_features]
 
-        inputs = self.tft_layer(batched_example)
+        # inputs = self.tft_layer(batched_example)
+        # TODO make work with batches
+        inputs = request_inputs_tft
 
         # Determine which of the features was used in the model
         feature_labels = timeseries_transform_utils.create_feature_list_from_list(
@@ -115,7 +100,9 @@ class ProcessReturn(beam.DoFn):
                 batched_example['METADATA_SPAN_END_TS']).numpy()
 
         batch_pos = 0
-        for batch_input in inputs['LABEL'].numpy():
+        for batch_input in inputs:
+            # TODO Currently only supports model runinf of batch size 1
+            batch_input = tf.make_ndarray(batch_input)[0]
             # Get the Metadata from the original request
             span_start_timestamp = datetime.fromtimestamp(
                     metadata_span_start_timestamp[batch_pos][0] / 1000)
@@ -150,9 +137,9 @@ class ProcessReturn(beam.DoFn):
                 label = (feature_labels[model_feature_pos])
 
                 # The num of features should == number of results
-                if len(feature_labels) != len(last_timestep_input):
+                if len(feature_labels) != len(last_timestep_output):
                     raise ValueError(f'Features list {feature_labels} in config is '
-                                     f'len {len(feature_labels)} which '
+                                     f'length {len(feature_labels)} which '
                                      f'does not match output length '
                                      f'{len(last_timestep_output)} '
                                      f' This normally is a result of using a configuration '
@@ -198,8 +185,9 @@ class CheckAnomalous(beam.DoFn):
     """
 
     # TODO(BEAM-6158): Revert the workaround once we can pickle super() on py3.
-    def __init__(self, threshold: float = 0.05):
+    def __init__(self, output_false: bool = True, threshold: float = 0.05):
         beam.DoFn.__init__(self)
+        self.output_false = output_false
         self.threshold = threshold
 
     def process(self, element: Dict[Text, Any], *unused_args, **unused_kwargs):
@@ -208,12 +196,17 @@ class CheckAnomalous(beam.DoFn):
                 'span_end_timestamp': element['span_end_timestamp']
         }
 
+        anomaly_found = False
+
         for key, value in element['feature_results'].items():
             input_value = value['input_value']
             output_value = value['output_value']
             diff = abs(input_value - output_value)
             value.update({'diff': diff})
             if not key.endswith('-TIMESTAMP'):
-                value.update({'anomaly': diff > self.threshold})
+                if diff > self.threshold:
+                    value.update({'anomaly': True})
+                    anomaly_found = True
             result.update({key: value})
-        yield result
+        if anomaly_found:
+            yield result

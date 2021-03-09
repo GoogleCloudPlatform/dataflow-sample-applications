@@ -16,7 +16,7 @@
 from typing import Text
 import tensorflow as tf
 import tensorflow_transform as tft
-import timeseries.encoder_decoder.encoder_decoder_model as encoder_decoder_model
+import ml_pipeline.timeseries.encoder_decoder.encoder_decoder_model as encoder_decoder_model
 
 from tfx.components.trainer.executor import TrainerFnArgs
 
@@ -69,7 +69,7 @@ def _get_serve_tf_examples_fn(model, tf_transform_output):
                 serialized_tf_examples, feature_spec)
         transformed_features = create_training_data(
                 model.tft_layer(parsed_features))
-        return model(transformed_features)
+        return model(transformed_features), transformed_features
 
     return serve_tf_examples_fn
 

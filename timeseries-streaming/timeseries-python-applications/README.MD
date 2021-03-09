@@ -75,7 +75,7 @@ That job will generate 86400 data points, which will be aggregated to 43200 exam
 Once that is done, change the information in the [config.py](ml_pipeline_examples/sin_wave_example/config.py) to match your local env.
 Run the command with the virtual-env activated:
 ```
-python ml_pipeline_examples/sin_wave_example/timeseries_local_simple_data.py
+python ml_pipeline_examples/sin_wave_example/training/timeseries_local_sin_wave.py
 ``` 
 
 This will output a serving_model_dir and a tf_transform_graph under the location you specified for ```PIPELINE_ROOT``` in the config.py file. With this you can now follow the rest of the steps outlines in Option 1 but using your own model.
