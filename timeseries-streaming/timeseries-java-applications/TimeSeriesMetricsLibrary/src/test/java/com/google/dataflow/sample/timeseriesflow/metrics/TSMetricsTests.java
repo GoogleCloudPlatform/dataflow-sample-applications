@@ -511,9 +511,10 @@ public class TSMetricsTests {
 
   @Test
   /* Simple test to check Exponential Moving Average Technical is created correctly */
+  @SuppressWarnings("unchecked")
   public void testCreateLogRtn() throws IOException {
 
-    String resourceName = "TSTestDataHints.json";
+    String resourceName = "LogRtnTSTestDataHints.json";
     ClassLoader classLoader = getClass().getClassLoader();
     File file = new File(classLoader.getResource(resourceName).getFile());
     String absolutePath = file.getAbsolutePath();
@@ -563,13 +564,17 @@ public class TSMetricsTests {
     Key_A_A = [1, 3] = [1.0987]
     Key_A_B = [16, 12] = [-0.2876]
     Key_A_C = [12, 12] = [0]
+    Key_A_C = [12, 0] = [0]
 
     Key_A_A = [1, 3, 8] = [0.9808]
     Key_A_B = [16, 12, 8] = [-0.4054]
     Key_A_C = [12, 12, 12] = [0]
+    Key_A_C = [12, 0, 12] = [0]
 
 
      */
+    TSKey keyAC = TSTestDataBaseline.KEY_A_C.toBuilder().setMinorKeyString("MKey-d").build();
+
     PAssert.that(logRtn)
         .inWindow(
             new IntervalWindow(
@@ -577,21 +582,24 @@ public class TSMetricsTests {
         .containsInAnyOrder(
             KV.of(TSTestDataBaseline.KEY_A_A, 0D),
             KV.of(TSTestDataBaseline.KEY_A_B, 0D),
-            KV.of(TSTestDataBaseline.KEY_A_C, 0D))
+            KV.of(TSTestDataBaseline.KEY_A_C, 0D),
+            KV.of(keyAC, 0D))
         .inWindow(
             new IntervalWindow(
                 Instant.ofEpochMilli(TSDataTestUtils.START + 5000), Duration.standardSeconds(5)))
         .containsInAnyOrder(
             KV.of(TSTestDataBaseline.KEY_A_A, 1.0987),
             KV.of(TSTestDataBaseline.KEY_A_B, -0.2876),
-            KV.of(TSTestDataBaseline.KEY_A_C, 0D))
+            KV.of(TSTestDataBaseline.KEY_A_C, 0D),
+            KV.of(keyAC, 0D))
         .inWindow(
             new IntervalWindow(
                 Instant.ofEpochMilli(TSDataTestUtils.START + 10000), Duration.standardSeconds(5)))
         .containsInAnyOrder(
             KV.of(TSTestDataBaseline.KEY_A_A, 0.9809),
             KV.of(TSTestDataBaseline.KEY_A_B, -0.4054),
-            KV.of(TSTestDataBaseline.KEY_A_C, 0D));
+            KV.of(TSTestDataBaseline.KEY_A_C, 0D),
+            KV.of(keyAC, 0D));
 
     p.run();
   }

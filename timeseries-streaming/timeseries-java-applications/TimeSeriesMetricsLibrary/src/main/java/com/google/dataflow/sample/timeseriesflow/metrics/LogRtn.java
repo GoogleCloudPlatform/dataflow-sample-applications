@@ -111,17 +111,22 @@ public abstract class LogRtn implements Serializable {
       AccumCoreNumericBuilder lead = new AccumCoreNumericBuilder(last);
       AccumCoreNumericBuilder lag = new AccumCoreNumericBuilder(penultimate);
 
-      BigDecimal diff =
-          TSDataUtils.getBigDecimalFromData(lead.getLastOrNull())
-              .divide(
-                  TSDataUtils.getBigDecimalFromData(lag.getLastOrNull()), 9, RoundingMode.CEILING);
+      BigDecimal bdLead = TSDataUtils.getBigDecimalFromData(lead.getLastOrNull());
+      BigDecimal bdlag = TSDataUtils.getBigDecimalFromData(lag.getLastOrNull());
 
-      // TODO use BigDecimal log
-      Double result = Math.log(Math.abs(diff.doubleValue()));
+      if (!bdLead.equals(BigDecimal.ZERO) && !bdlag.equals(BigDecimal.ZERO)) {
 
-      logRtnBuilder.setLogRtn(
-          CommonUtils.createNumData((Double.isInfinite(result) || result.isNaN()) ? 0D : result));
+        BigDecimal diff = bdLead.divide(bdlag, 9, RoundingMode.CEILING);
 
+        // TODO use BigDecimal log
+        Double result = Math.log(Math.abs(diff.doubleValue()));
+
+        logRtnBuilder.setLogRtn(
+            CommonUtils.createNumData((Double.isInfinite(result) || result.isNaN()) ? 0D : result));
+      } else {
+
+        logRtnBuilder.setLogRtn(CommonUtils.createNumData(0D));
+      }
       o.output(KV.of(pc.element().getKey(), logRtnBuilder.build()));
     }
   }
