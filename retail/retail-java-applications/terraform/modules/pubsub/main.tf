@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 resource "google_project_service" "pubsub" {
-  service = "pubsub.googleapis.com"
+  service            = "pubsub.googleapis.com"
   disable_on_destroy = false
 }
 
@@ -102,3 +102,30 @@ resource "google_pubsub_subscription" "inventory_inbound_sub" {
   enable_message_ordering    = false
 }
 
+output "clickstream_inbound_topic" {
+  value = var.topic_clickstream_inbound
+}
+
+output "transactions_inbound_topic" {
+  value = var.topic_transactions_inbound
+}
+
+output "inventory_inbound_topic" {
+  value = var.topic_inventory_inbound
+}
+
+output "inventory_outbound_topic" {
+  value = var.topic_inventory_outbound
+}
+
+output "clickstream_inbound_sub" {
+  value = var.clickstream_inbound_sub
+}
+
+output "transactions_inbound_sub" {
+  value = var.transactions_inbound_sub
+}
+
+output "inventory_inbound_sub" {
+  value = var.inventory_inbound_sub
+}

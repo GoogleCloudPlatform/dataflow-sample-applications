@@ -122,3 +122,6 @@ Use Terraform to destroy all resources
 ```
 terraform destroy
 ```
+## Automated Test For Modules
+Please refer to [this document](test/README.md) to execute automated tests using Go and Terratest.
+
