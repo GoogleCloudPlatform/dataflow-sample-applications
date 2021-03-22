@@ -1,6 +1,5 @@
-
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-# project_id = "xl-project-302106"
 region                     = "us-central1"
 topic_clickstream_inbound  = "Clickstream-inbound"
 topic_transactions_inbound = "Transactions-inbound"
@@ -23,3 +21,4 @@ topic_inventory_outbound   = "Inventory-outbound"
 clickstream_inbound_sub    = "Clickstream-inbound-sub"
 transactions_inbound_sub   = "Transactions-inbound-sub"
 inventory_inbound_sub      = "Inventory-inbound-sub"
+

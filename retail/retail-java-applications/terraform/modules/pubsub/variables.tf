@@ -13,17 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-variable "project_id" {
-  type        = string
-  description = "Project ID in GCP"
-}
-
-variable "region" {
-  type        = string
-  description = "Name of the selected region"
-}
-
 variable "topic_clickstream_inbound" {
   type        = string
   description = "Topic name for clickstream inbound"
@@ -46,16 +35,16 @@ variable "topic_inventory_outbound" {
 
 variable "clickstream_inbound_sub" {
   type        = string
-  description = "Subscription for clickstream inbound"
+  description = "Subscription name for clickstream inbound"
 }
 
 variable "transactions_inbound_sub" {
   type        = string
-  description = "Subscription for transactions inbound"
+  description = "Subscription name for transactions inbound"
 }
 
 variable "inventory_inbound_sub" {
   type        = string
-  description = "Subscription for inventory inbound"
+  description = "Subscription name for inventory inbound"
 }
 
