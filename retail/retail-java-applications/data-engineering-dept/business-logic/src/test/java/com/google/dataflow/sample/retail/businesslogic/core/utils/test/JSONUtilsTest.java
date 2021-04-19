@@ -103,9 +103,6 @@ public class JSONUtilsTest {
   }
 
   @Test
-  // This test will fail with 2.22.0 as non strict representation of null is not supported.
-  // Corrected in > 2.22.0
-  @Ignore
   public void testParseWithNonStrictNullsClickstream() {
 
     ClickStreamEventAVRO withNull = getEventAVRO();
