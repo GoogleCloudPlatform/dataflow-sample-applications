@@ -17,8 +17,7 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.utils.test.clickstream;
 
-import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.CSSessions;
-import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.ClickStreamSessions;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,7 +30,6 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
-import org.apache.beam.sdk.values.TimestampedValue;
 import org.apache.beam.vendor.grpc.v1p26p0.com.google.common.collect.ImmutableList;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
@@ -44,41 +42,6 @@ import org.junit.runners.JUnit4;
 /** Unit tests for {@link CreateClickStreamSessions}. */
 public class CreateClickStreamSessionsTest {
 
-  private static final Long TIME = Instant.parse("2000-01-01T00:00:00").getMillis();
-
-  private static final ClickStreamEvent EVENT =
-      ClickStreamEvent.builder()
-          .setUid(1L)
-          .setClientId("1")
-          .setAgent("A")
-          .setPageRef("pageRef")
-          .setPageTarget("pageTarget")
-          .setEvent("browse")
-          .setUid(1L)
-          .setTimestamp(TIME)
-          .build();
-
-  private static final TimestampedValue<ClickStreamEvent> CLICK_STREAM_EVENT_0_MINS =
-      TimestampedValue.of(EVENT, Instant.ofEpochMilli(TIME));
-
-  private static final TimestampedValue<ClickStreamEvent> CLICK_STREAM_EVENT_3_MINS =
-      TimestampedValue.of(
-          EVENT
-              .toBuilder()
-              .setTimestamp(
-                  Instant.ofEpochMilli(TIME).plus(Duration.standardMinutes(3)).getMillis())
-              .build(),
-          Instant.ofEpochMilli(TIME).plus(Duration.standardMinutes(3)));
-
-  private static final TimestampedValue<ClickStreamEvent> CLICK_STREAM_EVENT_10_MINS =
-      TimestampedValue.of(
-          EVENT
-              .toBuilder()
-              .setTimestamp(
-                  Instant.ofEpochMilli(TIME).plus(Duration.standardMinutes(10)).getMillis())
-              .build(),
-          Instant.ofEpochMilli(TIME).plus(Duration.standardMinutes(10)));
-
   @Rule public transient TestPipeline pipeline = TestPipeline.create();
 
   @Test
@@ -90,31 +53,35 @@ public class CreateClickStreamSessionsTest {
         pipeline
             .apply(
                 Create.timestamped(
-                    CLICK_STREAM_EVENT_0_MINS,
-                    CLICK_STREAM_EVENT_3_MINS,
-                    CLICK_STREAM_EVENT_10_MINS))
+                    ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_0_MINS,
+                    ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_3_MINS,
+                    ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_10_MINS))
             .apply(Convert.toRows())
-            .apply(new CSSessions(windowDuration))
+            .apply(ClickStreamSessions.create(windowDuration))
             .apply(Select.fieldNames("value.timestamp"))
-            .apply(ParDo.of(new RowKVDoFn()));
+            .apply(ParDo.of(new ExtractTimestampFromRow()));
 
     PAssert.that(sessions)
         .containsInAnyOrder(
             ImmutableList.of(
-                TIME, Instant.ofEpochMilli(TIME).plus(Duration.standardMinutes(3)).getMillis()),
+                ClickStreamSessionTestUtil.TIME,
+                Instant.ofEpochMilli(ClickStreamSessionTestUtil.TIME)
+                    .plus(Duration.standardMinutes(3))
+                    .getMillis()),
             ImmutableList.of(
-                Instant.ofEpochMilli(TIME).plus(Duration.standardMinutes(10)).getMillis()));
+                Instant.ofEpochMilli(ClickStreamSessionTestUtil.TIME)
+                    .plus(Duration.standardMinutes(10))
+                    .getMillis()));
 
     pipeline.run();
   }
 
-  private static class RowKVDoFn extends DoFn<Row, List<Long>> {
+  static class ExtractTimestampFromRow extends DoFn<Row, List<Long>> {
 
     @ProcessElement
     public void process(ProcessContext pc) {
       List<Long> timestamps = new ArrayList<>();
       pc.element().getArray("timestamp").forEach(x -> timestamps.add((Long) x));
-
       Collections.sort(timestamps);
       pc.output(timestamps);
     }

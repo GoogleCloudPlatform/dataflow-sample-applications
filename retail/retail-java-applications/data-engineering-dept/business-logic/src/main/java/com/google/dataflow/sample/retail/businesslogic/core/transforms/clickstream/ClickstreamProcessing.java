@@ -140,7 +140,7 @@ public class ClickstreamProcessing extends PTransform<PCollection<String>, PColl
      * <p>*********************************************************************************************
      */
     PCollection<Row> sessionizedCS =
-        cleanCSRow.apply(CSSessions.create(Duration.standardMinutes(10)));
+        cleanCSRow.apply(ClickStreamSessions.create(Duration.standardMinutes(10)));
 
     /**
      * *********************************************************************************************

@@ -17,8 +17,8 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream;
 
+import com.google.auto.value.AutoValue;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.DeadLetterSink;
-import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.transforms.Group;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -26,32 +26,48 @@ import org.apache.beam.sdk.transforms.windowing.Sessions;
 import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
+import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions;
 import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * This transform creates sessions from the incoming clickstream using the cliendId and
- * SessionWindows.
+ * SessionWindows. The output is a ROW with schema:
+ *
+ * <pre>{@code
+ * Field Name        Field Type
+ * key               ROW{clientID:STRING}
+ * values	         ITERABLE[ROW[{@link com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent}]]
+ * }</pre>
  */
 @Experimental
-public class CSSessions extends PTransform<PCollection<Row>, PCollection<Row>> {
+@AutoValue
+public abstract class ClickStreamSessions extends PTransform<PCollection<Row>, PCollection<Row>> {
 
   private static final Logger LOG = LoggerFactory.getLogger(DeadLetterSink.class);
 
-  Duration sessionWindowGapDuration;
+  public abstract Duration getSessionWindowGapDuration();
 
-  public CSSessions(Duration sessionWindowGapDuration) {
-    this.sessionWindowGapDuration = sessionWindowGapDuration;
+  public abstract Builder toBuilder();
+
+  public static ClickStreamSessions create(Duration sessionWindowGapDuration) {
+    return builder().setSessionWindowGapDuration(sessionWindowGapDuration).build();
   }
 
-  public CSSessions(@Nullable String name, Duration sessionWindowGapDuration) {
-    super(name);
-    this.sessionWindowGapDuration = sessionWindowGapDuration;
+  public static Builder builder() {
+    return new AutoValue_ClickStreamSessions.Builder();
   }
 
-  public static CSSessions create(Duration sessionWindowGapDuration) {
-    return new CSSessions(sessionWindowGapDuration);
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder setSessionWindowGapDuration(Duration newSessionWindowGapDuration);
+
+    public abstract ClickStreamSessions build();
+  }
+
+  public ClickStreamSessions withSessionWindowGapDuration(Duration sessionWindowGapDuration) {
+    return this.toBuilder().setSessionWindowGapDuration(sessionWindowGapDuration).build();
   }
 
   @Override
@@ -65,8 +81,9 @@ public class CSSessions extends PTransform<PCollection<Row>, PCollection<Row>> {
    * }</pre>
    */
   public PCollection<Row> expand(PCollection<Row> input) {
+    Preconditions.checkNotNull(this.getSessionWindowGapDuration(), "Must set a session value.");
     return input
-        .apply(Window.into(Sessions.withGapDuration(sessionWindowGapDuration)))
+        .apply(Window.into(Sessions.withGapDuration(getSessionWindowGapDuration())))
         .apply(Group.byFieldNames("client_id"));
   }
 }
