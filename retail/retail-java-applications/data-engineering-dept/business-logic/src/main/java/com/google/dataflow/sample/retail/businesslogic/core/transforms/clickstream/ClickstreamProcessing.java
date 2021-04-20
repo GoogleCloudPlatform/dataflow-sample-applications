@@ -20,6 +20,7 @@ package com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstr
 import com.google.api.services.bigquery.model.TimePartitioning;
 import com.google.dataflow.sample.retail.businesslogic.core.DeploymentAnnotations.PartialResultsExpectedOnDrain;
 import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.DeadLetterSink.SinkType;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.JSONUtils;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.Print;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.WriteRawJSONMessagesToBigQuery;
@@ -28,6 +29,8 @@ import com.google.dataflow.sample.retail.dataobjects.ClickStream.PageViewAggrega
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.WriteDisposition;
+import org.apache.beam.sdk.schemas.NoSuchSchemaException;
+import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.schemas.transforms.Filter;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -64,22 +67,29 @@ import org.joda.time.Duration;
  */
 @PartialResultsExpectedOnDrain
 @Experimental
-public class ClickstreamProcessing
-    extends PTransform<PCollection<String>, PCollection<ClickStreamEvent>> {
+public class ClickstreamProcessing extends PTransform<PCollection<String>, PCollection<Row>> {
 
   @Override
-  public PCollection<ClickStreamEvent> expand(PCollection<String> input) {
+  public PCollection<Row> expand(PCollection<String> input) {
 
     RetailPipelineOptions options =
         input.getPipeline().getOptions().as(RetailPipelineOptions.class);
 
+    Schema csEvtSchema = null;
+
+    try {
+      csEvtSchema = input.getPipeline().getSchemaRegistry().getSchema(ClickStreamEvent.class);
+    } catch (NoSuchSchemaException e) {
+      throw new IllegalArgumentException("Unable to get Schema for ClickStreamEvent class.");
+    }
+
     /**
      * **********************************************************************************************
-     * Parse Messages to Beam SCHEMAS
+     * Parse Messages to SCHEMAS
      * **********************************************************************************************
      */
-    PCollection<ClickStreamEvent> clickStreamEvents =
-        input.apply(JSONUtils.ConvertJSONtoPOJO.create(ClickStreamEvent.class));
+    PCollection<Row> csEvtRows =
+        input.apply(JSONUtils.JSONtoRowWithDeadLetterSink.withSchema(csEvtSchema));
 
     /**
      * **********************************************************************************************
@@ -97,8 +107,10 @@ public class ClickstreamProcessing
      *
      * <p>*********************************************************************************************
      */
-    PCollection<ClickStreamEvent> cleanedData =
-        clickStreamEvents.apply("Clean Data", new ValidateAndCorrectClickStreamEvents());
+    PCollection<Row> cleanCSRow =
+        csEvtRows.apply(
+            new ValidateAndCorrectCSEvt(
+                ((options.getTestModeEnabled()) ? SinkType.LOG : SinkType.BIGQUERY)));
 
     /**
      * *********************************************************************************************
@@ -107,11 +119,11 @@ public class ClickstreamProcessing
      * <p>*********************************************************************************************
      */
     if (options.getTestModeEnabled()) {
-      cleanedData.apply(ParDo.of(new Print<>("StoreCleanedDataToDW: ")));
+      cleanCSRow.apply(ParDo.of(new Print<>("StoreCleanedDataToDW: ")));
     } else {
-      cleanedData.apply(
+      cleanCSRow.apply(
           "StoreCleanedDataToDW",
-          BigQueryIO.<ClickStreamEvent>write()
+          BigQueryIO.<Row>write()
               .useBeamSchema()
               .withWriteDisposition(WriteDisposition.WRITE_APPEND)
               .withTimePartitioning(new TimePartitioning().setField("timestamp"))
@@ -127,8 +139,8 @@ public class ClickstreamProcessing
      *
      * <p>*********************************************************************************************
      */
-    PCollection<Row> sessionizedClickstream =
-        cleanedData.apply(CreateClickStreamSessions.create(Duration.standardMinutes(10)));
+    PCollection<Row> sessionizedCS =
+        cleanCSRow.apply(ClickStreamSessions.create(Duration.standardMinutes(10)));
 
     /**
      * *********************************************************************************************
@@ -137,9 +149,9 @@ public class ClickstreamProcessing
      * <p>*********************************************************************************************
      */
     if (options.getTestModeEnabled()) {
-      sessionizedClickstream.apply(ParDo.of(new Print<>("Sessionized Data is: ")));
+      sessionizedCS.apply(ParDo.of(new Print<>("Sessionized Data is: ")));
     } else {
-      sessionizedClickstream.apply(
+      sessionizedCS.apply(
           "sessionizedClickstream",
           BigQueryIO.<Row>write()
               .useBeamSchema()
@@ -157,9 +169,8 @@ public class ClickstreamProcessing
      *
      * <p>*********************************************************************************************
      */
-    PCollection<ClickStreamEvent> cleanDataWithOutErrorEvents =
-        cleanedData.apply(
-            Filter.<ClickStreamEvent>create().whereFieldName("event", c -> !c.equals("ERROR")));
+    PCollection<Row> cleanDataWithOutErrorEvents =
+        cleanCSRow.apply(Filter.<Row>create().whereFieldName("event", c -> !c.equals("ERROR")));
 
     /**
      * *********************************************************************************************

@@ -20,6 +20,7 @@ package com.google.dataflow.sample.retail.businesslogic.core.utils.test.clickstr
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.CountViewsPerProduct;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.PageViewAggregator;
+import org.apache.beam.sdk.schemas.transforms.Convert;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
@@ -41,14 +42,11 @@ public class CountViewsPerProductTest {
   private static final ClickStreamEvent EVENT =
       ClickStreamEvent.builder()
           .setUid(1L)
-          .setSessionId("1")
+          .setClientId("1")
           .setAgent("A")
-          .setLng(1D)
-          .setLat(1D)
           .setPageRef("pageRef")
           .setPageTarget("pageTarget")
           .setEvent("browse")
-          .setUid(1L)
           .setTimestamp(TIME)
           .build();
 
@@ -74,6 +72,7 @@ public class CountViewsPerProductTest {
     PCollection<PageViewAggregator> countPageViews =
         pipeline
             .apply(Create.timestamped(CLICK_STREAM_EVENT_0_MINS, CLICK_STREAM_EVENT_1_MINS))
+            .apply(Convert.toRows())
             .apply(new CountViewsPerProduct(windowDuration));
 
     PageViewAggregator pageViewAggregator =

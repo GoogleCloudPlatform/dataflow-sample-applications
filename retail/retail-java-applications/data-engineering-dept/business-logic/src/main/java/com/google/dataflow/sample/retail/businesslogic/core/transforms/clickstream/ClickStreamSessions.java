@@ -17,44 +17,57 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream;
 
+import com.google.auto.value.AutoValue;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.DeadLetterSink;
-import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
-import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
-import org.apache.beam.sdk.schemas.transforms.Convert;
 import org.apache.beam.sdk.schemas.transforms.Group;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.windowing.Sessions;
 import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
+import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions;
 import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This transform creates sessions from the incoming clickstream using the sessionid and
- * SessionWindows.
+ * This transform creates sessions from the incoming clickstream using the cliendId and
+ * SessionWindows. The output is a ROW with schema:
+ *
+ * <pre>{@code
+ * Field Name        Field Type
+ * key               ROW{clientID:STRING}
+ * values	         ITERABLE[ROW[{@link com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent}]]
+ * }</pre>
  */
 @Experimental
-public class CreateClickStreamSessions
-    extends PTransform<PCollection<ClickStreamEvent>, PCollection<Row>> {
+@AutoValue
+public abstract class ClickStreamSessions extends PTransform<PCollection<Row>, PCollection<Row>> {
 
   private static final Logger LOG = LoggerFactory.getLogger(DeadLetterSink.class);
 
-  Duration sessionWindowGapDuration;
+  public abstract Duration getSessionWindowGapDuration();
 
-  public CreateClickStreamSessions(Duration sessionWindowGapDuration) {
-    this.sessionWindowGapDuration = sessionWindowGapDuration;
+  public abstract Builder toBuilder();
+
+  public static ClickStreamSessions create(Duration sessionWindowGapDuration) {
+    return builder().setSessionWindowGapDuration(sessionWindowGapDuration).build();
   }
 
-  public CreateClickStreamSessions(@Nullable String name, Duration sessionWindowGapDuration) {
-    super(name);
-    this.sessionWindowGapDuration = sessionWindowGapDuration;
+  public static Builder builder() {
+    return new AutoValue_ClickStreamSessions.Builder();
   }
 
-  public static CreateClickStreamSessions create(Duration sessionWindowGapDuration) {
-    return new CreateClickStreamSessions(sessionWindowGapDuration);
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder setSessionWindowGapDuration(Duration newSessionWindowGapDuration);
+
+    public abstract ClickStreamSessions build();
+  }
+
+  public ClickStreamSessions withSessionWindowGapDuration(Duration sessionWindowGapDuration) {
+    return this.toBuilder().setSessionWindowGapDuration(sessionWindowGapDuration).build();
   }
 
   @Override
@@ -63,14 +76,14 @@ public class CreateClickStreamSessions
    *
    * <pre>{@code
    * Field Name	    Field Type
-   * key	        ROW{sessionId:STRING}
+   * key	        ROW{clientID:STRING}
    * values	        ITERABLE[ROW[ClickstreamEvent]]
    * }</pre>
    */
-  public PCollection<Row> expand(PCollection<ClickStreamEvent> input) {
+  public PCollection<Row> expand(PCollection<Row> input) {
+    Preconditions.checkNotNull(this.getSessionWindowGapDuration(), "Must set a session value.");
     return input
-        .apply(Window.into(Sessions.withGapDuration(sessionWindowGapDuration)))
-        .apply(Convert.toRows())
-        .apply(Group.byFieldNames("sessionId"));
+        .apply(Window.into(Sessions.withGapDuration(getSessionWindowGapDuration())))
+        .apply(Group.byFieldNames("client_id"));
   }
 }

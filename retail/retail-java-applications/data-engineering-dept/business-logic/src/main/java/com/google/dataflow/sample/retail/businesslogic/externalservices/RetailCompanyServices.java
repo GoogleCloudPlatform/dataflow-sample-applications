@@ -17,11 +17,12 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.externalservices;
 
+import com.google.dataflow.sample.retail.dataobjects.ClickStream.Item;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.beam.sdk.annotations.Experimental;
+import org.apache.beam.sdk.schemas.Schema;
 
 /**
  * This class represents a mock client to a microservice implemented by the Demo Retail company.
@@ -31,34 +32,24 @@ import org.apache.beam.sdk.annotations.Experimental;
  *
  * <p>Real services will often take 10-100's of ms to respond, which cause back pressure within a
  * pipeline. This version of this mock does not cause push back.
+ *
+ * <p>TODO convert to a service which requires a few hundred ms to respond.
  */
 @Experimental
 public class RetailCompanyServices {
 
-  // TODO convert to a service which requires a few hundred ms to respond.
-  public Long convertSessionIdToUid(String sessionId) {
-    return ThreadLocalRandom.current().nextLong(0, 100);
-  }
+  public Map<String, Item> convertItemIdsToFullText(List<String> itemIds, Schema itemSchema) {
 
-  public Map<String, Long> convertSessionIdsToUids(List<String> sessionIds) {
-    Map<String, Long> map = new HashMap<>();
-    sessionIds.forEach(x -> map.put(x, convertSessionIdToUid(x)));
+    Map<String, Item> map = new HashMap<>();
+
+    Item item =
+        Item.builder()
+            .setItemBrand("item_brand")
+            .setItemCat01("foo_category")
+            .setItemName("foo_name")
+            .build();
+
+    itemIds.forEach(x -> map.put(x, item));
     return map;
-  }
-
-  public Map<String, LatLng> convertMissingLatLongUids(List<String> uids) {
-    Map<String, LatLng> map = new HashMap<>();
-    uids.forEach(x -> map.put(x, new LatLng(51.5466D, 0.3678D)));
-    return map;
-  }
-
-  public static class LatLng {
-    public Double lat;
-    public Double lng;
-
-    public LatLng(Double lat, Double lng) {
-      this.lat = lat;
-      this.lng = lng;
-    }
   }
 }

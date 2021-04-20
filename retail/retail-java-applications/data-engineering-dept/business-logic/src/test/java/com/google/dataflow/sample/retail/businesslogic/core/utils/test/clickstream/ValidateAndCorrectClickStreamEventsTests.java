@@ -17,73 +17,98 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.utils.test.clickstream;
 
-import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.ValidateAndCorrectClickStreamEvents;
+import com.google.common.collect.ImmutableList;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.DeadLetterSink.SinkType;
+import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.ValidateAndCorrectCSEvt;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
+import com.google.dataflow.sample.retail.dataobjects.ClickStream.Item;
+import org.apache.beam.sdk.schemas.NoSuchSchemaException;
+import org.apache.beam.sdk.schemas.SchemaCoder;
+import org.apache.beam.sdk.schemas.transforms.Convert;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
+import org.apache.beam.sdk.testing.TestStream;
 import org.apache.beam.sdk.transforms.Create;
-import org.apache.beam.sdk.transforms.Filter;
-import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.TimestampedValue;
 import org.joda.time.Instant;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** Unit tests for {@link ValidateAndCorrectClickStreamEvents}. */
+/** Unit tests for {@link ValidateAndCorrectCSEvt}. TODO Remove Convert to / from left over code. */
 @RunWith(JUnit4.class)
 public class ValidateAndCorrectClickStreamEventsTests {
   private static final Long TIME = Instant.parse("2000-01-01T00:00:00").getMillis();
 
-  private static final ClickStreamEvent CLEAN_DATA =
+  private static final TimestampedValue<ClickStreamEvent> CLEAN_DATA =
+      TimestampedValue.of(
+          ClickStreamEvent.builder()
+              .setEventTime("2000-01-01 00:00:00")
+              .setUid(1L)
+              .setClientId("1")
+              .setAgent("A")
+              .setPageRef("pageRef")
+              .setPageTarget("pageTarget")
+              .setEvent("event")
+              .build(),
+          Instant.ofEpochMilli(TIME));
+
+  private static final ClickStreamEvent BAD_DATE_FORMAT =
       ClickStreamEvent.builder()
-          .setUid(1L)
-          .setSessionId("1")
+          .setEventTime("2000-XX-01 00:00:00")
+          .setClientId("1")
           .setAgent("A")
-          .setLng(0.3678D)
-          .setLat(51.5466D)
           .setPageRef("pageRef")
           .setPageTarget("pageTarget")
           .setEvent("event")
           .setUid(1L)
-          .setTimestamp(TIME)
           .build();
 
-  private static final ClickStreamEvent MISSING_LAT_LNG =
+  private static final ClickStreamEvent DATE_IN_FUTURE =
       ClickStreamEvent.builder()
+          .setEventTime("2000-01-02 00:00:00")
           .setUid(1L)
-          .setSessionId("1")
+          .setClientId("1")
           .setAgent("A")
           .setPageRef("pageRef")
           .setPageTarget("pageTarget")
           .setEvent("event")
           .setUid(1L)
-          .setTimestamp(TIME)
           .build();
 
-  private static final ClickStreamEvent MISSING_UID =
+  private static final ClickStreamEvent MISSING_ITEM_INFO =
       ClickStreamEvent.builder()
-          .setSessionId("1")
+          .setEventTime("2000-01-01 00:00:00")
+          .setClientId("1")
           .setAgent("A")
-          .setLng(0.3678D)
-          .setLat(51.5466D)
           .setPageRef("pageRef")
           .setPageTarget("pageTarget")
-          .setEvent("event")
-          .setUid(1L)
-          .setTimestamp(TIME)
+          .setEvent("add_to_cart")
+          .setItems(ImmutableList.of(Item.builder().setPrice("1").setItemId("1").build()))
           .build();
 
-  private static final ClickStreamEvent MISSING_UID_LAT_LNG =
+  private static final ClickStreamEvent CLEAN_DATE_TIMESTAMP =
       ClickStreamEvent.builder()
-          .setSessionId("1")
+          .setEventTime("2000-XX-01 00:00:00")
+          .setUid(1L)
+          .setClientId("1")
           .setAgent("A")
           .setPageRef("pageRef")
           .setPageTarget("pageTarget")
           .setEvent("event")
-          .setUid(1L)
-          .setTimestamp(TIME)
+          .build();
+
+  private static final ClickStreamEvent MISSING_ITEM_INFO_BAD_DATE =
+      ClickStreamEvent.builder()
+          .setEventTime("2000-0X-01 00:00:00")
+          .setClientId("1")
+          .setAgent("A")
+          .setPageRef("pageRef")
+          .setPageTarget("pageTarget")
+          .setEvent("add_to_cart")
+          .setItems(ImmutableList.of(Item.builder().setPrice("1").setItemId("1").build()))
           .build();
 
   @Rule public transient TestPipeline pipeline = TestPipeline.create();
@@ -92,59 +117,135 @@ public class ValidateAndCorrectClickStreamEventsTests {
   public void testCleanValidation() {
 
     PCollection<ClickStreamEvent> result =
-        pipeline.apply(Create.of(CLEAN_DATA)).apply(new ValidateAndCorrectClickStreamEvents());
+        pipeline
+            .apply(Create.timestamped(CLEAN_DATA))
+            .apply("From", Convert.toRows())
+            .apply(new ValidateAndCorrectCSEvt(SinkType.LOG))
+            .apply(Convert.fromRows(ClickStreamEvent.class));
 
-    PAssert.that(result).containsInAnyOrder(CLEAN_DATA);
+    PAssert.that(result)
+        .containsInAnyOrder(CLEAN_DATA.getValue().toBuilder().setTimestamp(TIME).build());
     pipeline.run();
   }
 
   @Test
-  public void testLatLng() {
+  public void testBadDateFormat() throws NoSuchSchemaException {
 
-    PCollection<ClickStreamEvent> result =
-        pipeline.apply(Create.of(MISSING_LAT_LNG)).apply(new ValidateAndCorrectClickStreamEvents());
+    SchemaCoder<ClickStreamEvent> schema =
+        pipeline.getSchemaRegistry().getSchemaCoder(ClickStreamEvent.class);
 
-    PAssert.that(result).containsInAnyOrder(CLEAN_DATA);
-    pipeline.run();
-  }
-
-  @Test
-  public void testMissingUID() {
-
-    PCollection<ClickStreamEvent> result =
-        pipeline.apply(Create.of(MISSING_UID)).apply(new ValidateAndCorrectClickStreamEvents());
-
-    // Random number is attached to UID in this sample app. So can not test for the whole object.
-
-    PCollection<ClickStreamEvent> output =
-        result.apply(
-            Filter.by(
-                (SerializableFunction<ClickStreamEvent, Boolean>) input -> input.getUid() == null));
-
-    PAssert.that(output).empty();
-    pipeline.run();
-  }
-
-  @Test
-  public void testMissingUIDAndLatLng() {
+    TestStream<ClickStreamEvent> ts =
+        TestStream.create(schema)
+            .advanceWatermarkTo(Instant.ofEpochMilli(TIME))
+            .addElements(BAD_DATE_FORMAT)
+            .advanceWatermarkToInfinity();
 
     PCollection<ClickStreamEvent> result =
         pipeline
-            .apply(Create.of(MISSING_UID_LAT_LNG))
-            .apply(new ValidateAndCorrectClickStreamEvents());
+            .apply(ts)
+            .apply("From", Convert.toRows())
+            .apply(new ValidateAndCorrectCSEvt(SinkType.LOG))
+            .apply(Convert.fromRows(ClickStreamEvent.class));
 
-    // Random number is attached to UID in this sample app. So can not test for the whole object.
+    PAssert.that(result)
+        .containsInAnyOrder(CLEAN_DATE_TIMESTAMP.toBuilder().setTimestamp(TIME).build());
+    pipeline.run();
+  }
 
-    PCollection<ClickStreamEvent> output =
-        result.apply(
-            Filter.by(
-                (SerializableFunction<ClickStreamEvent, Boolean>)
-                    input ->
-                        input.getUid() == null
-                            || input.getLat() == null
-                            || input.getLng() == null));
+  @Test
+  public void testDateInFuture() throws NoSuchSchemaException {
 
-    PAssert.that(output).empty();
+    SchemaCoder<ClickStreamEvent> schema =
+        pipeline.getSchemaRegistry().getSchemaCoder(ClickStreamEvent.class);
+
+    TestStream<ClickStreamEvent> ts =
+        TestStream.create(schema)
+            .advanceWatermarkTo(Instant.ofEpochMilli(TIME))
+            .addElements(DATE_IN_FUTURE)
+            .advanceWatermarkToInfinity();
+
+    PCollection<ClickStreamEvent> result =
+        pipeline
+            .apply(ts)
+            .apply("From", Convert.toRows())
+            .apply(new ValidateAndCorrectCSEvt(SinkType.LOG))
+            .apply(Convert.fromRows(ClickStreamEvent.class));
+
+    PAssert.that(result).containsInAnyOrder(DATE_IN_FUTURE.toBuilder().setTimestamp(TIME).build());
+    pipeline.run();
+  }
+
+  @Test
+  public void testMissingItems() throws NoSuchSchemaException {
+
+    SchemaCoder<ClickStreamEvent> schema =
+        pipeline.getSchemaRegistry().getSchemaCoder(ClickStreamEvent.class);
+
+    TestStream<ClickStreamEvent> ts =
+        TestStream.create(schema)
+            .advanceWatermarkTo(Instant.ofEpochMilli(TIME))
+            .addElements(MISSING_ITEM_INFO)
+            .advanceWatermarkToInfinity();
+
+    PCollection<ClickStreamEvent> result =
+        pipeline
+            .apply(ts)
+            .apply("From", Convert.toRows())
+            .apply(new ValidateAndCorrectCSEvt(SinkType.LOG))
+            .apply(Convert.fromRows(ClickStreamEvent.class));
+
+    PAssert.that(result)
+        .containsInAnyOrder(
+            MISSING_ITEM_INFO
+                .toBuilder()
+                .setTimestamp(TIME)
+                .setItems(
+                    ImmutableList.of(
+                        Item.builder()
+                            .setPrice("1")
+                            .setItemId("1")
+                            .setItemName("foo_name")
+                            .setItemBrand("item_brand")
+                            .setItemCat01("foo_category")
+                            .build()))
+                .build());
+    pipeline.run();
+  }
+
+  @Test
+  public void testBadDateFormatAndMissingItems() throws NoSuchSchemaException {
+
+    SchemaCoder<ClickStreamEvent> schema =
+        pipeline.getSchemaRegistry().getSchemaCoder(ClickStreamEvent.class);
+
+    TestStream<ClickStreamEvent> ts =
+        TestStream.create(schema)
+            .advanceWatermarkTo(Instant.ofEpochMilli(TIME))
+            .addElements(MISSING_ITEM_INFO_BAD_DATE)
+            .advanceWatermarkToInfinity();
+
+    PCollection<ClickStreamEvent> result =
+        pipeline
+            .apply(ts)
+            .apply("From", Convert.toRows())
+            .apply(new ValidateAndCorrectCSEvt(SinkType.LOG))
+            .apply(Convert.fromRows(ClickStreamEvent.class));
+
+    PAssert.that(result)
+        .containsInAnyOrder(
+            MISSING_ITEM_INFO_BAD_DATE
+                .toBuilder()
+                .setItems(
+                    ImmutableList.of(
+                        Item.builder()
+                            .setPrice("1")
+                            .setItemId("1")
+                            .setItemName("foo_name")
+                            .setItemBrand("item_brand")
+                            .setItemCat01("foo_category")
+                            .build()))
+                .setTimestamp(TIME)
+                .build());
     pipeline.run();
   }
 }

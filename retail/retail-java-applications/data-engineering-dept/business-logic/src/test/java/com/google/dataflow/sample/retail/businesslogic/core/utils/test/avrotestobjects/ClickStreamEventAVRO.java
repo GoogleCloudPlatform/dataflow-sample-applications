@@ -20,16 +20,23 @@ package com.google.dataflow.sample.retail.businesslogic.core.utils.test.avrotest
 import org.apache.avro.reflect.Nullable;
 import org.apache.beam.sdk.coders.AvroCoder;
 import org.apache.beam.sdk.coders.DefaultCoder;
+import org.apache.beam.vendor.grpc.v1p26p0.com.google.gson.annotations.SerializedName;
 
 @DefaultCoder(AvroCoder.class)
 /** Used as part of utility for creation of JSON with {@link Gson}. */
 public class ClickStreamEventAVRO {
   public @Nullable long timestamp;
+
+  @SerializedName(value = "user_id")
   public @Nullable Long uid;
-  public @Nullable String sessionId;
+
+  @SerializedName(value = "client_id")
+  public @Nullable String clientId;
+
+  @SerializedName(value = "event_datetime")
+  public @Nullable String eventDateTime;
+
   public @Nullable String pageRef;
-  public @Nullable Double lat;
-  public @Nullable Double lng;
   public @Nullable String pageTarget;
   public @Nullable String agent;
   public @Nullable String event;
