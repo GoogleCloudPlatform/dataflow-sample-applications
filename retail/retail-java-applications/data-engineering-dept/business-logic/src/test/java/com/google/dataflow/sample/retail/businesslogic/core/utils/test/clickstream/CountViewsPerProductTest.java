@@ -43,9 +43,8 @@ public class CountViewsPerProductTest {
       ClickStreamEvent.builder()
           .setUid(1L)
           .setClientId("1")
-          .setAgent("A")
-          .setPageRef("pageRef")
-          .setPageTarget("pageTarget")
+          .setPage("pageRef")
+          .setPagePrevious("pageTarget")
           .setEvent("browse")
           .setTimestamp(TIME)
           .build();
@@ -78,7 +77,7 @@ public class CountViewsPerProductTest {
     PageViewAggregator pageViewAggregator =
         PageViewAggregator.builder()
             .setCount(2L)
-            .setPageRef("pageRef")
+            .setPage("pageRef")
             .setDurationMS(windowDuration.getMillis())
             .setStartTime(TIME)
             .build();

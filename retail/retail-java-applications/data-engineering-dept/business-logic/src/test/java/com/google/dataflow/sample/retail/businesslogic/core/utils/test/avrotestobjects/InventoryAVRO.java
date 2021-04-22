@@ -22,6 +22,10 @@ import org.apache.beam.sdk.coders.AvroCoder;
 import org.apache.beam.sdk.coders.DefaultCoder;
 
 @DefaultCoder(AvroCoder.class)
+/**
+ * Used as part of utility for creation of JSON with {@link Gson}. TODO Remove in favour of raw
+ * String for the JSON.
+ */
 public class InventoryAVRO {
 
   public @Nullable long timestamp;

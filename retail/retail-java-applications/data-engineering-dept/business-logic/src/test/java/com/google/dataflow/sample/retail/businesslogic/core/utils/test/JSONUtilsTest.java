@@ -18,17 +18,13 @@
 package com.google.dataflow.sample.retail.businesslogic.core.utils.test;
 
 import com.google.dataflow.sample.retail.businesslogic.core.utils.JSONUtils;
-import com.google.dataflow.sample.retail.businesslogic.core.utils.test.avrotestobjects.ClickStreamEventAVRO;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.JsonToRow;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.vendor.grpc.v1p26p0.com.google.gson.Gson;
-import org.apache.beam.vendor.grpc.v1p26p0.com.google.gson.GsonBuilder;
 import org.joda.time.Instant;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,40 +37,25 @@ public class JSONUtilsTest {
 
   private static final ClickStreamEvent AUTO_VALUE_EVENT =
       ClickStreamEvent.builder()
-          .setUid(1L)
+          .setUid(999L)
           .setClientId("1")
-          .setAgent("A")
-          .setPageRef("pageRef")
-          .setPageTarget("pageTarget")
+          .setPage("pageRef")
+          .setPagePrevious("pageTarget")
           .setEvent("event")
-          .setUid(1L)
           .setTimestamp(TIME)
           .build();
 
-  private ClickStreamEventAVRO getEventAVRO() {
-    ClickStreamEventAVRO event = new ClickStreamEventAVRO();
-    event.clientId = "1";
-    event.uid = 1L;
-    event.agent = "A";
-    event.pageRef = "pageRef";
-    event.pageTarget = "pageTarget";
-    event.event = "event";
-    event.timestamp = TIME;
-
-    return event;
-  }
+  private static final String JSON =
+      "{\"eventTime\":null,\"event\":\"event\",\"timestamp\":946656000000,\"user_id\":999,\"client_id\":\"1\",\"page\":\"pageRef\",\"page_previous\":\"pageTarget\",\"ecommerce\":null}\n";
 
   @Rule public transient TestPipeline pipeline = TestPipeline.create();
 
   @Test
   public void testParseCleanClickstream() {
 
-    Gson gson = new Gson();
-    String jsonString = gson.toJson(getEventAVRO());
-
     PCollection<ClickStreamEvent> events =
         pipeline
-            .apply(Create.of(jsonString))
+            .apply(Create.of(JSON))
             .apply(JSONUtils.ConvertJSONtoPOJO.<ClickStreamEvent>create(ClickStreamEvent.class));
 
     PAssert.that(events).containsInAnyOrder(AUTO_VALUE_EVENT);
@@ -85,12 +66,7 @@ public class JSONUtilsTest {
   @Test
   public void testParseWithStrictNullsClickstream() {
 
-    ClickStreamEventAVRO withNull = getEventAVRO();
-    withNull.uid = null;
-
-    Gson gson = new GsonBuilder().serializeNulls().create();
-
-    String jsonString = gson.toJson(withNull);
+    String jsonString = JSON.replace("999", "null");
 
     PCollection<ClickStreamEvent> events =
         pipeline
@@ -105,12 +81,7 @@ public class JSONUtilsTest {
   @Test
   public void testParseWithNonStrictNullsClickstream() {
 
-    ClickStreamEventAVRO withNull = getEventAVRO();
-    withNull.uid = null;
-
-    Gson gson = new GsonBuilder().create();
-
-    String jsonString = gson.toJson(withNull);
+    String jsonString = JSON.replace("999", "null");
 
     PCollection<ClickStreamEvent> events =
         pipeline
@@ -125,9 +96,7 @@ public class JSONUtilsTest {
   @Test
   public void testParseWithTypeErrorClickstream() {
 
-    Gson gson = new Gson();
-    String jsonString = gson.toJson(getEventAVRO());
-    jsonString = jsonString.replace("\"A\"", "1.0");
+    String jsonString = JSON.replace("\"event\"", "1.0");
 
     PCollection<ClickStreamEvent> events =
         pipeline

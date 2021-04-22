@@ -22,7 +22,10 @@ import org.apache.beam.sdk.coders.AvroCoder;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.vendor.grpc.v1p26p0.com.google.gson.Gson;
 
-/** Used as part of utility for creation of JSON with {@link Gson}. */
+/**
+ * Used as part of utility for creation of JSON with {@link Gson}. TODO Remove in favour of raw
+ * String for the JSON.
+ */
 @DefaultCoder(AvroCoder.class)
 public class TransactionsAVRO {
   public @Nullable long timestamp;

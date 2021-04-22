@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.retail.pipeine.test;
+package com.google.dataflow.sample.retail.pipeline.test;
 
 import com.google.dataflow.sample.retail.businesslogic.core.options.RetailPipelineOptions;
 import com.google.dataflow.sample.retail.pipeline.RetailDataProcessingPipeline;

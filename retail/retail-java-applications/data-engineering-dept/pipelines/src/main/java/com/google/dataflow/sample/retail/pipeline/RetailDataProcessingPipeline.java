@@ -30,6 +30,7 @@ import com.google.dataflow.sample.retail.businesslogic.core.transforms.transacti
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.transaction.TransactionProcessing;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.Print;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.ReadPubSubMsgPayLoadAsString;
+import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
 import com.google.dataflow.sample.retail.dataobjects.Stock.StockEvent;
 import com.google.dataflow.sample.retail.dataobjects.StockAggregation;
 import com.google.dataflow.sample.retail.dataobjects.Transaction.TransactionEvent;
@@ -40,6 +41,7 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.ToJson;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.TypeDescriptors;
@@ -53,7 +55,7 @@ import org.joda.time.Duration;
 @Experimental
 public class RetailDataProcessingPipeline {
 
-  @VisibleForTesting public PCollection<String> testClickstreamEvents = null;
+  @VisibleForTesting public PCollection<ClickStreamEvent> testClickstreamEvents = null;
 
   @VisibleForTesting public PCollection<String> testTransactionEvents = null;
 
@@ -81,7 +83,7 @@ public class RetailDataProcessingPipeline {
                   .withTimestampAttribute("TIMESTAMP"));
     } else {
       checkNotNull(testClickstreamEvents, "In TestMode you must set testClickstreamEvents");
-      clickStreamJSONMessages = testClickstreamEvents;
+      clickStreamJSONMessages = testClickstreamEvents.apply(ToJson.of());
     }
     clickStreamJSONMessages.apply(new ClickstreamProcessing());
 

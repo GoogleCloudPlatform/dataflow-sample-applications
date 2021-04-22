@@ -67,9 +67,7 @@ public class CountViewsPerProduct
         .apply(Filter.<Row>create().whereFieldName("event", c -> c.equals("browse")))
         // Group By pageRef and count the results.
         .apply(Window.into(FixedWindows.of(pageViewCountWindowDuration)))
-        .apply(
-            Group.<Row>byFieldNames("pageRef")
-                .aggregateField("pageRef", Count.combineFn(), "count"))
+        .apply(Group.<Row>byFieldNames("page").aggregateField("page", Count.combineFn(), "count"))
         .apply(CreatePageViewAggregatorMetadata.create(pageViewCountWindowDuration.getMillis()));
   }
 
@@ -97,14 +95,14 @@ public class CountViewsPerProduct
       // TODO the schema registry for PageViewAggregator throws a class cast issue
       Schema schema =
           Schema.of(
-              Field.of("pageRef", FieldType.STRING),
+              Field.of("page", FieldType.STRING),
               Field.of("count", FieldType.INT64),
               Field.of("startTime", FieldType.INT64),
               Field.of("durationMS", FieldType.INT64));
 
       return input
           // Note key and value are results of Group + Count operation in the previous transform.
-          .apply(Select.fieldNames("key.pageRef", "value.count"))
+          .apply(Select.fieldNames("key.page", "value.count"))
           // We need to add these fields to the ROW object before we convert the POJO
           .apply(
               AddFields.<Row>create()

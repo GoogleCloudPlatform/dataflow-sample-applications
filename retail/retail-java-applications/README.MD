@@ -65,7 +65,7 @@ The application processes the following types of data:
 ------
 # To run the pipeline locally you can make use of the smoke test 
 ```
-gradlew :data-engineering-dept:pipelines:test --tests com.google.dataflow.sample.retail.pipeine.test.RetailDataProcessingPipelineSimpleSmokeTest --info --rerun-tasks
+gradlew :data-engineering-dept:pipelines:test --tests RetailDataProcessingPipelineSimpleSmokeTest --info --rerun-tasks
 ```
 # Task patterns
 The application contains a number of task patterns that show the best way to accomplish Java programming tasks that are commonly needed to create this type of application.

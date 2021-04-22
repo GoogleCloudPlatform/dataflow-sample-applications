@@ -17,7 +17,7 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.externalservices;
 
-import com.google.dataflow.sample.retail.dataobjects.ClickStream.Item;
+import com.google.dataflow.sample.retail.dataobjects.Item;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
