@@ -5,15 +5,17 @@ This repository comprises a reference pattern and accompanying sample code to pr
 In addition, this repository provides a set of time-series transforms that simplify developing Apache Beam pipelines for processing ***streaming*** time-series data.
 
 ### Sample Version
+0.3.3
+ - Performance: Use Combiner rather then GBK for TSAccumSeq… 
+ - Support GapFill behaviour Per Key 
+ - Add log rtn metric
+ - Wire the HB message through to output TSAccum 
+ - Composite TSAccum Creation 
+
 0.3.2
  - Upgrade of TFX version to 0.24.0
  - Use runtime values for timesteps and features to preprocessing_fn and input_fn
  - Allow inference to apply scaling to the input for comparision to the output from the model 
-
-0.3.1 - Archived to Branch.
- - Options now passed through to all builders.
- - Refactor [PerfectRectangles](timeseries-java-applications/TimeSeriesPipeline/src/main/java/com/google/dataflow/sample/timeseriesflow/transforms/PerfectRectangles.java)
- - [Data Window Snapshot](timeseries-java-applications/TimeSeriesPipeline/src/main/java/com/google/dataflow/sample/timeseriesflow/transforms/MajorKeyWindowSnapshot.java)   
 
 # Processing time-series data
 Apache Beam has rich support for streaming data, including support for State and Timers API which enable sophisticated processing of time-series data. In order to effectively process streaming time-series data, practitioners often need to perform time-series data preprocessing. This can involve introducing computed data to fill 'gaps' in the source time-series data. 
