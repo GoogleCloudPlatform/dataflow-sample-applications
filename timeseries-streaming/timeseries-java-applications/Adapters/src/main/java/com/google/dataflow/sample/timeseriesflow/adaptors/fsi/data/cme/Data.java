@@ -20,11 +20,13 @@ package com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme;
 import static org.apache.beam.sdk.schemas.Schema.toSchema;
 
 import java.util.stream.Stream;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.schemas.Schema.FieldType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Experimental
 class Data {
 
   public static final Logger LOG = LoggerFactory.getLogger(Data.class);

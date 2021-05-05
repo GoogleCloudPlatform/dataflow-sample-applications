@@ -17,12 +17,13 @@
  */
 package com.google.dataflow.sample.timeseriesflow.examples.fsi.forex;
 
-import com.google.dataflow.sample.timeseriesflow.TimeseriesStreamingOptions;
+import com.google.dataflow.sample.timeseriesflow.options.TFXOptions;
+import com.google.dataflow.sample.timeseriesflow.options.TSFlowOptions;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.options.Description;
 
 @Experimental
-public interface ExampleForexPipelineOptions extends TimeseriesStreamingOptions {
+public interface ExampleForexPipelineOptions extends TSFlowOptions, TFXOptions {
 
   @Description("Option to specify BigQuery target table to push metrics")
   String getBigQueryTableForTSAccumOutputLocation();

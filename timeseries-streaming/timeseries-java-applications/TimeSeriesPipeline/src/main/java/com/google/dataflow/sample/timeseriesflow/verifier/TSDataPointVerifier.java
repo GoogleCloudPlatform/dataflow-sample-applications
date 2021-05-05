@@ -17,8 +17,10 @@
  */
 package com.google.dataflow.sample.timeseriesflow.verifier;
 
+import com.google.auto.value.AutoValue;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
+import com.google.protobuf.util.Timestamps;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -26,18 +28,53 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
 import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Ensure all TSDataPoint is valid. */
 @Experimental
-public class TSDataPointVerifier
+@AutoValue
+public abstract class TSDataPointVerifier
     extends PTransform<PCollection<TSDataPoint>, PCollection<TSDataPoint>> {
+
+  public abstract boolean getAllowIncorrectTimeMismatch();
+
+  public abstract Builder toBuilder();
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+
+    public abstract Builder setAllowIncorrectTimeMismatch(boolean allowIncorrectTimeMismatch);
+
+    public abstract TSDataPointVerifier build();
+  }
+
+  public static TSDataPointVerifier create() {
+    return TSDataPointVerifier.builder().setAllowIncorrectTimeMismatch(false).build();
+  }
+
+  public TSDataPointVerifier allowSourceDataTimeMismatch() {
+    return this.toBuilder().setAllowIncorrectTimeMismatch(true).build();
+  }
+
+  public static Builder builder() {
+    return new AutoValue_TSDataPointVerifier.Builder();
+  }
+
+  private static final Logger LOG = LoggerFactory.getLogger(TSDataPointVerifier.class);
 
   @Override
   public PCollection<TSDataPoint> expand(PCollection<TSDataPoint> input) {
-    return input.apply(ParDo.of(new VerifyTSDataPoint()));
+    return input.apply(ParDo.of(new VerifyTSDataPoint(this)));
   }
 
   private static class VerifyTSDataPoint extends DoFn<TSDataPoint, TSDataPoint> {
+
+    final TSDataPointVerifier tsDataPointVerifier;
+
+    private VerifyTSDataPoint(TSDataPointVerifier tsDataPointVerifier) {
+      this.tsDataPointVerifier = tsDataPointVerifier;
+    }
 
     @ProcessElement
     public void process(
@@ -72,6 +109,27 @@ public class TSDataPointVerifier
                     + "The library expects TSDataPoints with timestamps larger than GlobalWindow.TIMESTAMP_MIN_VALUE "
                     + "and smaller than GlobalWindow.TIMESTAMP_MAX_VALUE. The timestamp value was %s\"",
                 time.toString()));
+      }
+
+      if (time.getMillis() != Timestamps.toMillis(input.getTimestamp())) {
+
+        String errorMsg =
+            String.format(
+                "TSDataPoint %s timestamp %s does not match the Beam timestamp %s. "
+                    + "Ensure you have configured your source to make use of Event time."
+                    + "For example with PubSubIO make use of withTimestampAttribute()."
+                    + "Without correcting this issue, values can end up in incorrect windows.",
+                input.getKey().toString(),
+                Timestamps.toMillis(input.getTimestamp()),
+                time.getMillis());
+
+        if (tsDataPointVerifier.getAllowIncorrectTimeMismatch()) {
+          LOG.warn(errorMsg);
+        } else {
+          throw new IllegalStateException(
+              errorMsg
+                  + " Note although discouraged you can allow this behaviour by setting AllowIncorrectTimeMismatch");
+        }
       }
 
       o.output(input);

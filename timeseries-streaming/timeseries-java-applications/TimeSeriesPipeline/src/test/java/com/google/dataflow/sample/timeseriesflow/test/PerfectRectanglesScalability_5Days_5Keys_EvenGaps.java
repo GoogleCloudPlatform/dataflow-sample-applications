@@ -32,7 +32,7 @@ public class PerfectRectanglesScalability_5Days_5Keys_EvenGaps {
     options.setAppName("TestPerfectRectangles_86400S_NoGaps");
     options.setTypeOneComputationsLengthInSecs(1);
     options.setTypeTwoComputationsLengthInSecs(60);
-    options.setSequenceLengthInSeconds(60);
+    options.setOutputTimestepLengthInSecs(60);
     options.setTTLDurationSecs(2);
     options.setNumKeys(5);
     options.setPerfectRecNumberDataSecs(86400 * 5);

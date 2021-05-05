@@ -17,9 +17,9 @@
  */
 package com.google.dataflow.sample.timeseriesflow.test;
 
-import com.google.dataflow.sample.timeseriesflow.TimeseriesStreamingOptions;
+import com.google.dataflow.sample.timeseriesflow.options.TSFlowOptions;
 
-public interface ScaleTestingOptions extends TimeseriesStreamingOptions {
+public interface ScaleTestingOptions extends TSFlowOptions {
 
   public Integer getNumSecs();
 

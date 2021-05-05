@@ -17,6 +17,7 @@
  */
 package com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme;
 
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -26,6 +27,7 @@ import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Experimental
 class LogElements<T> extends PTransform<PCollection<T>, PCollection<T>> {
 
   private static final Logger LOG = LoggerFactory.getLogger(LogElements.class);

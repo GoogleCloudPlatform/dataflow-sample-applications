@@ -1,0 +1,68 @@
+[
+  {
+    "key": {
+      "major_key": "Key-A",
+      "minor_key_string": "PRICE"
+    },
+    "data": {"double_val": 10.0
+    },
+    "extendedData": {
+      "Data::VOL": {
+        "doubleVal": 2.0
+      }
+    },
+    "timestamp": "2000-01-01T00:00:00Z"
+  },
+  {
+    "key": {
+      "major_key": "Key-B",
+      "minor_key_string": "PRICE"
+    },
+    "data": {"double_val": 20.0
+    },    "extendedData": {
+    "Data::VOL": {
+      "doubleVal": 2.0
+    }
+  },
+    "timestamp": "2000-01-01T00:00:00Z",
+    "time": {
+      "advance_watermark_seconds": 5
+    }
+  },
+  {
+    "key": {
+      "major_key": "Key-B",
+      "minor_key_string": "PRICE"
+    },
+    "data": {"double_val": 40.0
+    },
+    "extendedData": {
+      "Data::VOL": {
+        "doubleVal": 8.0
+      }
+    },
+    "timestamp": "2000-01-01T00:00:11Z",
+    "time": {
+      "advance_watermark_seconds": 5
+    }
+  },
+
+  {
+    "key": {
+      "major_key": "Key-A",
+      "minor_key_string": "PRICE"
+    },
+    "data": {"double_val": 10.0
+    },
+    "extendedData": {
+      "Data::VOL": {
+        "doubleVal": 2.0
+      }
+    },
+
+    "timestamp": "2000-01-01T00:00:11Z",
+    "time": {
+      "advance_watermark_expression": "INFINITY"
+    }
+  }
+]

@@ -24,8 +24,8 @@ import com.google.auto.value.AutoValue;
 import com.google.common.collect.Lists;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
-import com.google.dataflow.sample.timeseriesflow.TimeseriesStreamingOptions;
 import com.google.dataflow.sample.timeseriesflow.common.TSDataUtils;
+import com.google.dataflow.sample.timeseriesflow.options.TSFlowOptions;
 import com.google.protobuf.util.Timestamps;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -53,6 +53,7 @@ import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.Filter;
 import org.apache.beam.sdk.transforms.Flatten;
+import org.apache.beam.sdk.transforms.Latest;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.Reify;
@@ -87,7 +88,7 @@ import org.slf4j.LoggerFactory;
  * <p>{@link PerfectRectangles#enablePreviousValueFill()} enables the use of the last known value as
  * the value to be used to fill gaps.
  *
- * <p>{@link PerfectRectangles#getPreviousValueFillExcludeList(List<TSKey>)} An Optional list of
+ * <p>{@link PerfectRectangles#getPreviousValueFillExcludeList()} (List<TSKey>)} An Optional list of
  * TSKey's can be provided which will be excluded from the {@link
  * PerfectRectangles#enablePreviousValueFill()} policy if set. If the TSKey Major Key is not set
  * then the minorkey will be assumed to match all major keys.
@@ -154,7 +155,7 @@ public abstract class PerfectRectangles
     public abstract PerfectRectangles build();
   }
 
-  public static PerfectRectangles fromPipelineOptions(TimeseriesStreamingOptions options) {
+  public static PerfectRectangles fromPipelineOptions(TSFlowOptions options) {
     checkNotNull(options);
     checkArgument(
         !(options.getTTLDurationSecs() == null && options.getAbsoluteStopTimeMSTimestamp() == null),
@@ -175,7 +176,7 @@ public abstract class PerfectRectangles
         Duration.standardSeconds(options.getTypeOneComputationsLengthInSecs()));
 
     // Option has a default value of false.
-    builder.setEnableHoldAndPropogate(options.getEnableHoldAndPropogate());
+    builder.setEnableHoldAndPropogate(options.getEnableHoldAndPropogateLastValue());
 
     return builder.build();
   }
@@ -240,7 +241,8 @@ public abstract class PerfectRectangles
                 .withAllowedLateness(Duration.ZERO));
 
     PCollection<KV<TSKey, TSDataPoint>> lastValueInWindow =
-        windowedInput.apply(LatestEventTimeDataPoint.perKey());
+        // windowedInput.apply(Latest.perKey()LatestEventTimeDataPoint.perKey());
+        windowedInput.apply(Latest.perKey());
 
     // Move into Global Time Domain, this allows Keyed State to retain its value across windows.
     // Late Data is dropped at this stage. Before we apply the Global Window we need to retain the
@@ -509,7 +511,6 @@ public abstract class PerfectRectangles
             throw new IllegalStateException(
                 String.format(
                     "There is no known last value and no new values in the list for window boundary %s. If you are using the DirectRunner please switch to another runner like Dataflow or Flink, we are investigating a known issue with larger datasets and the direct runner and this class.",
-                    Timestamps.toString(sortedElements.get(0).getValue().getTimestamp()),
                     currentWindowBoundary.end()));
           }
 

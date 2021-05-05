@@ -42,9 +42,17 @@ public class TSDataUtils {
         {
           return new BigDecimal(data.getLongVal());
         }
+      case FLOAT_VAL:
+        {
+          return new BigDecimal(data.getFloatVal());
+        }
       case INT_VAL:
         {
           return new BigDecimal(data.getIntVal());
+        }
+      case NUM_AS_STRING:
+        {
+          return new BigDecimal(data.getNumAsString());
         }
       default:
         throw new IllegalStateException(
@@ -55,6 +63,12 @@ public class TSDataUtils {
   /** Multiply two Data points, returning a BigDecimal */
   public static BigDecimal multiply(Data a, Data b) {
     return getBigDecimalFromData(a).multiply(getBigDecimalFromData(b));
+  }
+
+  /** Divide two Data points, returning a BigDecimal */
+  public static BigDecimal divide(Data a, Data b) {
+    // TODO allow user to pass in round method
+    return getBigDecimalFromData(a).divide(getBigDecimalFromData(b), BigDecimal.ROUND_DOWN);
   }
 
   /** Add Data points, returning a BigDecimal */

@@ -20,6 +20,7 @@ package com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme;
 import com.google.auto.value.AutoValue;
 import java.util.List;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
@@ -61,6 +62,7 @@ import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
  */
 
 /** Objects to map to Trade Info */
+@Experimental
 class TradeInfo {
 
   /** Represents Trade Info event */

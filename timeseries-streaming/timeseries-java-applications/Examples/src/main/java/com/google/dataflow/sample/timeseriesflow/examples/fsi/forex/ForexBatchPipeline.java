@@ -22,10 +22,12 @@ import static com.google.dataflow.sample.timeseriesflow.examples.fsi.forex.Histo
 import static java.lang.Boolean.TRUE;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.dataflow.sample.timeseriesflow.AllComputationsExamplePipeline;
-import com.google.dataflow.sample.timeseriesflow.metrics.utils.AllMetricsWithDefaults;
-import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
-import com.google.dataflow.sample.timeseriesflow.transforms.PerfectRectangles;
+import com.google.dataflow.sample.timeseriesflow.graph.GenerateComputations;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.complex.fsi.rsi.RSIGFn;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typeone.Max;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typeone.Min;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typeone.Sum;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typetwo.basic.ma.MAFn;
 import java.time.Instant;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
@@ -33,6 +35,7 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.TypeDescriptors;
+import org.apache.beam.vendor.grpc.v1p26p0.com.google.common.collect.ImmutableList;
 
 public class ForexBatchPipeline {
 
@@ -60,12 +63,12 @@ public class ForexBatchPipeline {
 
     options.setTypeOneComputationsLengthInSecs(options.getResampleSec());
     options.setTypeTwoComputationsLengthInSecs(options.getWindowSec());
-    options.setSequenceLengthInSeconds(options.getWindowSec());
+    options.setOutputTimestepLengthInSecs(options.getWindowSec());
 
     // Absolute time is required for batch jobs to determine when to stop filling gaps in bound
     // datasets
     options.setAbsoluteStopTimeMSTimestamp(millis);
-    options.setEnableHoldAndPropogate(TRUE);
+    options.setEnableHoldAndPropogateLastValue(TRUE);
 
     // We fill gaps for 50 hours during quiet periods of forex markets, and including weekend when
     // markets are closed,
@@ -80,13 +83,14 @@ public class ForexBatchPipeline {
     /**
      * ***********************************************************************************************************
      * The data has only one key, to allow the type 1 computations to be done in parallel we set the
-     * {@link GenerateComputations#hotKeyFanOut()}
+     * {@link GenerateComputations#getHotKeyFanOut()}
      * ***********************************************************************************************************
      */
     GenerateComputations.Builder generateComputations =
         GenerateComputations.fromPiplineOptions(options)
-            .setType1NumericComputations(AllMetricsWithDefaults.getAllType1Combiners())
-            .setType2NumericComputations(AllMetricsWithDefaults.getAllType2Computations());
+            .setBasicType1Metrics(ImmutableList.of(Sum.class, Min.class, Max.class))
+            .setBasicType2Metrics(ImmutableList.of(MAFn.class))
+            .setComplexType2Metrics(ImmutableList.of(RSIGFn.class));
 
     /**
      * ***********************************************************************************************************
@@ -95,7 +99,7 @@ public class ForexBatchPipeline {
      * to ensure consistency across the sample pipelines.
      * ***********************************************************************************************************
      */
-    generateComputations.setPerfectRectangles(PerfectRectangles.fromPipelineOptions(options));
+    //    generateComputations.setPerfectRectangles(PerfectRectangles.fromPipelineOptions(options));
 
     PCollectionTuple tsCollection =
         p.apply(

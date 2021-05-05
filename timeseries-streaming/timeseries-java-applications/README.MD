@@ -1,3 +1,9 @@
+## Disclaimer
+
+These samples are for illustration of techniques that can be used with Dataflow. 
+The samples are not a supported Google product. We welcome feedback, bug reports and code contributions, but cannot guarantee they will be
+addressed.
+
 # Quickstart
 
 In this section we will walk through downloading the sample and running through
@@ -12,11 +18,11 @@ a few examples using gradle.
     * ./gradlew build
 ## Creating metrics from a stream
 The following commands will run an example pipeline which uses a generated stream of data. While the pipeline is 
-running 1 tick happens every 500 ms, the function will produce a repeating wave of data. [SimpleDataStreamGenerator class](SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java) contains the code that will be run. 
+running 1 tick happens every 500 ms, the function will produce a repeating wave of data. [SinWaveExample class](SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SinWaveExample.java) contains the code that will be run. 
 
 The simple data usage is to demonstrate the end to end data engineering of the library. From, time series pre-processing to model creation using TFX.
  
- [SimpleDataStreamGenerator class](SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java) has four modes:
+ [SimpleDataStreamGenerator class](SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SinWaveExample.java) has four modes:
  
  * example_1 : In this mode the metrics generated are sent to output as logs.
  * example_2 : In this mode the metrics generated are sent to output as TFExamples to a file system.

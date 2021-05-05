@@ -27,7 +27,16 @@ plugins {
     id 'idea'
     id "com.google.protobuf" version "0.8.12"
     id "com.diffplug.gradle.spotless" version "3.24.2"
+    id 'org.gradle.test-retry' version '1.0.0'
 //    id "com.github.spotbugs" version "4.4.4"
+}
+
+test {
+    retry {
+        failOnPassedAfterRetry = true
+        maxFailures = 2
+        maxRetries = 1
+    }
 }
 
 sourceCompatibility = 1.8

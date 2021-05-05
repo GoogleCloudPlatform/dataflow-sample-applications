@@ -20,9 +20,12 @@ package com.google.dataflow.sample.timeseriesflow.metrics;
 import com.google.dataflow.sample.timeseriesflow.FSITechnicalDerivedAggregations.FsiTechnicalIndicators;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
-import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSNumericCombiner;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
-import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
+import com.google.dataflow.sample.timeseriesflow.graph.GenerateComputations;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.complex.fsi.rsi.RSIGFn;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typeone.Max;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typeone.Min;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typeone.Sum;
 import common.TSTestDataBaseline;
 import org.apache.beam.runners.dataflow.DataflowRunner;
 import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
@@ -114,13 +117,8 @@ public class TSMetricsIntegrationTest {
                 GenerateComputations.builder()
                     .setType1FixedWindow(Duration.standardSeconds(5))
                     .setType2SlidingWindowDuration(Duration.standardSeconds(15))
-                    .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
-                    .setType2NumericComputations(
-                        ImmutableList.of(
-                            RSI.toBuilder()
-                                .setAverageComputationMethod(RSI.AverageComputationMethod.ALL)
-                                .build()
-                                .create()))
+                    .setBasicType1Metrics(ImmutableList.of(Sum.class, Min.class, Max.class))
+                    .setComplexType2Metrics(ImmutableList.of(RSIGFn.class))
                     .build());
 
     // The sliding window will create partial values, to keep testing simple we just test

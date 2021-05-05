@@ -22,6 +22,7 @@ import com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme.GenerateE
 import com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme.Util.ErrorMessage;
 import java.util.Objects;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.CreateDisposition;
@@ -54,6 +55,7 @@ import org.slf4j.LoggerFactory;
  * </ul>
  */
 @AutoValue
+@Experimental
 abstract class CMEMarketDataReader extends PTransform<PCollection<String>, PCollection<Row>> {
 
   public static final Logger LOG = LoggerFactory.getLogger(CMEMarketDataReader.class);

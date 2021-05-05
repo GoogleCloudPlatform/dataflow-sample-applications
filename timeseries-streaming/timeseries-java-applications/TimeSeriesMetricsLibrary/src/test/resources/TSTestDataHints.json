@@ -4,8 +4,8 @@
       "major_key": "Key-A",
       "minor_key_string": "MKey-a"
     },
-    "data": {"double_val": 1.0
-    }
+    "data": {"double_val": 1.0}
+    ,"timestamp": "2000-01-01T00:00:01Z"
   },
   {
     "key": {
@@ -13,7 +13,7 @@
       "minor_key_string": "MKey-a"
     },
     "data": {"double_val": 1.0
-    }
+    }, "timestamp": "2000-01-01T00:00:02Z"
   },
   {
     "key": {
@@ -21,7 +21,7 @@
       "minor_key_string": "MKey-b"
     },
     "data": {"double_val": 16.0
-    }
+    }, "timestamp": "2000-01-01T00:00:03Z"
   },
   {
     "key": {
@@ -29,7 +29,7 @@
       "minor_key_string": "MKey-c"
     },
     "data": {"double_val": 12.0
-    },
+    }, "timestamp": "2000-01-01T00:00:04Z",
     "time": {
       "advance_watermark_seconds": 5
     }
@@ -40,7 +40,7 @@
       "minor_key_string": "MKey-a"
     },
     "data": {"double_val": 3.0
-    }
+    }, "timestamp": "2000-01-01T00:00:05Z"
   },
   {
     "key": {
@@ -48,7 +48,7 @@
       "minor_key_string": "MKey-a"
     },
     "data": {"double_val": 3.0
-    }
+    }, "timestamp": "2000-01-01T00:00:05Z"
   },
   {
     "key": {
@@ -56,7 +56,7 @@
       "minor_key_string": "MKey-b"
     },
     "data": {"double_val": 12.0
-    }
+    }, "timestamp": "2000-01-01T00:00:07Z"
   },
   {
     "key": {
@@ -64,7 +64,7 @@
       "minor_key_string": "MKey-c"
     },
     "data": {"double_val": 12.0
-    },
+    }, "timestamp": "2000-01-01T00:00:09Z",
     "time": {
       "advance_watermark_seconds": 10
     }
@@ -75,7 +75,7 @@
       "minor_key_string": "MKey-a"
     },
     "data": {"double_val": 8.0
-    }
+    }, "timestamp": "2000-01-01T00:00:11Z"
   },
   {
     "key": {
@@ -83,7 +83,7 @@
       "minor_key_string": "MKey-a"
     },
     "data": {"double_val": 8.0
-    }
+    }, "timestamp": "2000-01-01T00:00:12Z"
   },
   {
     "key": {
@@ -91,7 +91,7 @@
       "minor_key_string": "MKey-b"
     },
     "data": {"double_val": 8.0
-    }
+    }, "timestamp": "2000-01-01T00:00:10Z"
   },
   {
     "key": {
@@ -99,7 +99,7 @@
       "minor_key_string": "MKey-c"
     },
     "data": {"double_val": 12.0
-    },
+    }, "timestamp": "2000-01-01T00:00:14Z",
     "time": {
       "advance_watermark_expression": "INFINITY"
     }

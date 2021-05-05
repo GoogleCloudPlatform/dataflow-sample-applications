@@ -17,9 +17,9 @@
  */
 package com.google.dataflow.sample.timeseriesflow.io.tfexample;
 
-import com.google.dataflow.sample.timeseriesflow.TFXOptions;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
+import com.google.dataflow.sample.timeseriesflow.options.TFXOptions;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.PTransform;

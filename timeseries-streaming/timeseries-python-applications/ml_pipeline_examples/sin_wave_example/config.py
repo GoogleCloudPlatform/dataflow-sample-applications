@@ -24,7 +24,7 @@ MODEL_CONFIG = {
         # This value must match the sequence length used in the java pipeline.
         'timesteps': 5,
 
-  #
+
         'features': [
                 'timeseries_x-value-LAST',  # 'timeseries_x-value-FIRST',
                 'timeseries_x-value-LAST_TIMESTAMP',

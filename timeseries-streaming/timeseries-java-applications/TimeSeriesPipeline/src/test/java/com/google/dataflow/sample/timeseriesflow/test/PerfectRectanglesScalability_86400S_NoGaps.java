@@ -35,7 +35,7 @@ public class PerfectRectanglesScalability_86400S_NoGaps {
     options.setAppName("TestPerfectRectangles_86400S_NoGaps");
     options.setTypeOneComputationsLengthInSecs(1);
     options.setTypeTwoComputationsLengthInSecs(60);
-    options.setSequenceLengthInSeconds(60);
+    options.setOutputTimestepLengthInSecs(60);
     options.setTTLDurationSecs(0);
     options.setNumKeys(1);
     options.setPerfectRecNumberDataSecs(86400);

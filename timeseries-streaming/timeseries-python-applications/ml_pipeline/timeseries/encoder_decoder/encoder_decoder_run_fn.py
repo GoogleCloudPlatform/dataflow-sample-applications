@@ -16,7 +16,7 @@
 from typing import Text
 import tensorflow as tf
 import tensorflow_transform as tft
-import timeseries.encoder_decoder.encoder_decoder_model as encoder_decoder_model
+import ml_pipeline.timeseries.encoder_decoder.encoder_decoder_model as encoder_decoder_model
 
 from tfx.components.trainer.executor import TrainerFnArgs
 

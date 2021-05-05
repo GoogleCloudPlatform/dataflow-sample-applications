@@ -50,6 +50,10 @@ public abstract class AccumBuilder {
     tsAccum.putDataStore(key, value);
   }
 
+  public void removeValue(String key) {
+    tsAccum.removeDataStore(key);
+  }
+
   public Timestamp getTimestampValueOrZero(String key) {
     return Timestamps.fromMillis(
         tsAccum.getDataStoreOrDefault(key, CommonUtils.createNumData(0L)).getLongVal());

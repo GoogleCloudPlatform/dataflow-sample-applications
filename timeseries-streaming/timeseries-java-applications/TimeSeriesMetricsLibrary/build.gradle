@@ -20,7 +20,18 @@ plugins {
     id 'idea'
     id "com.diffplug.gradle.spotless" version "3.24.2"
     id "com.google.protobuf" version "0.8.12"
+    id 'org.gradle.test-retry' version '1.0.0'
 }
+
+// Introduced due to known bug with Directrunner and state api when using multiple keys.
+test {
+    retry {
+        failOnPassedAfterRetry = true
+        maxFailures = 3
+        maxRetries = 1
+    }
+}
+
 
 group 'org.apache.beam.sdk.extensions.timeseries'
 version '1.0-SNAPSHOT'

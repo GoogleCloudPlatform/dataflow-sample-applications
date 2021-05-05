@@ -31,7 +31,7 @@ public class SnapShotScalability_1D_100M_1K_1FW_60SW {
     options.setAppName("SimpleDataStreamTSDataPoints");
     options.setTypeOneComputationsLengthInSecs(1);
     options.setTypeTwoComputationsLengthInSecs(60);
-    options.setSequenceLengthInSeconds(60);
+    options.setOutputTimestepLengthInSecs(60);
     options.setNumKeys(1);
     options.setNumSecs(86400);
     options.setNumFeatures(1);

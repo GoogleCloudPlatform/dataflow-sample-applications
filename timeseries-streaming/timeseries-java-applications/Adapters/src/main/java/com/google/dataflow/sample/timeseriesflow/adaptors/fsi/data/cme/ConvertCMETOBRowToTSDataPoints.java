@@ -20,15 +20,22 @@ package com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
+import com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme.CMEAdapter.SSCLTOBJsonTransform;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.protobuf.util.Timestamps;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
+import org.checkerframework.checker.initialization.qual.Initialized;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.UnknownKeyFor;
+import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,21 +50,42 @@ import org.slf4j.LoggerFactory;
  *   <li>Stamping bidLevel TSDataPoints with askLevelLastUpdateTime Timestamp
  * </ul>
  */
+@Experimental
 class ConvertCMETOBRowToTSDataPoints
     extends PTransform<PCollection<Row>, PCollection<TSDataPoint>> {
 
   public static final Logger LOG = LoggerFactory.getLogger(ConvertCMETOBRowToTSDataPoints.class);
 
+  final SSCLTOBJsonTransform sscltobJsonTransform;
+
+  public ConvertCMETOBRowToTSDataPoints(SSCLTOBJsonTransform sscltobJsonTransform) {
+    this.sscltobJsonTransform = sscltobJsonTransform;
+  }
+
+  public ConvertCMETOBRowToTSDataPoints(
+      @Nullable @UnknownKeyFor @Initialized String name,
+      SSCLTOBJsonTransform sscltobJsonTransform) {
+    super(name);
+    this.sscltobJsonTransform = sscltobJsonTransform;
+  }
+
   @Override
   public PCollection<TSDataPoint> expand(PCollection<Row> input) {
 
-    return input.apply(ParDo.of(new ConvertRowToTSDataPoint()));
+    return input.apply(ParDo.of(new ConvertRowToTSDataPoint(this)));
   }
 
   private static class ConvertRowToTSDataPoint extends DoFn<Row, TSDataPoint> {
 
+    final ConvertCMETOBRowToTSDataPoints convertCMETOBRowToTSDataPoints;
+
+    private ConvertRowToTSDataPoint(ConvertCMETOBRowToTSDataPoints convertCMETOBRowToTSDataPoints) {
+      this.convertCMETOBRowToTSDataPoints = convertCMETOBRowToTSDataPoints;
+    }
+
     @ProcessElement
-    public void process(@Element Row element, OutputReceiver<TSDataPoint> out) {
+    public void process(
+        @Element Row element, @Timestamp Instant sourceTimestamp, OutputReceiver<TSDataPoint> out) {
 
       Long sentTime = element.getInt64("sentTime");
 
@@ -78,6 +106,14 @@ class ConvertCMETOBRowToTSDataPoints
       Long bidLevelPrice = element.getInt64("bidLevelPrice");
       Long bidLevelQty = element.getInt64("bidLevelQty");
 
+      Long elementTimestamp = null;
+
+      if (convertCMETOBRowToTSDataPoints.sscltobJsonTransform.getUseSourceTimeMetadata()) {
+        elementTimestamp = TimeUnit.MILLISECONDS.toNanos(sourceTimestamp.getMillis());
+      } else {
+        elementTimestamp = askLevelLastUpdateTime;
+      }
+
       Map<String, String> metadataMap = new HashMap<>();
 
       metadataMap.put("sentTime", String.valueOf(sentTime));
@@ -88,70 +124,74 @@ class ConvertCMETOBRowToTSDataPoints
         // Stamping Categorical TSDataPoints with askLevelLastUpdateTime Timestamp
 
         if (askLevelLastUpdateTime != null) {
-          out.output(
-              TSDataPoint.newBuilder()
-                  .setKey(
-                      TSKey.newBuilder()
-                          .setMajorKey(symbol)
-                          .build()
-                          .toBuilder()
-                          .setMinorKeyString("tradingStatus"))
-                  .setTimestamp(Timestamps.fromNanos(askLevelLastUpdateTime))
-                  .setData(Data.newBuilder().setCategoricalVal(tradingStatus).build())
-                  .putAllMetadata(metadataMap)
-                  .build());
 
-          out.output(
-              TSDataPoint.newBuilder()
-                  .setKey(
-                      TSKey.newBuilder()
-                          .setMajorKey(symbol)
-                          .build()
-                          .toBuilder()
-                          .setMinorKeyString("periodCode"))
-                  .setTimestamp(Timestamps.fromNanos(askLevelLastUpdateTime))
-                  .setData(Data.newBuilder().setCategoricalVal(periodCode).build())
-                  .putAllMetadata(metadataMap)
-                  .build());
+          if (!convertCMETOBRowToTSDataPoints.sscltobJsonTransform.getSuppressCategorical()) {
 
-          out.output(
-              TSDataPoint.newBuilder()
-                  .setKey(
-                      TSKey.newBuilder()
-                          .setMajorKey(symbol)
-                          .build()
-                          .toBuilder()
-                          .setMinorKeyString("productCode"))
-                  .setTimestamp(Timestamps.fromNanos(askLevelLastUpdateTime))
-                  .setData(Data.newBuilder().setCategoricalVal(productCode).build())
-                  .putAllMetadata(metadataMap)
-                  .build());
+            out.output(
+                TSDataPoint.newBuilder()
+                    .setKey(
+                        TSKey.newBuilder()
+                            .setMajorKey(symbol)
+                            .build()
+                            .toBuilder()
+                            .setMinorKeyString("tradingStatus"))
+                    .setTimestamp(Timestamps.fromNanos(elementTimestamp))
+                    .setData(Data.newBuilder().setCategoricalVal(tradingStatus).build())
+                    .putAllMetadata(metadataMap)
+                    .build());
 
-          out.output(
-              TSDataPoint.newBuilder()
-                  .setKey(
-                      TSKey.newBuilder()
-                          .setMajorKey(symbol)
-                          .build()
-                          .toBuilder()
-                          .setMinorKeyString("productGroup"))
-                  .setTimestamp(Timestamps.fromNanos(askLevelLastUpdateTime))
-                  .setData(Data.newBuilder().setCategoricalVal(productGroup).build())
-                  .putAllMetadata(metadataMap)
-                  .build());
+            out.output(
+                TSDataPoint.newBuilder()
+                    .setKey(
+                        TSKey.newBuilder()
+                            .setMajorKey(symbol)
+                            .build()
+                            .toBuilder()
+                            .setMinorKeyString("periodCode"))
+                    .setTimestamp(Timestamps.fromNanos(elementTimestamp))
+                    .setData(Data.newBuilder().setCategoricalVal(periodCode).build())
+                    .putAllMetadata(metadataMap)
+                    .build());
 
-          out.output(
-              TSDataPoint.newBuilder()
-                  .setKey(
-                      TSKey.newBuilder()
-                          .setMajorKey(symbol)
-                          .build()
-                          .toBuilder()
-                          .setMinorKeyString("productType"))
-                  .setTimestamp(Timestamps.fromNanos(askLevelLastUpdateTime))
-                  .setData(Data.newBuilder().setCategoricalVal(productType).build())
-                  .putAllMetadata(metadataMap)
-                  .build());
+            out.output(
+                TSDataPoint.newBuilder()
+                    .setKey(
+                        TSKey.newBuilder()
+                            .setMajorKey(symbol)
+                            .build()
+                            .toBuilder()
+                            .setMinorKeyString("productCode"))
+                    .setTimestamp(Timestamps.fromNanos(elementTimestamp))
+                    .setData(Data.newBuilder().setCategoricalVal(productCode).build())
+                    .putAllMetadata(metadataMap)
+                    .build());
+
+            out.output(
+                TSDataPoint.newBuilder()
+                    .setKey(
+                        TSKey.newBuilder()
+                            .setMajorKey(symbol)
+                            .build()
+                            .toBuilder()
+                            .setMinorKeyString("productGroup"))
+                    .setTimestamp(Timestamps.fromNanos(elementTimestamp))
+                    .setData(Data.newBuilder().setCategoricalVal(productGroup).build())
+                    .putAllMetadata(metadataMap)
+                    .build());
+
+            out.output(
+                TSDataPoint.newBuilder()
+                    .setKey(
+                        TSKey.newBuilder()
+                            .setMajorKey(symbol)
+                            .build()
+                            .toBuilder()
+                            .setMinorKeyString("productType"))
+                    .setTimestamp(Timestamps.fromNanos(elementTimestamp))
+                    .setData(Data.newBuilder().setCategoricalVal(productType).build())
+                    .putAllMetadata(metadataMap)
+                    .build());
+          }
         }
 
         if (askLevelLastUpdateTime != null) {
@@ -165,7 +205,7 @@ class ConvertCMETOBRowToTSDataPoints
                           .build()
                           .toBuilder()
                           .setMinorKeyString("askOrderCnt"))
-                  .setTimestamp(Timestamps.fromNanos(askLevelLastUpdateTime))
+                  .setTimestamp(Timestamps.fromNanos(elementTimestamp))
                   .setData(CommonUtils.createNumData(askLevelOrderCnt))
                   .putAllMetadata(metadataMap)
                   .build());
@@ -178,7 +218,7 @@ class ConvertCMETOBRowToTSDataPoints
                           .build()
                           .toBuilder()
                           .setMinorKeyString("askPrice"))
-                  .setTimestamp(Timestamps.fromNanos(askLevelLastUpdateTime))
+                  .setTimestamp(Timestamps.fromNanos(elementTimestamp))
                   .setData(CommonUtils.createNumData(askLevelPrice))
                   .putAllMetadata(metadataMap)
                   .build());
@@ -191,7 +231,7 @@ class ConvertCMETOBRowToTSDataPoints
                           .build()
                           .toBuilder()
                           .setMinorKeyString("askQty"))
-                  .setTimestamp(Timestamps.fromNanos(askLevelLastUpdateTime))
+                  .setTimestamp(Timestamps.fromNanos(elementTimestamp))
                   .setData(CommonUtils.createNumData(askLevelQty))
                   .putAllMetadata(metadataMap)
                   .build());
@@ -208,7 +248,7 @@ class ConvertCMETOBRowToTSDataPoints
                           .build()
                           .toBuilder()
                           .setMinorKeyString("bidOrderCnt"))
-                  .setTimestamp(Timestamps.fromNanos(askLevelLastUpdateTime))
+                  .setTimestamp(Timestamps.fromNanos(elementTimestamp))
                   .setData(CommonUtils.createNumData(bidLevelOrderCnt))
                   .putAllMetadata(metadataMap)
                   .build());
@@ -221,7 +261,7 @@ class ConvertCMETOBRowToTSDataPoints
                           .build()
                           .toBuilder()
                           .setMinorKeyString("bidPrice"))
-                  .setTimestamp(Timestamps.fromNanos(askLevelLastUpdateTime))
+                  .setTimestamp(Timestamps.fromNanos(elementTimestamp))
                   .setData(CommonUtils.createNumData(bidLevelPrice))
                   .putAllMetadata(metadataMap)
                   .build());
@@ -234,7 +274,7 @@ class ConvertCMETOBRowToTSDataPoints
                           .build()
                           .toBuilder()
                           .setMinorKeyString("bidQty"))
-                  .setTimestamp(Timestamps.fromNanos(askLevelLastUpdateTime))
+                  .setTimestamp(Timestamps.fromNanos(elementTimestamp))
                   .setData(CommonUtils.createNumData(bidLevelQty))
                   .putAllMetadata(metadataMap)
                   .build());

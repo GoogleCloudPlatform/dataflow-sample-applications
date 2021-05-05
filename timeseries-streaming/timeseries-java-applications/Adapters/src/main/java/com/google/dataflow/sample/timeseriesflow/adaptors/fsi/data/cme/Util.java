@@ -20,6 +20,7 @@ package com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme;
 import com.google.auto.value.AutoValue;
 import com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme.TopOfBook.TopOfBookEvent;
 import com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme.TradeInfo.TradeInfoEvent;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
@@ -29,6 +30,7 @@ import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Experimental
 class Util {
 
   public static final Logger LOG = LoggerFactory.getLogger(Util.class);

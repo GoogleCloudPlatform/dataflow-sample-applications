@@ -78,9 +78,10 @@ public abstract class TSBaseCombiner extends CombineFn<TSDataPoint, TSAccum, TSA
       accumStore.setLast(dataPoint.getData());
     }
 
-    // Increment the total count
-
-    accumStore.setCountValue(accumStore.getCountValueOrZero() + 1);
+    // Increment the total count if this is not a HB message
+    if (!dataPoint.getIsAGapFillMessage()) {
+      accumStore.setCountValue(accumStore.getCountValueOrZero() + 1);
+    }
 
     TSAccum accum = addTypeSpecificInput(accumStore.build(), dataPoint);
 
@@ -118,7 +119,7 @@ public abstract class TSBaseCombiner extends CombineFn<TSDataPoint, TSAccum, TSA
     TSAccum.Builder output = accum.toBuilder();
 
     if (accumBuilder.getCountValueOrZero() > 1) {
-      output.setHasAGapFillMessage(false).build();
+      output.setHasAGapFillMessage(false);
     }
     output.putMetadata(_BASE_COMBINER, "t");
 
