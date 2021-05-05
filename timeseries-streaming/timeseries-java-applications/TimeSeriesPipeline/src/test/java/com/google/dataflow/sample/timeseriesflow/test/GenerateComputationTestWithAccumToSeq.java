@@ -25,7 +25,7 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSNumericCombiner;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
-import com.google.dataflow.sample.timeseriesflow.transforms.ConvertAccumToSequenceV2;
+import com.google.dataflow.sample.timeseriesflow.transforms.ConvertAccumToSequence;
 import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.protobuf.util.Durations;
 import com.google.protobuf.util.Timestamps;
@@ -49,7 +49,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 /** TODO switch whole TSAccum building tests to validatePropertyTests */
-public class GenerateComputationTestWithAccumToSeqV2 {
+public class GenerateComputationTestWithAccumToSeq {
 
   @Rule public final transient TestPipeline p = TestPipeline.create();
 
@@ -152,7 +152,7 @@ public class GenerateComputationTestWithAccumToSeqV2 {
                     .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
                     .build())
             .apply(
-                ConvertAccumToSequenceV2.builder()
+                ConvertAccumToSequence.builder()
                     .setWindow(Window.into(FixedWindows.of(Duration.standardSeconds(5))))
                     .build());
 
@@ -224,7 +224,7 @@ public class GenerateComputationTestWithAccumToSeqV2 {
                     .<KV<TSKey, TSAccum>>via(
                         x -> KV.of(x.getKey(), x.getValue().toBuilder().clearDataStore().build())))
             .apply(
-                ConvertAccumToSequenceV2.builder()
+                ConvertAccumToSequence.builder()
                     .setWindow(Window.into(FixedWindows.of(Duration.standardSeconds(30))))
                     .build());
     TSAccum first =
@@ -327,7 +327,7 @@ public class GenerateComputationTestWithAccumToSeqV2 {
         p.apply(stream)
             .apply(Window.into(FixedWindows.of(Duration.standardSeconds(30))))
             .apply(
-                ConvertAccumToSequenceV2.builder()
+                ConvertAccumToSequence.builder()
                     .setWindow(Window.into(FixedWindows.of(Duration.standardSeconds(30))))
                     .build());
     PAssert.that(result).empty();
@@ -362,7 +362,7 @@ public class GenerateComputationTestWithAccumToSeqV2 {
                     .<KV<TSKey, TSAccum>>via(
                         x -> KV.of(x.getKey(), x.getValue().toBuilder().clearDataStore().build())))
             .apply(
-                ConvertAccumToSequenceV2.builder()
+                ConvertAccumToSequence.builder()
                     .setWindow(
                         Window.into(
                             SlidingWindows.of(Duration.standardSeconds(5))

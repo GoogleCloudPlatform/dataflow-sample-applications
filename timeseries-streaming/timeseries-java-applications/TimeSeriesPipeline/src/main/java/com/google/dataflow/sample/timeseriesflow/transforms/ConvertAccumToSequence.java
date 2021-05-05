@@ -20,7 +20,9 @@ package com.google.dataflow.sample.timeseriesflow.transforms;
 import com.google.auto.value.AutoValue;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence.Builder;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
+import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.protobuf.util.Durations;
 import com.google.protobuf.util.Timestamps;
 import java.util.ArrayList;
@@ -31,8 +33,9 @@ import java.util.List;
 import java.util.Set;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
+import org.apache.beam.sdk.transforms.Combine;
+import org.apache.beam.sdk.transforms.Combine.CombineFn;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.windowing.IntervalWindow;
@@ -46,7 +49,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Creates a {@link TSAccumSequence} from a {@link TSAccum} given a {@link Window}. Without init
  * bootstrap there will be {@link TSAccumSequences} which will have imbalanced length use {@link
- * ConvertAccumToSequence.Builder#setCheckHasValueCountOf(Integer)}
+ * ConvertAccumToSequenceV2.Builder#setCheckHasValueCountOf(Integer)}
  */
 @Experimental
 public abstract class ConvertAccumToSequence
@@ -78,12 +81,13 @@ public abstract class ConvertAccumToSequence
 
     return input
         .apply(this.getWindow())
-        .apply(GroupByKey.create())
+        .apply(Combine.perKey(new AccumToSequenceCombiner()))
+        .setCoder(CommonUtils.getKvTSAccumSequenceCoder())
         .apply("TSAccumToSequence", ParDo.of(new AccumToSequencesDoFn(this)));
   }
 
   public static class AccumToSequencesDoFn
-      extends DoFn<KV<TSKey, Iterable<TSAccum>>, KV<TSKey, TSAccumSequence>> {
+      extends DoFn<KV<TSKey, TSAccumSequence>, KV<TSKey, TSAccumSequence>> {
 
     ConvertAccumToSequence convertAccumToSequence;
 
@@ -98,8 +102,8 @@ public abstract class ConvertAccumToSequence
       // This is mitigated as only aggregator's are loaded.
       // TODO Convert to use the sorter utility for larger sorts
 
-      List<TSAccum> inMemoryList = new ArrayList<>();
-      pc.element().getValue().forEach(inMemoryList::add);
+      // Make new list to allow sort
+      List<TSAccum> inMemoryList = new ArrayList<>(pc.element().getValue().getAccumsList());
 
       if (convertAccumToSequence.getCheckHasValueCountOf() != null
           && inMemoryList.size() != convertAccumToSequence.getCheckHasValueCountOf()) {
@@ -137,6 +141,39 @@ public abstract class ConvertAccumToSequence
       sequence.setCount(inMemoryList.size());
 
       pc.output(KV.of(pc.element().getKey(), sequence.build()));
+    }
+  }
+
+  public static class AccumToSequenceCombiner
+      extends CombineFn<TSAccum, TSAccumSequence, TSAccumSequence> {
+
+    @Override
+    public TSAccumSequence createAccumulator() {
+      return TSAccumSequence.newBuilder().build();
+    }
+
+    @Override
+    public TSAccumSequence addInput(TSAccumSequence accumulator, TSAccum input) {
+      return accumulator.toBuilder().addAccums(input).build();
+    }
+
+    @Override
+    public TSAccumSequence mergeAccumulators(Iterable<TSAccumSequence> accumulators) {
+      if (!accumulators.iterator().hasNext()) {
+        return TSAccumSequence.newBuilder().build();
+      }
+
+      Iterator<TSAccumSequence> iterator = accumulators.iterator();
+      TSAccumSequence.Builder accumaltor = iterator.next().toBuilder();
+      while (iterator.hasNext()) {
+        accumaltor.addAllAccums(iterator.next().getAccumsList());
+      }
+      return accumaltor.build();
+    }
+
+    @Override
+    public TSAccumSequence extractOutput(TSAccumSequence accumulator) {
+      return accumulator;
     }
   }
 }
