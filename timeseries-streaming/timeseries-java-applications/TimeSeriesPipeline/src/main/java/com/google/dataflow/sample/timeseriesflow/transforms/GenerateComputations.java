@@ -226,6 +226,15 @@ public abstract class GenerateComputations
                   "Combine Longs",
                   Combine.<TSKey, TSDataPoint, TSAccum>perKey(combine)
                       .withHotKeyFanout(hotKeyfanout)));
+      coll.add(
+          allDataTypes
+              .get(TupleTypes.t_float)
+              .apply("Float Types", WithKeys.of(x -> TSKey.newBuilder(x.getKey()).build()))
+              .setCoder(CommonUtils.getKvTSDataPointCoder())
+              .apply(
+                  "Combine Floats",
+                  Combine.<TSKey, TSDataPoint, TSAccum>perKey(combine)
+                      .withHotKeyFanout(hotKeyfanout)));
     }
 
     PCollectionList<KV<TSKey, TSAccum>> allNumericAccums = PCollectionList.of(coll);
@@ -385,7 +394,11 @@ public abstract class GenerateComputations
               .withOutputTags(
                   TupleTypes.t_int,
                   TupleTagList.of(
-                      ImmutableList.of(TupleTypes.t_double, TupleTypes.t_long, TupleTypes.t_str))));
+                      ImmutableList.of(
+                          TupleTypes.t_double,
+                          TupleTypes.t_long,
+                          TupleTypes.t_str,
+                          TupleTypes.t_float))));
     }
 
     /** Takes a {@link TSDataPoint} and outputs collection based on {@link TupleTypes} */
@@ -407,6 +420,11 @@ public abstract class GenerateComputations
           case LONG_VAL:
             {
               mo.get(TupleTypes.t_long).output(data);
+              return;
+            }
+          case FLOAT_VAL:
+            {
+              mo.get(TupleTypes.t_float).output(data);
               return;
             }
           case CATEGORICAL_VAL:

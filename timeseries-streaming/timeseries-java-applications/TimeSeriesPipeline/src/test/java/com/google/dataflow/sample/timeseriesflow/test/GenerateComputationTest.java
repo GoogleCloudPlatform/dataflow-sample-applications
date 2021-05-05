@@ -29,12 +29,17 @@ import com.google.dataflow.sample.timeseriesflow.transforms.ConvertAccumToSequen
 import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.protobuf.util.Durations;
 import com.google.protobuf.util.Timestamps;
+import org.apache.beam.sdk.coders.KvCoder;
+import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testing.TestStream;
+import org.apache.beam.sdk.transforms.Distinct;
 import org.apache.beam.sdk.transforms.Filter;
+import org.apache.beam.sdk.transforms.Keys;
 import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.WithKeys;
 import org.apache.beam.sdk.transforms.windowing.FixedWindows;
 import org.apache.beam.sdk.transforms.windowing.SlidingWindows;
 import org.apache.beam.sdk.transforms.windowing.Window;
@@ -106,6 +111,61 @@ public class GenerateComputationTest {
                     .putDataStore(
                         Indicators.LAST.name(), TSDataTestUtils.DOUBLE_POINT_3_A_A.getData())
                     .build()));
+    p.run();
+  }
+
+  @Test
+  /* Simple test to check all data types are processed into TSAccum Correctly */
+  public void testCreateTSAccumFromAllDataTypes() {
+
+    TestStream<TSDataPoint> stream =
+        TestStream.create(ProtoCoder.of(TSDataPoint.class))
+            .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START))
+            .addElements(
+                TSDataTestUtils.DOUBLE_POINT_1_A_A
+                    .toBuilder()
+                    .setKey(TSDataTestUtils.KEY_A_A.toBuilder().setMinorKeyString("double"))
+                    .build())
+            .addElements(
+                TSDataTestUtils.DOUBLE_POINT_1_A_A
+                    .toBuilder()
+                    .setKey(TSDataTestUtils.KEY_A_A.toBuilder().setMinorKeyString("long"))
+                    .setData(CommonUtils.createNumData(1L))
+                    .setData(CommonUtils.createNumData(1L))
+                    .build())
+            .addElements(
+                TSDataTestUtils.DOUBLE_POINT_1_A_A
+                    .toBuilder()
+                    .setKey(TSDataTestUtils.KEY_A_A.toBuilder().setMinorKeyString("integer"))
+                    .setData(CommonUtils.createNumData(1L))
+                    .setData(CommonUtils.createNumData(1))
+                    .build())
+            .addElements(
+                TSDataTestUtils.DOUBLE_POINT_1_A_A
+                    .toBuilder()
+                    .setKey(TSDataTestUtils.KEY_A_A.toBuilder().setMinorKeyString("float"))
+                    .setData(CommonUtils.createNumData(1L))
+                    .setData(CommonUtils.createNumData(1.0F))
+                    .build())
+            .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.PLUS_FIVE_SECS))
+            .advanceWatermarkToInfinity();
+
+    PCollection<String> result =
+        p.apply(stream)
+            .apply(
+                GenerateComputations.builder()
+                    .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
+                    .setType1FixedWindow(Duration.standardSeconds(5))
+                    .setType2SlidingWindowDuration(Duration.standardSeconds(5))
+                    .build())
+            .apply(
+                WithKeys.<String, KV<TSKey, TSAccum>>of(
+                    x -> x.getValue().getDataStoreMap().get("SUM").getDataPointCase().name()))
+            .setCoder(KvCoder.of(StringUtf8Coder.of(), CommonUtils.getKvTSAccumCoder()))
+            .apply(Keys.create())
+            .apply(Distinct.create());
+
+    PAssert.that(result).containsInAnyOrder("FLOAT_VAL", "LONG_VAL", "DOUBLE_VAL", "INT_VAL");
     p.run();
   }
 

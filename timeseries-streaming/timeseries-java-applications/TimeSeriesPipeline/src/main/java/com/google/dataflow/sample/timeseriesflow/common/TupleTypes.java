@@ -29,4 +29,5 @@ public class TupleTypes {
   public static TupleTag<TSDataPoint> t_int = new TupleTag<TSDataPoint>() {};
   public static TupleTag<TSDataPoint> t_double = new TupleTag<TSDataPoint>() {};
   public static TupleTag<TSDataPoint> t_long = new TupleTag<TSDataPoint>() {};
+  public static TupleTag<TSDataPoint> t_float = new TupleTag<TSDataPoint>() {};
 }
