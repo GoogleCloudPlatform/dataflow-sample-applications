@@ -17,6 +17,8 @@
  */
 package com.google.dataflow.sample.timeseriesflow.metrics;
 
+import static com.google.dataflow.sample.timeseriesflow.test.TestUtils.timestampedValueFromTSDataPoint;
+
 import com.google.dataflow.sample.timeseriesflow.FSITechnicalDerivedAggregations.FsiTechnicalIndicators;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
@@ -64,50 +66,58 @@ public class TSMetricsTests {
     TestStream<TSDataPoint> stream =
         TestStream.create(ProtoCoder.of(TSDataPoint.class))
             .advanceWatermarkTo(Instant.ofEpochMilli(TSTestDataBaseline.START))
-            .addElements(TSTestDataBaseline.DOUBLE_POINT_1_A_A)
+            .addElements(timestampedValueFromTSDataPoint(TSTestDataBaseline.DOUBLE_POINT_1_A_A))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_2_A_B
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(0D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_1_A_B
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(0D))
+                        .build()))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_3_A_C
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(7D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_1_A_C
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(7D))
+                        .build()))
             .advanceWatermarkTo(Instant.ofEpochMilli(TSTestDataBaseline.PLUS_FIVE_SECS))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_2_A_A
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(4D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_2_A_A
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(4D))
+                        .build()))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_2_A_B
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(12D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_2_A_B
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(12D))
+                        .build()))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_2_A_C
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(4D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_2_A_C
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(4D))
+                        .build()))
             .advanceWatermarkTo(Instant.ofEpochMilli(TSTestDataBaseline.PLUS_TEN_SECS))
             // Mutate final value so we have div with no remainder
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_3_A_A
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(7D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_3_A_A
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(7D))
+                        .build()))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_2_A_B
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(6D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_3_A_B
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(6D))
+                        .build()))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_1_A_C
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(1D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_3_A_C
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(1D))
+                        .build()))
             .advanceWatermarkToInfinity();
 
     PCollection<KV<TSKey, TSAccum>> techAccum =
@@ -178,6 +188,7 @@ public class TSMetricsTests {
     Key_A_C = 0 = 100 - 100 = 0
 
      */
+
     PAssert.that(rs)
         .containsInAnyOrder(
             KV.of(TSTestDataBaseline.KEY_A_A, 0D),
@@ -196,7 +207,7 @@ public class TSMetricsTests {
   /* Simple test to check Simple Moving Average Technical is created correctly */
   public void testCreateSMA() throws IOException {
 
-    String resourceName = "TSTestData.json";
+    String resourceName = "TSTestDataHints.json";
     ClassLoader classLoader = getClass().getClassLoader();
     File file = new File(classLoader.getResource(resourceName).getFile());
     String absolutePath = file.getAbsolutePath();
@@ -261,6 +272,7 @@ public class TSMetricsTests {
     SMA Key_A_C = 12 + 12 + 12 / 3 = 12
 
      */
+
     PAssert.that(sma)
         .containsInAnyOrder(
             KV.of(TSTestDataBaseline.KEY_A_A, 4D),
