@@ -167,7 +167,7 @@ public abstract class GenerateComputations
     // Run verification logic against the TSDataPoint
     PCollection<KV<TSKey, TSDataPoint>> verifiedTSDataPoints =
         input
-            .apply(new TSDataPointVerifier())
+            .apply(TSDataPointVerifier.create())
             .apply("AddDataPointKeys", WithKeys.of(TSDataPoint::getKey))
             .setCoder(CommonUtils.getKvTSDataPointCoder());
 

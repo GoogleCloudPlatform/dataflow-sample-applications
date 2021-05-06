@@ -53,6 +53,7 @@ import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.Filter;
 import org.apache.beam.sdk.transforms.Flatten;
+import org.apache.beam.sdk.transforms.Latest;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.Reify;
@@ -87,7 +88,7 @@ import org.slf4j.LoggerFactory;
  * <p>{@link PerfectRectangles#enablePreviousValueFill()} enables the use of the last known value as
  * the value to be used to fill gaps.
  *
- * <p>{@link PerfectRectangles#getPreviousValueFillExcludeList(List<TSKey>)} An Optional list of
+ * <p>{@link PerfectRectangles#getPreviousValueFillExcludeList()} (List<TSKey>)} An Optional list of
  * TSKey's can be provided which will be excluded from the {@link
  * PerfectRectangles#enablePreviousValueFill()} policy if set. If the TSKey Major Key is not set
  * then the minorkey will be assumed to match all major keys.
@@ -240,7 +241,8 @@ public abstract class PerfectRectangles
                 .withAllowedLateness(Duration.ZERO));
 
     PCollection<KV<TSKey, TSDataPoint>> lastValueInWindow =
-        windowedInput.apply(LatestEventTimeDataPoint.perKey());
+        // windowedInput.apply(Latest.perKey()LatestEventTimeDataPoint.perKey());
+        windowedInput.apply(Latest.perKey());
 
     // Move into Global Time Domain, this allows Keyed State to retain its value across windows.
     // Late Data is dropped at this stage. Before we apply the Global Window we need to retain the
