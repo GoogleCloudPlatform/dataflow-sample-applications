@@ -97,7 +97,6 @@ public abstract class TSTestData implements Serializable {
           JsonFormat.parser()
               .ignoringUnknownFields()
               .merge(String.valueOf(element), tsDataPointBuilder);
-          System.out.println(element);
           messages.add(TestUtils.timestampedValueFromTSDataPoint(tsDataPointBuilder.build()));
           tsDataPointBuilder.clear();
 
