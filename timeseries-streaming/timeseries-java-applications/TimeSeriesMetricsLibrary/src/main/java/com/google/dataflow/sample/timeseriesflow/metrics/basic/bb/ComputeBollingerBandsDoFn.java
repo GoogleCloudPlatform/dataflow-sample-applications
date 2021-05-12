@@ -15,9 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.timeseriesflow.metrics;
+package com.google.dataflow.sample.timeseriesflow.metrics.basic.bb;
 
-import static com.google.dataflow.sample.timeseriesflow.metrics.BB.AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE;
+import static com.google.dataflow.sample.timeseriesflow.metrics.basic.bb.BB.AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE;
 
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;

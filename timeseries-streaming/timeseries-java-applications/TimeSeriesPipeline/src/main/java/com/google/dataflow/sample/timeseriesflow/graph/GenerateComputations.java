@@ -27,6 +27,7 @@ import com.google.dataflow.sample.timeseriesflow.TimeseriesStreamingOptions;
 import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSBaseCombiner;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.common.TupleTypes;
+import com.google.dataflow.sample.timeseriesflow.metrics.BType2Fn;
 import com.google.dataflow.sample.timeseriesflow.transforms.CreateCompositeTSAccum;
 import com.google.dataflow.sample.timeseriesflow.transforms.PerfectRectangles;
 import com.google.dataflow.sample.timeseriesflow.verifier.TSDataPointVerifier;
@@ -81,7 +82,6 @@ public abstract class GenerateComputations
 
   public @Nullable abstract Duration type2SlidingWindowDuration();
 
-  @Experimental
   public @Nullable abstract PerfectRectangles perfectRectangles();
 
   public @Nullable abstract Integer hotKeyFanOut();
@@ -101,6 +101,8 @@ public abstract class GenerateComputations
           PTransform<PCollection<KV<TSKey, TSAccum>>, PCollection<KV<TSKey, TSAccum>>>>
       type2CategoricalComputations();
 
+  public @Nullable abstract List<Class<? extends BType2Fn>> basicType2Metrics();
+
   public abstract Builder toBuilder();
 
   public static Builder builder() {
@@ -114,6 +116,8 @@ public abstract class GenerateComputations
     public abstract Builder setType2SlidingWindowDuration(Duration value);
 
     public abstract Builder setPerfectRectangles(PerfectRectangles perfectRectangles);
+
+    public abstract Builder setBasicType2Metrics(List<Class<? extends BType2Fn>> bType2Fns);
 
     public abstract Builder setHotKeyFanOut(Integer value);
 
@@ -197,13 +201,10 @@ public abstract class GenerateComputations
     // loaded into the {@link TSAccumSequence} objects
     // **************************************************************
 
-    if (type2NumericComputations() != null) {
-
-      PCollection<KV<TSKey, TSAccum>> mergedComputations =
-          GraphType2Comp.create(this).genType2ComputationGraph(allDataTypes, type1Computations);
-
-      output = mergedComputations;
-    }
+    output =
+        GraphType2Comp.create(this)
+            .genType2ComputationGraph(
+                allDataTypes, type1Computations, input.getPipeline().getOptions());
 
     return output.apply(ParDo.of(new ClearInternalState()));
   }

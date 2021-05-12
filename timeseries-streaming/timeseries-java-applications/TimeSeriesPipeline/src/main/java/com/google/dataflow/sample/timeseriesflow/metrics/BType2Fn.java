@@ -17,25 +17,22 @@
  */
 package com.google.dataflow.sample.timeseriesflow.metrics;
 
-import com.google.dataflow.sample.timeseriesflow.FSITechnicalDerivedAggregations.FsiTechnicalIndicators;
-import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
-import com.google.dataflow.sample.timeseriesflow.datamap.AccumCoreMetadataBuilder;
-import org.apache.beam.sdk.annotations.Experimental;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
+import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.transforms.Contextful;
+import org.apache.beam.sdk.transforms.Contextful.Fn;
+import org.apache.beam.sdk.transforms.SerializableFunction;
+import org.apache.beam.sdk.values.KV;
 
-/** Builder for the {@link LogRtn} type 2 computation data store */
-@Experimental
-class AccumLogRtnBuilder extends AccumCoreMetadataBuilder {
-  public AccumLogRtnBuilder(TSAccum tsAccum) {
-    super(tsAccum);
-  }
+public abstract class BType2Fn {
 
-  public Data getLogRtn() {
-    return getValueOrNull(FsiTechnicalIndicators.LOG_RTN.name());
-  }
+  public abstract SerializableFunction<KV<TSKey, TSAccumSequence>, KV<TSKey, TSAccum>> getFunction(
+      PipelineOptions options);
 
-  public AccumLogRtnBuilder setLogRtn(Data data) {
-    setValue(FsiTechnicalIndicators.LOG_RTN.name(), data);
-    return this;
+  public Contextful<Fn<KV<TSKey, TSAccumSequence>, KV<TSKey, TSAccum>>> getContextualFn(
+      PipelineOptions options) {
+    return Contextful.fn(getFunction(options));
   }
 }

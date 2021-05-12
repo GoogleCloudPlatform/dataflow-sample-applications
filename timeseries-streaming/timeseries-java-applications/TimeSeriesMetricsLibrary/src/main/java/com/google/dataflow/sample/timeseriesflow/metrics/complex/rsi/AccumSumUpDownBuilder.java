@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.timeseriesflow.metrics;
+package com.google.dataflow.sample.timeseriesflow.metrics.complex.rsi;
 
 import com.google.dataflow.sample.timeseriesflow.FSITechnicalDerivedAggregations.FsiTechnicalIndicators;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
@@ -23,28 +23,37 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.datamap.AccumCoreMetadataBuilder;
 import org.apache.beam.sdk.annotations.Experimental;
 
-/** Builder for the {@link MA} type 2 computation data store */
+/** Builder for the {@link ComputeSumUpSumDownWithCount} type 2 computation data store */
 @Experimental
-class AccumStdDevBuilder extends AccumCoreMetadataBuilder {
-  public AccumStdDevBuilder(TSAccum tsAccum) {
+public class AccumSumUpDownBuilder extends AccumCoreMetadataBuilder {
+  public AccumSumUpDownBuilder(TSAccum tsAccum) {
     super(tsAccum);
   }
 
-  public Data getMovementCount() {
+  Data getSumUp() {
+    return getValueOrNull(FsiTechnicalIndicators.SUM_UP_MOVEMENT.name());
+  }
+
+  Data getSumDown() {
+    return getValueOrNull(FsiTechnicalIndicators.SUM_DOWN_MOVEMENT.name());
+  }
+
+  Data getMovementCount() {
     return getValueOrNull(FsiTechnicalIndicators.SUM_MOVEMENT_COUNT.name());
   }
 
-  public Data getStdDev() {
-    return getValueOrNull(FsiTechnicalIndicators.STANDARD_DEVIATION.name());
-  }
-
-  public AccumStdDevBuilder setMovementCount(Data data) {
-    setValue(FsiTechnicalIndicators.SUM_MOVEMENT_COUNT.name(), data);
+  AccumSumUpDownBuilder setSumUp(Data data) {
+    setValue(FsiTechnicalIndicators.SUM_UP_MOVEMENT.name(), data);
     return this;
   }
 
-  public AccumStdDevBuilder setStdDev(Data data) {
-    setValue(FsiTechnicalIndicators.STANDARD_DEVIATION.name(), data);
+  AccumSumUpDownBuilder setSumDown(Data data) {
+    setValue(FsiTechnicalIndicators.SUM_DOWN_MOVEMENT.name(), data);
+    return this;
+  }
+
+  AccumSumUpDownBuilder setMovementCount(Data data) {
+    setValue(FsiTechnicalIndicators.SUM_MOVEMENT_COUNT.name(), data);
     return this;
   }
 }

@@ -40,6 +40,7 @@ import org.apache.beam.sdk.extensions.protobuf.ProtoMessageSchema;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.TypeDescriptor;
+import org.apache.beam.sdk.values.TypeDescriptors;
 
 @Experimental
 /** Utilities. */
@@ -184,6 +185,14 @@ public class CommonUtils {
     return KvCoder.of(ProtoCoder.of(TSKey.class), ProtoCoder.of(TSAccumSequence.class));
   }
 
+  public static TypeDescriptor<KV<TSKey, TSAccum>> getKvTSAccumTypedescritors() {
+    return TypeDescriptors.kvs(TypeDescriptor.of(TSKey.class), TypeDescriptor.of(TSAccum.class));
+  }
+
+  public static TypeDescriptor<KV<TSKey, TSAccumSequence>> getKvTSAccumSequenceTypedescritors() {
+    return TypeDescriptors.kvs(
+        TypeDescriptor.of(TSKey.class), TypeDescriptor.of(TSAccumSequence.class));
+  }
   /**
    * The output sequence length is derived from the Type 1 fixed length value divided by the desired
    * output sequence in seconds. The sequence length must be a multiple of the type 1 fixed value.

@@ -25,8 +25,15 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSNumericCombiner;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
+import com.google.dataflow.sample.timeseriesflow.graph.GenerateComputations;
+import com.google.dataflow.sample.timeseriesflow.metrics.basic.bb.BB;
+import com.google.dataflow.sample.timeseriesflow.metrics.basic.logrtn.LogRtnFn;
+import com.google.dataflow.sample.timeseriesflow.metrics.basic.ma.MAFn;
+import com.google.dataflow.sample.timeseriesflow.metrics.basic.ma.MAFn.AverageComputationMethod;
+import com.google.dataflow.sample.timeseriesflow.metrics.basic.ma.MAOptions;
+import com.google.dataflow.sample.timeseriesflow.metrics.basic.stddev.StdDevFn;
+import com.google.dataflow.sample.timeseriesflow.metrics.complex.rsi.RSI;
 import com.google.dataflow.sample.timeseriesflow.test.TSDataTestUtils;
-import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.gson.stream.JsonReader;
 import common.TSTestData;
 import common.TSTestDataBaseline;
@@ -207,6 +214,10 @@ public class TSMetricsTests {
   /* Simple test to check Simple Moving Average Technical is created correctly */
   public void testCreateSMA() throws IOException {
 
+    MAOptions options = p.getOptions().as(MAOptions.class);
+    options.setAverageComputationAlpha(BigDecimal.valueOf(2D / (3D + 1D)).doubleValue());
+    options.setAverageComputationMethod(AverageComputationMethod.SIMPLE_MOVING_AVERAGE);
+
     String resourceName = "TSTestDataHints.json";
     ClassLoader classLoader = getClass().getClassLoader();
     File file = new File(classLoader.getResource(resourceName).getFile());
@@ -229,13 +240,7 @@ public class TSMetricsTests {
                     .setType1FixedWindow(Duration.standardSeconds(5))
                     .setType2SlidingWindowDuration(Duration.standardSeconds(15))
                     .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
-                    .setType2NumericComputations(
-                        ImmutableList.of(
-                            MA.toBuilder()
-                                .setAverageComputationMethod(
-                                    MA.AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
-                                .build()
-                                .create()))
+                    .setBasicType2Metrics(ImmutableList.of(MAFn.class))
                     .build());
 
     // The sliding window will create partial values, to keep testing simple we just test
@@ -299,6 +304,10 @@ public class TSMetricsTests {
                 Duration.standardSeconds(15))
             .build();
 
+    MAOptions options = p.getOptions().as(MAOptions.class);
+    options.setAverageComputationAlpha(BigDecimal.valueOf(2D / (3D + 1D)).doubleValue());
+    options.setAverageComputationMethod(AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE);
+
     TestStream<TSDataPoint> stream = tsTestData.inputTSData();
 
     PCollection<KV<TSKey, TSAccum>> techAccum =
@@ -308,14 +317,7 @@ public class TSMetricsTests {
                     .setType1FixedWindow(Duration.standardSeconds(5))
                     .setType2SlidingWindowDuration(Duration.standardSeconds(15))
                     .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
-                    .setType2NumericComputations(
-                        ImmutableList.of(
-                            MA.toBuilder()
-                                .setAverageComputationMethod(
-                                    MA.AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE)
-                                .setWeight(BigDecimal.valueOf(2D / (3D + 1D)))
-                                .build()
-                                .create()))
+                    .setBasicType2Metrics(ImmutableList.of(MAFn.class))
                     .build());
 
     // The sliding window will create partial values, to keep testing simple we just test
@@ -475,8 +477,7 @@ public class TSMetricsTests {
                     .setType1FixedWindow(Duration.standardSeconds(5))
                     .setType2SlidingWindowDuration(Duration.standardSeconds(15))
                     .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
-                    .setType2NumericComputations(
-                        ImmutableList.of(StdDev.toBuilder().build().create()))
+                    .setBasicType2Metrics(ImmutableList.of(StdDevFn.class))
                     .build());
 
     // The sliding window will create partial values, to keep testing simple we just test
@@ -548,8 +549,7 @@ public class TSMetricsTests {
                     .setType1FixedWindow(Duration.standardSeconds(5))
                     .setType2SlidingWindowDuration(Duration.standardSeconds(15))
                     .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
-                    .setType2NumericComputations(
-                        ImmutableList.of(LogRtn.builder().build().create()))
+                    .setBasicType2Metrics(ImmutableList.of(LogRtnFn.class))
                     .build());
 
     // The sliding window will create partial values, to keep testing simple we just test

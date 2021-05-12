@@ -21,54 +21,48 @@ import com.google.auto.value.AutoValue;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
-import com.google.dataflow.sample.timeseriesflow.transforms.TypeTwoComputation;
-import com.google.dataflow.sample.timeseriesflow.transforms.TypeTwoComputation.ComputeType;
-import java.io.Serializable;
+import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.transforms.Contextful;
+import org.apache.beam.sdk.transforms.Contextful.Fn;
+import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.Values;
+import org.apache.beam.sdk.transforms.ProcessFunction;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 
+/**
+ * Basic Type 2 metrics are a simple serializable function which takes a TSAccumSequence and outputs
+ * a metric. This class is not intended for direct usage.
+ */
 @AutoValue
-public abstract class StdDev implements Serializable {
+public abstract class BType2
+    extends PTransform<PCollection<KV<TSKey, TSAccumSequence>>, PCollection<KV<TSKey, TSAccum>>> {
 
-  public static Builder toBuilder() {
-    return new AutoValue_StdDev.Builder();
+  public abstract Builder toBuilder();
+
+  @Nullable
+  public abstract Contextful<Fn<KV<TSKey, TSAccumSequence>, KV<TSKey, TSAccum>>> getMapping();
+
+  public BType2 via(ProcessFunction<KV<TSKey, TSAccumSequence>, KV<TSKey, TSAccum>> fn) {
+    return this.toBuilder().setMapping(Contextful.fn(fn)).build();
+  }
+
+  public static Builder builder() {
+    return new AutoValue_BType2.Builder();
   }
 
   @AutoValue.Builder
   public abstract static class Builder {
+    public abstract BType2 build();
 
-    public abstract StdDev build();
+    public abstract Builder setMapping(
+        Contextful<Fn<KV<TSKey, TSAccumSequence>, KV<TSKey, TSAccum>>> value);
   }
 
-  public StdDevComputation create() {
-    return new StdDevComputation(this);
-  }
-
-  /** Compute StdDev */
-  @TypeTwoComputation(computeType = ComputeType.SINGLE_KEY)
-  public static class StdDevComputation
-      extends PTransform<PCollection<KV<TSKey, TSAccumSequence>>, PCollection<KV<TSKey, TSAccum>>> {
-
-    StdDev stdDev;
-
-    public StdDevComputation(StdDev ma) {
-      this.stdDev = stdDev;
-    }
-
-    public StdDevComputation(@Nullable String name, StdDev stdDev) {
-      super(name);
-      this.stdDev = stdDev;
-    }
-
-    @Override
-    public PCollection<KV<TSKey, TSAccum>> expand(PCollection<KV<TSKey, TSAccumSequence>> input) {
-      PCollection<KV<TSKey, TSAccum>> result =
-          input.apply(Values.create()).apply(ParDo.of(new ComputeStdDevDoFn()));
-      return result;
-    }
+  @Override
+  public PCollection<KV<TSKey, TSAccum>> expand(PCollection<KV<TSKey, TSAccumSequence>> input) {
+    return input.apply(
+        MapElements.into(CommonUtils.getKvTSAccumTypedescritors()).via(getMapping()));
   }
 }

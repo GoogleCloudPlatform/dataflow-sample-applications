@@ -22,10 +22,8 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSNumericCombiner;
-import com.google.dataflow.sample.timeseriesflow.metrics.BB;
-import com.google.dataflow.sample.timeseriesflow.metrics.MA;
-import com.google.dataflow.sample.timeseriesflow.metrics.RSI;
-import com.google.dataflow.sample.timeseriesflow.metrics.StdDev;
+import com.google.dataflow.sample.timeseriesflow.metrics.basic.bb.BB;
+import com.google.dataflow.sample.timeseriesflow.metrics.complex.rsi.RSI;
 import java.math.BigDecimal;
 import java.util.List;
 import org.apache.beam.sdk.annotations.Experimental;
@@ -57,15 +55,6 @@ public class AllMetricsWithDefaults {
             .setAverageComputationMethod(RSI.AverageComputationMethod.ALL)
             .build()
             .create(),
-        MA.toBuilder()
-            .setAverageComputationMethod(MA.AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
-            .build()
-            .create(),
-        MA.toBuilder()
-            .setAverageComputationMethod(MA.AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE)
-            .setWeight(BigDecimal.valueOf(2D / (3D + 1D)))
-            .build()
-            .create(),
         BB.toBuilder()
             .setAverageComputationMethod(BB.AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE)
             .setWeight(BigDecimal.valueOf(2D / (3D + 1D)))
@@ -76,7 +65,6 @@ public class AllMetricsWithDefaults {
             .setAverageComputationMethod(BB.AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
             .setDevFactor(2)
             .build()
-            .create(),
-        StdDev.toBuilder().build().create());
+            .create());
   }
 }
