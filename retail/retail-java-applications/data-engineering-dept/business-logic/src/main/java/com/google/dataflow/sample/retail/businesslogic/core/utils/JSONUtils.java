@@ -104,7 +104,7 @@ public class JSONUtils {
       PCollection<ErrorMsg> errorMsgs =
           result
               .getFailedToParseLines()
-              .apply("CreateRows", ParDo.of(new CreateErrorEvents(errMessageSchema)))
+              .apply("CreateErrorRows", ParDo.of(new CreateErrorEvents(errMessageSchema)))
               .setRowSchema(errMessageSchema)
               .apply("ConvertRowsToErrMsg", Convert.fromRows(ErrorMsg.class));
 
