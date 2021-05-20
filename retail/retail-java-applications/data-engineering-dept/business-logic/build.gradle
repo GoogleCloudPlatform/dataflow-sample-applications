@@ -34,6 +34,19 @@ tasks.matching {task -> task.name.startsWith('spotbugs')}.forEach {
     }
 }
 
+test {
+    testLogging {
+        events "passed", "skipped", "failed" //, "standardOut", "standardError"
+
+        showExceptions true
+        exceptionFormat "full"
+        showCauses true
+        showStackTraces true
+
+        showStandardStreams = false
+    }
+}
+
 dependencies {
     compile project(':data-engineering-dept:data-objects')
 
