@@ -104,9 +104,9 @@ public class JSONUtils {
       PCollection<ErrorMsg> errorMsgs =
           result
               .getFailedToParseLines()
-              .apply("CreateErrorMessages", ParDo.of(new CreateErrorEvents(errMessageSchema)))
+              .apply("CreateRows", ParDo.of(new CreateErrorEvents(errMessageSchema)))
               .setRowSchema(errMessageSchema)
-              .apply("ConvertErrMsgToRows", Convert.fromRows(ErrorMsg.class));
+              .apply("ConvertRowsToErrMsg", Convert.fromRows(ErrorMsg.class));
 
       if (sinkType != null) {
         errorMsgs.apply(DeadLetterSink.createSink(sinkType));
