@@ -24,6 +24,7 @@ import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.JsonToRow;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 import org.joda.time.Instant;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,7 +34,7 @@ import org.junit.runners.JUnit4;
 /** Unit tests for {@link JsonToRow}. */
 @RunWith(JUnit4.class)
 public class JSONUtilsTest {
-  private static final Long TIME = Instant.parse("2000-01-01T00:00:00").getMillis();
+  private static final Long TIME = Instant.parse("2000-01-01T00:00:00Z").getMillis();
 
   private static final ClickStreamEvent AUTO_VALUE_EVENT =
       ClickStreamEvent.builder()
@@ -46,7 +47,7 @@ public class JSONUtilsTest {
           .build();
 
   private static final String JSON =
-      "{\"eventTime\":null,\"event\":\"event\",\"timestamp\":946656000000,\"user_id\":999,\"client_id\":\"1\",\"page\":\"pageRef\",\"page_previous\":\"pageTarget\",\"ecommerce\":null}\n";
+      "{\"eventTime\":null,\"event\":\"event\",\"timestamp\":946684800000,\"user_id\":999,\"client_id\":\"1\",\"page\":\"pageRef\",\"page_previous\":\"pageTarget\",\"ecommerce\":null}\n";
 
   @Rule public transient TestPipeline pipeline = TestPipeline.create();
 
