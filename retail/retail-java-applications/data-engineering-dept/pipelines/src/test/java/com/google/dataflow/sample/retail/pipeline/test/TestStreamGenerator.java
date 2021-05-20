@@ -15,11 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.dataflow.sample.retail.pipeine.test;
+package com.google.dataflow.sample.retail.pipeline.test;
 
-import com.google.dataflow.sample.retail.businesslogic.core.utils.test.avrotestobjects.ClickStreamEventAVRO;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.test.avrotestobjects.InventoryAVRO;
 import com.google.dataflow.sample.retail.businesslogic.core.utils.test.avrotestobjects.TransactionsAVRO;
+import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
+import com.google.dataflow.sample.retail.dataobjects.Ecommerce;
+import com.google.dataflow.sample.retail.dataobjects.Item;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -32,6 +34,7 @@ import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.TupleTag;
 import org.apache.beam.sdk.values.TupleTagList;
+import org.apache.beam.vendor.grpc.v1p26p0.com.google.common.collect.ImmutableList;
 import org.apache.beam.vendor.grpc.v1p26p0.com.google.gson.Gson;
 import org.apache.beam.vendor.grpc.v1p26p0.com.google.gson.GsonBuilder;
 import org.joda.time.Duration;
@@ -46,7 +49,7 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStreamGenerator.class);
 
-  public static final TupleTag<String> CLICKSTREAM = new TupleTag<String>() {};
+  public static final TupleTag<ClickStreamEvent> CLICKSTREAM = new TupleTag<ClickStreamEvent>() {};
   public static final TupleTag<String> TRANSACTION = new TupleTag<String>() {};
   public static final TupleTag<String> STOCK = new TupleTag<String>() {};
 
@@ -60,7 +63,7 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
                 .withOutputTags(CLICKSTREAM, TupleTagList.of(TRANSACTION).and(STOCK)));
   }
 
-  private static class CreateClickStream extends DoFn<Long, String> {
+  private static class CreateClickStream extends DoFn<Long, ClickStreamEvent> {
     Gson gson = null;
 
     DateTimeFormatter fm;
@@ -86,74 +89,65 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
 
         String sessionId = UUID.randomUUID().toString();
 
-        ClickStreamEventAVRO click = new ClickStreamEventAVRO();
-        click.clientId = sessionId;
-        click.eventDateTime = time.toString(fm);
-        click.clientId = UUID.randomUUID().toString();
-        click.pageRef = String.format("P%s", pageReferrer);
-        click.pageTarget = String.format("P%s", currentPage);
-        click.agent =
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
-        click.transaction = false;
-        click.uid = 1L;
-        click.event = "browse";
+        ClickStreamEvent click =
+            ClickStreamEvent.builder()
+                .setClientId(sessionId)
+                .setEventTime(time.toString(fm))
+                .setClientId(UUID.randomUUID().toString())
+                .setPage(String.format("P%s", pageReferrer))
+                .setPagePrevious(String.format("P%s", currentPage))
+                .setUid(1L)
+                .setEvent("browse")
+                .build();
 
-        pc.output(gson.toJson(click));
-        LOG.debug(String.format("Genrating Msg: %s", gson.toJson(click)));
+        pc.output(click);
+        LOG.debug(String.format("Generating Msg: %s", gson.toJson(click)));
 
         pageReferrer = currentPage;
         currentPage = ThreadLocalRandom.current().nextInt(10);
       }
 
-      ClickStreamEventAVRO click = new ClickStreamEventAVRO();
-      click.clientId = UUID.randomUUID().toString();
-      click.eventDateTime = time.toString(fm);
-      click.pageRef = String.format("P%s", pageReferrer);
-      click.pageTarget = String.format("P%s", currentPage);
-      click.agent =
-          "Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
-      click.transaction = false;
-      click.uid = 1L;
-      click.event = "ERROR-CODE-B87769A";
+      ClickStreamEvent.Builder click =
+          ClickStreamEvent.builder()
+              .setClientId(UUID.randomUUID().toString())
+              .setEventTime(time.toString(fm))
+              .setPage(String.format("P%s", pageReferrer))
+              .setPagePrevious(String.format("P%s", currentPage))
+              .setUid(1L)
+              .setEvent("ERROR-CODE-B87769A");
 
       /**
        * **********************************************************************************************
        * Generate and error event.
        * **********************************************************************************************
        */
-      pc.output(gson.toJson(click));
-      LOG.debug(String.format("Generating Msg: %s", gson.toJson(click)));
+      pc.output(click.build());
 
       /**
        * **********************************************************************************************
        * Generate missing uid event.
        * **********************************************************************************************
        */
-      click.event = "browse";
-      click.uid = null;
-      click.clientId = UUID.randomUUID().toString();
-      pc.output(gson.toJson(click));
-      LOG.debug(String.format("Generating Msg: %s", gson.toJson(click)));
+      click.setEvent("browse").setUid(null).setClientId(UUID.randomUUID().toString());
+      pc.output(click.build());
 
       /**
        * **********************************************************************************************
        * Generate bad date format events.
        * **********************************************************************************************
        */
-      click.clientId = UUID.randomUUID().toString();
-      click.eventDateTime = "BROKEN DATE FORMAT!!!";
-      pc.output(gson.toJson(click));
-      LOG.debug(String.format("Generating Msg: %s", gson.toJson(click)));
+      click.setEventTime("BROKEN DATE FORMAT!!!").setClientId(UUID.randomUUID().toString());
+      pc.output(click.build());
 
       /**
        * **********************************************************************************************
        * Generate events with date in the future
        * **********************************************************************************************
        */
-      click.clientId = UUID.randomUUID().toString();
-      click.eventDateTime = time.plus(Duration.standardDays(30)).toString(fm);
-      pc.output(gson.toJson(click));
-      LOG.debug(String.format("Generating Msg: %s", gson.toJson(click)));
+      click
+          .setEventTime(time.plus(Duration.standardDays(30)).toString(fm))
+          .setClientId(UUID.randomUUID().toString());
+      pc.output(click.build());
 
       /**
        * **********************************************************************************************
@@ -165,24 +159,22 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
 
       String sessionId = UUID.randomUUID().toString();
 
-      List<String> clickstream = new ArrayList<>();
+      List<ClickStreamEvent> clickstream = new ArrayList<>();
       Instant clickTime = time;
 
       for (int i = 0; i < 3; i++) {
 
-        click = new ClickStreamEventAVRO();
-        click.clientId = sessionId;
-        click.eventDateTime = clickTime.toString(fm);
-        click.pageRef = String.format("P%s", pageReferrer);
-        click.pageTarget = String.format("P%s", currentPage);
-        click.agent =
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
-        click.transaction = false;
-        click.uid = 1L;
-        click.event = "browse";
+        click =
+            ClickStreamEvent.builder()
+                .setClientId(sessionId)
+                .setEventTime(time.toString(fm))
+                .setClientId(UUID.randomUUID().toString())
+                .setPage(String.format("P%s", pageReferrer))
+                .setPagePrevious(String.format("P%s", currentPage))
+                .setUid(1L)
+                .setEvent("browse");
 
-        pc.outputWithTimestamp(CLICKSTREAM, gson.toJson(click), clickTime);
-        LOG.debug(String.format("Generating Msg: %s", gson.toJson(click)));
+        pc.outputWithTimestamp(CLICKSTREAM, click.build(), clickTime);
 
         clickTime = clickTime.plus(Duration.standardSeconds(i + 2));
         pageReferrer = currentPage;
@@ -191,35 +183,29 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
 
       clickTime = clickTime.plus(Duration.standardSeconds(1));
 
-      ClickStreamEventAVRO addToCart = new ClickStreamEventAVRO();
-      addToCart.clientId = sessionId;
-      addToCart.eventDateTime = time.toString(fm);
-      addToCart.pageRef = String.format("P%s", pageReferrer);
-      addToCart.pageTarget = String.format("P%s", currentPage);
-      addToCart.agent =
-          "Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
-      addToCart.transaction = false;
-      addToCart.uid = 1L;
-      addToCart.event = "add-to-cart";
+      ClickStreamEvent.Builder addToCart = click.setEvent("add-to-cart");
 
-      clickstream.add(gson.toJson(addToCart));
-      LOG.debug(String.format("Generating Msg: %s", gson.toJson(addToCart)));
+      clickstream.add(addToCart.build());
 
       clickTime = clickTime.plus(Duration.standardSeconds(1));
 
-      ClickStreamEventAVRO purchase = new ClickStreamEventAVRO();
-      purchase.eventDateTime = time.toString(fm);
-      purchase.clientId = sessionId;
-      purchase.pageRef = String.format("P%s", pageReferrer);
-      purchase.pageTarget = String.format("P%s", currentPage);
-      purchase.agent =
-          "Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
-      purchase.transaction = false;
-      purchase.uid = 1L;
-      purchase.event = "purchase";
+      ClickStreamEvent.Builder purchase =
+          click
+              .setEvent("purchase")
+              .setEcommerce(
+                  Ecommerce.builder()
+                      .setItems(
+                          ImmutableList.of(
+                              Item.builder()
+                                  .setIndex(0)
+                                  .setItemCat01("cat01")
+                                  .setItemListId("1")
+                                  .setPrice(1F)
+                                  .setQuantity(1)
+                                  .build()))
+                      .build());
 
-      clickstream.add(gson.toJson(purchase));
-      LOG.debug(String.format("Generating Msg: %s", gson.toJson(purchase)));
+      clickstream.add(purchase.build());
 
       clickTime = clickTime.plus(Duration.standardSeconds(1));
 
@@ -256,19 +242,17 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
 
       for (int i = 0; i < 3; i++) {
 
-        click = new ClickStreamEventAVRO();
-        click.clientId = sessionId;
-        click.eventDateTime = clickTime.toString(fm);
-        click.pageRef = String.format("P%s", pageReferrer);
-        click.pageTarget = String.format("P%s", currentPage);
-        click.agent =
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
-        click.transaction = false;
-        click.uid = 1L;
-        click.event = "browse";
+        click =
+            ClickStreamEvent.builder()
+                .setClientId(sessionId)
+                .setEventTime(time.toString(fm))
+                .setClientId(UUID.randomUUID().toString())
+                .setPage(String.format("P%s", pageReferrer))
+                .setPagePrevious(String.format("P%s", currentPage))
+                .setUid(1L)
+                .setEvent("browse");
 
-        pc.outputWithTimestamp(CLICKSTREAM, gson.toJson(click), clickTime);
-        LOG.debug(String.format("Generating Msg: %s", gson.toJson(click)));
+        pc.outputWithTimestamp(CLICKSTREAM, click.build(), clickTime);
 
         clickTime = clickTime.plus(Duration.standardSeconds(i + 2));
         pageReferrer = currentPage;
@@ -279,18 +263,17 @@ public class TestStreamGenerator extends PTransform<PBegin, PCollectionTuple> {
 
       for (int i = 0; i < 3; i++) {
 
-        click = new ClickStreamEventAVRO();
-        click.clientId = sessionId;
-        click.eventDateTime = clickTime.toString(fm);
-        click.pageRef = String.format("P%s", pageReferrer);
-        click.pageTarget = String.format("P%s", currentPage);
-        click.agent =
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
-        click.transaction = false;
-        click.uid = 1L;
-        click.event = "browse";
+        click =
+            ClickStreamEvent.builder()
+                .setClientId(sessionId)
+                .setEventTime(time.toString(fm))
+                .setClientId(UUID.randomUUID().toString())
+                .setPage(String.format("P%s", pageReferrer))
+                .setPagePrevious(String.format("P%s", currentPage))
+                .setUid(1L)
+                .setEvent("browse");
 
-        pc.outputWithTimestamp(CLICKSTREAM, gson.toJson(click), clickTime);
+        pc.outputWithTimestamp(CLICKSTREAM, click.build(), clickTime);
         LOG.debug(String.format("Generating Msg: %s", gson.toJson(click)));
 
         clickTime = clickTime.plus(Duration.standardSeconds(i + 2));

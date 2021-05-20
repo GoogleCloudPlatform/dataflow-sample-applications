@@ -18,7 +18,6 @@
 package com.google.dataflow.sample.retail.dataobjects;
 
 import com.google.auto.value.AutoValue;
-import java.util.List;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
@@ -27,7 +26,113 @@ import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
 
 /**
  * Objects used for dealing with clickstream within the pipeline and schemas for I/O of clickstream
- * events.
+ * events. Example events:
+ *
+ * <p>View Item
+ *
+ * <pre>{@code
+ *     {
+ *   "event_datetime":"2020-11-16 22:59:59",
+ *   "event": "view_item",
+ *   "user_id": "UID00003",
+ *   "client_id": "CID00003",
+ *   "page":"/product-67890",
+ *   "page_previous": "/category-tshirts",
+ *   "ecommerce": {
+ *     "items": [{
+ *       "item_name": "Donut Friday Scented T-Shirt",
+ *       "item_id": "67890",
+ *       "price": 33.75,
+ *       "item_brand": "Google",
+ *       "item_category": "Apparel",
+ *       "item_category_2": "Mens",
+ *       "item_category_3": "Shirts",
+ *       "item_category_4": "Tshirts",
+ *       "item_variant": "Black",
+ *       "item_list_name": "Search Results",
+ *       "item_list_id": "SR123",
+ *       "index": 1,
+ *       "quantity": 1
+ *     }]
+ *   }
+ * }
+ *
+ *
+ * }</pre>
+ *
+ * add_to_cart
+ *
+ * <pre>{@code
+ *     {
+ *   "event_datetime":"2020-11-16 20:59:59",
+ *   "event": "add_to_cart",
+ *   "user_id": "UID00003",
+ *   "client_id": "CID00003",
+ *   "page":"/product-67890",
+ *   "page_previous": "/category-tshirts",
+ *   "ecommerce": {
+ *     "items": [{
+ *       "item_name": "Donut Friday Scented T-Shirt",
+ *       "item_id": "67890",
+ *       "price": 33.75,
+ *       "item_brand": "Google",
+ *       "item_category": "Apparel",
+ *       "item_category_2": "Mens",
+ *       "item_category_3": "Shirts",
+ *       "item_category_4": "Tshirts",
+ *       "item_variant": "Black",
+ *       "item_list_name": "Search Results",
+ *       "item_list_id": "SR123",
+ *       "index": 1,
+ *       "quantity": 2
+ *     }]
+ *   }
+ * }
+ *
+ * }</pre>
+ *
+ * purchase
+ *
+ * <pre>{@code
+ * {
+ *   "event_datetime":"2020-11-16 20:59:59",
+ *   "event": "purchase",
+ *   "user_id": "UID00001",
+ *   "client_id": "CID00003",
+ *   "page":"/checkout",
+ *   "page_previous": "/order-confirmation",
+ *   "ecommerce": {
+ *     "purchase": {
+ *       "transaction_id": "T12345",
+ *       "affiliation": "Online Store",
+ *       "value": 35.43,
+ *       "tax": 4.90,
+ *       "shipping": 5.99,
+ *       "currency": "EUR",
+ *       "coupon": "SUMMER_SALE",
+ *       "items": [{
+ *         "item_name": "Triblend Android T-Shirt",
+ *         "item_id": "12345",
+ *         "item_price": 15.25,
+ *         "item_brand": "Google",
+ *         "item_category": "Apparel",
+ *         "item_variant": "Gray",
+ *         "quantity": 1,
+ *         "item_coupon": ""
+ *       }, {
+ *         "item_name": "Donut Friday Scented T-Shirt",
+ *         "item_id": "67890",
+ *         "item_price": 33.75,
+ *         "item_brand": "Google",
+ *         "item_category": "Apparel",
+ *         "item_variant": "Black",
+ *         "quantity": 1
+ *       }]
+ *     }
+ *   }
+ * }
+ *
+ * }</pre>
  */
 @Experimental
 public class ClickStream {
@@ -55,17 +160,14 @@ public class ClickStream {
     @SchemaFieldName("client_id")
     public @Nullable abstract String getClientId();
 
-    @SchemaFieldName("pageRef")
-    public @Nullable abstract String getPageRef();
+    @SchemaFieldName("page")
+    public @Nullable abstract String getPage();
 
-    @SchemaFieldName("pageTarget")
-    public @Nullable abstract String getPageTarget();
+    @SchemaFieldName("page_previous")
+    public @Nullable abstract String getPagePrevious();
 
-    @SchemaFieldName("agent")
-    public @Nullable abstract String getAgent();
-
-    @SchemaFieldName("items")
-    public @Nullable abstract List<Item> getItems();
+    @SchemaFieldName("ecommerce")
+    public @Nullable abstract Ecommerce getEcommerce();
 
     public abstract Builder toBuilder();
 
@@ -86,13 +188,11 @@ public class ClickStream {
 
       public abstract Builder setClientId(String value);
 
-      public abstract Builder setPageRef(String value);
+      public abstract Builder setPage(String value);
 
-      public abstract Builder setPageTarget(String value);
+      public abstract Builder setPagePrevious(String value);
 
-      public abstract Builder setAgent(String value);
-
-      public abstract Builder setItems(List<Item> value);
+      public abstract Builder setEcommerce(Ecommerce ecommerce);
 
       public abstract ClickStreamEvent build();
     }
@@ -111,96 +211,12 @@ public class ClickStream {
 
   @AutoValue
   @DefaultSchema(AutoValueSchema.class)
-  public abstract static class Item {
-
-    @SchemaFieldName("item_name")
-    public @Nullable abstract String getItemName();
-
-    @SchemaFieldName("item_id")
-    public @Nullable abstract String getItemId();
-
-    @SchemaFieldName("price")
-    public @Nullable abstract String getPrice();
-
-    @SchemaFieldName("item_brand")
-    public @Nullable abstract String getItemBrand();
-
-    @SchemaFieldName("item_category")
-    public @Nullable abstract String getItemCat01();
-
-    @SchemaFieldName("item_category_2")
-    public @Nullable abstract String getItemCat02();
-
-    @SchemaFieldName("item_category_3")
-    public @Nullable abstract String getItemCat03();
-
-    @SchemaFieldName("item_category_4")
-    public @Nullable abstract String getItemCat04();
-
-    @SchemaFieldName("item_category_5")
-    public @Nullable abstract String getItemCat05();
-
-    @SchemaFieldName("item_variant")
-    public @Nullable abstract String getItemVariant();
-
-    @SchemaFieldName("item_list_name")
-    public @Nullable abstract String getItemListName();
-
-    @SchemaFieldName("item_list_id")
-    public @Nullable abstract String getItemListId();
-
-    @SchemaFieldName("index")
-    public @Nullable abstract String getIndex();
-
-    @SchemaFieldName("quantity")
-    public @Nullable abstract String getQuantity();
-
-    public static Builder builder() {
-      return new AutoValue_ClickStream_Item.Builder();
-    }
-
-    @AutoValue.Builder
-    public abstract static class Builder {
-      public abstract Builder setItemName(String newItemName);
-
-      public abstract Builder setItemId(String newItemId);
-
-      public abstract Builder setPrice(String newPrice);
-
-      public abstract Builder setItemBrand(String newItemBrand);
-
-      public abstract Builder setItemCat01(String newItemCat01);
-
-      public abstract Builder setItemCat02(String newItemCat02);
-
-      public abstract Builder setItemCat03(String newItemCat03);
-
-      public abstract Builder setItemCat04(String newItemCat04);
-
-      public abstract Builder setItemCat05(String newItemCat05);
-
-      public abstract Builder setItemVariant(String newItemVariant);
-
-      public abstract Builder setItemListName(String newItemListName);
-
-      public abstract Builder setItemListId(String newItemListId);
-
-      public abstract Builder setIndex(String newIndex);
-
-      public abstract Builder setQuantity(String newQuantity);
-
-      public abstract Item build();
-    }
-  }
-
-  @AutoValue
-  @DefaultSchema(AutoValueSchema.class)
   public abstract static class PageViewAggregator {
     public @Nullable abstract Long getDurationMS();
 
     public @Nullable abstract Long getStartTime();
 
-    public @Nullable abstract String getPageRef();
+    public @Nullable abstract String getPage();
 
     public @Nullable abstract Long getCount();
 
@@ -217,7 +233,7 @@ public class ClickStream {
 
       public abstract Builder setStartTime(Long value);
 
-      public abstract Builder setPageRef(String value);
+      public abstract Builder setPage(String value);
 
       public abstract Builder setCount(Long value);
 

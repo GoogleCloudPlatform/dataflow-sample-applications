@@ -17,11 +17,8 @@
  */
 package com.google.dataflow.sample.retail.businesslogic.core.utils.test.clickstream;
 
-import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.BackFillSessionData;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.ClickStreamSessions;
-import java.util.Objects;
 import org.apache.beam.sdk.schemas.transforms.Convert;
-import org.apache.beam.sdk.schemas.transforms.Select;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
@@ -29,8 +26,6 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
-import org.apache.beam.sdk.values.TimestampedValue;
-import org.apache.beam.vendor.grpc.v1p26p0.com.google.common.collect.ImmutableList;
 import org.joda.time.Duration;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,7 +39,7 @@ public class BackFillSessionDataTest {
    * This test provides values from time 0 to time 2 with no agent, time 3 has a agent and time 4 is
    * again null
    */
-  public void testBackFillSessionization() throws Exception {
+  public void testSessionization() throws Exception {
 
     Duration windowDuration = Duration.standardMinutes(5);
 
@@ -54,43 +49,17 @@ public class BackFillSessionDataTest {
         pipeline
             .apply(
                 Create.timestamped(
-                    TimestampedValue.of(
-                        ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_0_MINS
-                            .getValue()
-                            .toBuilder()
-                            .setAgent(null)
-                            .build(),
-                        ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_0_MINS.getTimestamp()),
-                    TimestampedValue.of(
-                        ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_1_MINS
-                            .getValue()
-                            .toBuilder()
-                            .setAgent(null)
-                            .build(),
-                        ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_1_MINS.getTimestamp()),
-                    TimestampedValue.of(
-                        ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_2_MINS
-                            .getValue()
-                            .toBuilder()
-                            .setAgent(null)
-                            .build(),
-                        ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_2_MINS.getTimestamp()),
+                    ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_0_MINS,
+                    ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_1_MINS,
+                    ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_2_MINS,
                     ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_3_MINS,
-                    TimestampedValue.of(
-                        ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_4_MINS
-                            .getValue()
-                            .toBuilder()
-                            .setAgent(null)
-                            .build(),
-                        ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_4_MINS.getTimestamp()),
+                    ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_4_MINS,
                     ClickStreamSessionTestUtil.CLICK_STREAM_EVENT_10_MINS))
             .apply(Convert.toRows())
             .apply(ClickStreamSessions.create(windowDuration))
-            .apply(BackFillSessionData.create(ImmutableList.of("agent")))
-            .apply(Select.fieldNames("value.agent"))
             .apply(ParDo.of(new ExtractUserIDCountFromRow()));
 
-    PAssert.that(sessions).containsInAnyOrder(4L, 1L);
+    PAssert.that(sessions).containsInAnyOrder(5L, 1L);
 
     pipeline.run();
   }
@@ -98,8 +67,7 @@ public class BackFillSessionDataTest {
   static class ExtractUserIDCountFromRow extends DoFn<Row, Long> {
     @ProcessElement
     public void process(ProcessContext pc) {
-      long count = pc.element().getArray("agent").stream().filter(Objects::nonNull).count();
-      System.out.println(count);
+      long count = pc.element().getArray("value").size();
       pc.output(count);
     }
   }

@@ -18,7 +18,7 @@
 package com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.validation;
 
 import com.google.dataflow.sample.retail.businesslogic.externalservices.RetailCompanyServices;
-import com.google.dataflow.sample.retail.dataobjects.ClickStream.Item;
+import com.google.dataflow.sample.retail.dataobjects.Item;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -73,7 +73,7 @@ public class EventItemCorrectionService extends DoFn<Row, Row> {
       for (_WindowWrappedEvent event : cache) {
 
         Row row = event.eventData.getRow("data");
-        Collection<Row> items = row.getArray("items");
+        Collection<Row> items = row.getRow("ecommerce").getArray("items");
         List<Row> updatedItems = new ArrayList<>();
 
         for (Row item : items) {
@@ -88,7 +88,9 @@ public class EventItemCorrectionService extends DoFn<Row, Row> {
                   .build());
         }
 
-        Row newDataRow = Row.fromRow(row).withFieldValue("items", updatedItems).build();
+        Row itemsRow =
+            Row.fromRow(row.getRow("ecommerce")).withFieldValue("items", updatedItems).build();
+        Row newDataRow = Row.fromRow(row).withFieldValue("ecommerce", itemsRow).build();
 
         fbc.output(
             Row.fromRow(event.eventData).withFieldValue("data", newDataRow).build(),
@@ -108,6 +110,7 @@ public class EventItemCorrectionService extends DoFn<Row, Row> {
         x ->
             x.eventData
                 .getRow("data")
+                .getRow("ecommerce")
                 .getArray("items")
                 .forEach(y -> ids.add(((Row) y).getString("item_id"))));
 

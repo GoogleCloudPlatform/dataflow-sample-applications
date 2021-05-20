@@ -21,7 +21,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.DeadLetterSink.SinkType;
 import com.google.dataflow.sample.retail.businesslogic.core.transforms.clickstream.ValidateAndCorrectCSEvt;
 import com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent;
-import com.google.dataflow.sample.retail.dataobjects.ClickStream.Item;
+import com.google.dataflow.sample.retail.dataobjects.Ecommerce;
+import com.google.dataflow.sample.retail.dataobjects.Item;
 import org.apache.beam.sdk.schemas.NoSuchSchemaException;
 import org.apache.beam.sdk.schemas.SchemaCoder;
 import org.apache.beam.sdk.schemas.transforms.Convert;
@@ -48,9 +49,8 @@ public class ValidateAndCorrectClickStreamEventsTests {
               .setEventTime("2000-01-01 00:00:00")
               .setUid(1L)
               .setClientId("1")
-              .setAgent("A")
-              .setPageRef("pageRef")
-              .setPageTarget("pageTarget")
+              .setPage("pageRef")
+              .setPagePrevious("pageTarget")
               .setEvent("event")
               .build(),
           Instant.ofEpochMilli(TIME));
@@ -59,9 +59,8 @@ public class ValidateAndCorrectClickStreamEventsTests {
       ClickStreamEvent.builder()
           .setEventTime("2000-XX-01 00:00:00")
           .setClientId("1")
-          .setAgent("A")
-          .setPageRef("pageRef")
-          .setPageTarget("pageTarget")
+          .setPage("pageRef")
+          .setPagePrevious("pageTarget")
           .setEvent("event")
           .setUid(1L)
           .build();
@@ -71,9 +70,8 @@ public class ValidateAndCorrectClickStreamEventsTests {
           .setEventTime("2000-01-02 00:00:00")
           .setUid(1L)
           .setClientId("1")
-          .setAgent("A")
-          .setPageRef("pageRef")
-          .setPageTarget("pageTarget")
+          .setPage("pageRef")
+          .setPagePrevious("pageTarget")
           .setEvent("event")
           .setUid(1L)
           .build();
@@ -82,11 +80,13 @@ public class ValidateAndCorrectClickStreamEventsTests {
       ClickStreamEvent.builder()
           .setEventTime("2000-01-01 00:00:00")
           .setClientId("1")
-          .setAgent("A")
-          .setPageRef("pageRef")
-          .setPageTarget("pageTarget")
+          .setPage("pageRef")
+          .setPagePrevious("pageTarget")
           .setEvent("add_to_cart")
-          .setItems(ImmutableList.of(Item.builder().setPrice("1").setItemId("1").build()))
+          .setEcommerce(
+              Ecommerce.builder()
+                  .setItems(ImmutableList.of(Item.builder().setPrice(1F).setItemId("1").build()))
+                  .build())
           .build();
 
   private static final ClickStreamEvent CLEAN_DATE_TIMESTAMP =
@@ -94,9 +94,8 @@ public class ValidateAndCorrectClickStreamEventsTests {
           .setEventTime("2000-XX-01 00:00:00")
           .setUid(1L)
           .setClientId("1")
-          .setAgent("A")
-          .setPageRef("pageRef")
-          .setPageTarget("pageTarget")
+          .setPage("pageRef")
+          .setPagePrevious("pageTarget")
           .setEvent("event")
           .build();
 
@@ -104,11 +103,13 @@ public class ValidateAndCorrectClickStreamEventsTests {
       ClickStreamEvent.builder()
           .setEventTime("2000-0X-01 00:00:00")
           .setClientId("1")
-          .setAgent("A")
-          .setPageRef("pageRef")
-          .setPageTarget("pageTarget")
+          .setPage("pageRef")
+          .setPagePrevious("pageTarget")
           .setEvent("add_to_cart")
-          .setItems(ImmutableList.of(Item.builder().setPrice("1").setItemId("1").build()))
+          .setEcommerce(
+              Ecommerce.builder()
+                  .setItems(ImmutableList.of(Item.builder().setPrice(1F).setItemId("1").build()))
+                  .build())
           .build();
 
   @Rule public transient TestPipeline pipeline = TestPipeline.create();
@@ -199,15 +200,18 @@ public class ValidateAndCorrectClickStreamEventsTests {
             MISSING_ITEM_INFO
                 .toBuilder()
                 .setTimestamp(TIME)
-                .setItems(
-                    ImmutableList.of(
-                        Item.builder()
-                            .setPrice("1")
-                            .setItemId("1")
-                            .setItemName("foo_name")
-                            .setItemBrand("item_brand")
-                            .setItemCat01("foo_category")
-                            .build()))
+                .setEcommerce(
+                    Ecommerce.builder()
+                        .setItems(
+                            ImmutableList.of(
+                                Item.builder()
+                                    .setPrice(1F)
+                                    .setItemId("1")
+                                    .setItemName("foo_name")
+                                    .setItemBrand("item_brand")
+                                    .setItemCat01("foo_category")
+                                    .build()))
+                        .build())
                 .build());
     pipeline.run();
   }
@@ -235,15 +239,18 @@ public class ValidateAndCorrectClickStreamEventsTests {
         .containsInAnyOrder(
             MISSING_ITEM_INFO_BAD_DATE
                 .toBuilder()
-                .setItems(
-                    ImmutableList.of(
-                        Item.builder()
-                            .setPrice("1")
-                            .setItemId("1")
-                            .setItemName("foo_name")
-                            .setItemBrand("item_brand")
-                            .setItemCat01("foo_category")
-                            .build()))
+                .setEcommerce(
+                    Ecommerce.builder()
+                        .setItems(
+                            ImmutableList.of(
+                                Item.builder()
+                                    .setPrice(1F)
+                                    .setItemId("1")
+                                    .setItemName("foo_name")
+                                    .setItemBrand("item_brand")
+                                    .setItemCat01("foo_category")
+                                    .build()))
+                        .build())
                 .setTimestamp(TIME)
                 .build());
     pipeline.run();

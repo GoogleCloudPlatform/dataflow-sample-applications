@@ -33,12 +33,12 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This transform creates sessions from the incoming clickstream using the cliendId and
- * SessionWindows. The output is a ROW with schema:
+ * SessionWindows. The output is a
  *
  * <pre>{@code
- * Field Name        Field Type
- * key               ROW{clientID:STRING}
- * values	         ITERABLE[ROW[{@link com.google.dataflow.sample.retail.dataobjects.ClickStream.ClickStreamEvent}]]
+ * Field Name	    Field Type
+ * key	            ROW{clientID:STRING}
+ * value	        ITERABLE[ROW[ClickstreamEvent]]
  * }</pre>
  */
 @Experimental
@@ -71,17 +71,19 @@ public abstract class ClickStreamSessions extends PTransform<PCollection<Row>, P
   }
 
   @Override
-  /**
-   * Returns a Row object in the format:
-   *
-   * <pre>{@code
-   * Field Name	    Field Type
-   * key	        ROW{clientID:STRING}
-   * values	        ITERABLE[ROW[ClickstreamEvent]]
-   * }</pre>
-   */
   public PCollection<Row> expand(PCollection<Row> input) {
-    Preconditions.checkNotNull(this.getSessionWindowGapDuration(), "Must set a session value.");
+
+    Preconditions.checkNotNull(
+        this.getSessionWindowGapDuration(), "Must set a session gap duration.");
+    /*
+     * Group.byFiledNames returns a Row object in the format:
+     *
+     * <pre>{@code
+     * Field Name	    Field Type
+     * key	            ROW{clientID:STRING}
+     * value	        ITERABLE[ROW[ClickstreamEvent]]
+     * }</pre>
+     */
     return input
         .apply(Window.into(Sessions.withGapDuration(getSessionWindowGapDuration())))
         .apply(Group.byFieldNames("client_id"));

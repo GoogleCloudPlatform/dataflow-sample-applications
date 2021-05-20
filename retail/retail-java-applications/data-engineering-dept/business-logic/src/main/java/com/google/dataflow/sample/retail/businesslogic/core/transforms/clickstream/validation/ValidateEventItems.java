@@ -51,7 +51,7 @@ public class ValidateEventItems extends DoFn<Row, Row> {
     // If the event is of a type that needs Item to be present, do checks
     if (chkItemRequired(data)) {
 
-      Collection<Row> items = data.getArray("items");
+      Collection<Row> items = data.getRow("ecommerce").getArray("items");
       // If no items this is not recoverable, send to dead letter.
       if (items == null || items.size() == 0) {
 

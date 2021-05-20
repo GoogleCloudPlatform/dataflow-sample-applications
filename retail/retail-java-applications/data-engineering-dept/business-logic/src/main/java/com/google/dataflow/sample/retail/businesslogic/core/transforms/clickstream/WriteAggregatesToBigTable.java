@@ -92,13 +92,12 @@ public class WriteAggregatesToBigTable {
         throws UnsupportedEncodingException {
 
       Put put =
-          new Put(
-              String.format("%s-%s", input.getPageRef(), input.getStartTime()).getBytes("UTF-8"));
+          new Put(String.format("%s-%s", input.getPage(), input.getStartTime()).getBytes("UTF-8"));
 
       String charset = "UTF-8";
 
       // TODO This should never be Null eliminate bug.
-      String pageRef = Optional.ofNullable(input.getPageRef()).orElse("");
+      String pageRef = Optional.ofNullable(input.getPage()).orElse("");
       Long count = Optional.ofNullable(input.getCount()).orElse(0L);
 
       put.addColumn(
