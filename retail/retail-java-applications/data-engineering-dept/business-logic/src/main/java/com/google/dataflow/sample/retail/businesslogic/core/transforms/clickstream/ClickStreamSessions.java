@@ -36,8 +36,8 @@ import org.slf4j.LoggerFactory;
  * SessionWindows. The output is a
  *
  * <pre>{@code
- * Field Name	    Field Type
- * key	            ROW{clientID:STRING}
+ * Field Name      Field Type
+ * key              ROW{clientID:STRING}
  * value	        ITERABLE[ROW[ClickstreamEvent]]
  * }</pre>
  */
@@ -61,6 +61,7 @@ public abstract class ClickStreamSessions extends PTransform<PCollection<Row>, P
 
   @AutoValue.Builder
   public abstract static class Builder {
+
     public abstract Builder setSessionWindowGapDuration(Duration newSessionWindowGapDuration);
 
     public abstract ClickStreamSessions build();
@@ -85,7 +86,8 @@ public abstract class ClickStreamSessions extends PTransform<PCollection<Row>, P
      * }</pre>
      */
     return input
-        .apply(Window.into(Sessions.withGapDuration(getSessionWindowGapDuration())))
-        .apply(Group.byFieldNames("client_id"));
+        .apply("SessionWindow",
+            Window.into(Sessions.withGapDuration(getSessionWindowGapDuration())))
+        .apply("GroupByClientId", Group.byFieldNames("client_id"));
   }
 }
