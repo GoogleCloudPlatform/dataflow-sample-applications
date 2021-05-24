@@ -23,8 +23,8 @@ import static java.lang.Boolean.TRUE;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.dataflow.sample.timeseriesflow.AllComputationsExamplePipeline;
+import com.google.dataflow.sample.timeseriesflow.graph.GenerateComputations;
 import com.google.dataflow.sample.timeseriesflow.metrics.utils.AllMetricsWithDefaults;
-import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.dataflow.sample.timeseriesflow.transforms.PerfectRectangles;
 import java.time.Instant;
 import org.apache.beam.sdk.Pipeline;
