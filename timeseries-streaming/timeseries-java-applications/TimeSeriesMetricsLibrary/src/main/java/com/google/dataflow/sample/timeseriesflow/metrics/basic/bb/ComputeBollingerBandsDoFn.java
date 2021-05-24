@@ -57,37 +57,25 @@ class ComputeBollingerBandsDoFn extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>
     if (averageComputationMethod == EXPONENTIAL_MOVING_AVERAGE) {
       movingAverage = StatisticalFormulas.computeExponentialMovingAverage(itAvg, this.alpha);
       BigDecimal stdDev = StatisticalFormulas.computeStandardDeviation(itStdDev);
+      BigDecimal stdDevDelta = stdDev.multiply(BigDecimal.valueOf(this.devFactor));
 
       bbBuilder
           .setMovementCount(CommonUtils.createNumData(pc.element().getAccumsCount()))
           .setMidBandEMA(CommonUtils.createNumData(movingAverage.doubleValue()))
-          .setUpperBandEMA(
-              CommonUtils.createNumData(
-                  movingAverage
-                      .add(stdDev.multiply(BigDecimal.valueOf(this.devFactor)))
-                      .doubleValue()))
+          .setUpperBandEMA(CommonUtils.createNumData(movingAverage.add(stdDevDelta).doubleValue()))
           .setBottomBandEMA(
-              CommonUtils.createNumData(
-                  movingAverage
-                      .subtract(stdDev.multiply(BigDecimal.valueOf(this.devFactor)))
-                      .doubleValue()));
+              CommonUtils.createNumData(movingAverage.subtract(stdDevDelta).doubleValue()));
     } else { // By default we use Simple Moving Average
       movingAverage = StatisticalFormulas.computeSimpleMovingAverage(itAvg);
       BigDecimal stdDev = StatisticalFormulas.computeStandardDeviation(itStdDev);
+      BigDecimal stdDevDelta = stdDev.multiply(BigDecimal.valueOf(this.devFactor));
 
       bbBuilder
           .setMovementCount(CommonUtils.createNumData(pc.element().getAccumsCount()))
           .setMidBandSMA(CommonUtils.createNumData(movingAverage.doubleValue()))
-          .setUpperBandSMA(
-              CommonUtils.createNumData(
-                  movingAverage
-                      .add(stdDev.multiply(BigDecimal.valueOf(this.devFactor)))
-                      .doubleValue()))
+          .setUpperBandSMA(CommonUtils.createNumData(movingAverage.add(stdDevDelta).doubleValue()))
           .setBottomBandSMA(
-              CommonUtils.createNumData(
-                  movingAverage
-                      .subtract(stdDev.multiply(BigDecimal.valueOf(this.devFactor)))
-                      .doubleValue()));
+              CommonUtils.createNumData(movingAverage.subtract(stdDevDelta).doubleValue()));
     }
 
     o.output(KV.of(pc.element().getKey(), bbBuilder.build()));
