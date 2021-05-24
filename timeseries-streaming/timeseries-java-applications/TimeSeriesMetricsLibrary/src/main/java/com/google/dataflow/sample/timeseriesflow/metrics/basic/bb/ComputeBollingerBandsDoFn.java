@@ -26,6 +26,7 @@ import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.metrics.utils.StatisticalFormulas;
 import java.math.BigDecimal;
 import java.util.Iterator;
+import java.util.Objects;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
 
@@ -45,12 +46,13 @@ class ComputeBollingerBandsDoFn extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>
   @ProcessElement
   public void process(ProcessContext pc, OutputReceiver<KV<TSKey, TSAccum>> o) {
 
-    Iterator<TSAccum> itAvg = pc.element().getAccumsList().iterator();
+    Iterator<TSAccum> itAvg = Objects.requireNonNull(pc.element()).getAccumsList().iterator();
 
-    Iterator<TSAccum> itStdDev = pc.element().getAccumsList().iterator();
+    Iterator<TSAccum> itStdDev = Objects.requireNonNull(pc.element()).getAccumsList().iterator();
 
     AccumBBBuilder bbBuilder =
-        new AccumBBBuilder(TSAccum.newBuilder().setKey(pc.element().getKey()).build());
+        new AccumBBBuilder(
+            TSAccum.newBuilder().setKey(Objects.requireNonNull(pc.element()).getKey()).build());
 
     BigDecimal movingAverage;
 
@@ -60,7 +62,8 @@ class ComputeBollingerBandsDoFn extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>
       BigDecimal stdDevDelta = stdDev.multiply(BigDecimal.valueOf(this.devFactor));
 
       bbBuilder
-          .setMovementCount(CommonUtils.createNumData(pc.element().getAccumsCount()))
+          .setMovementCount(
+              CommonUtils.createNumData(Objects.requireNonNull(pc.element()).getAccumsCount()))
           .setMidBandEMA(CommonUtils.createNumData(movingAverage.doubleValue()))
           .setUpperBandEMA(CommonUtils.createNumData(movingAverage.add(stdDevDelta).doubleValue()))
           .setBottomBandEMA(
@@ -71,13 +74,14 @@ class ComputeBollingerBandsDoFn extends DoFn<TSAccumSequence, KV<TSKey, TSAccum>
       BigDecimal stdDevDelta = stdDev.multiply(BigDecimal.valueOf(this.devFactor));
 
       bbBuilder
-          .setMovementCount(CommonUtils.createNumData(pc.element().getAccumsCount()))
+          .setMovementCount(
+              CommonUtils.createNumData(Objects.requireNonNull(pc.element()).getAccumsCount()))
           .setMidBandSMA(CommonUtils.createNumData(movingAverage.doubleValue()))
           .setUpperBandSMA(CommonUtils.createNumData(movingAverage.add(stdDevDelta).doubleValue()))
           .setBottomBandSMA(
               CommonUtils.createNumData(movingAverage.subtract(stdDevDelta).doubleValue()));
     }
 
-    o.output(KV.of(pc.element().getKey(), bbBuilder.build()));
+    o.output(KV.of(Objects.requireNonNull(pc.element()).getKey(), bbBuilder.build()));
   }
 }
