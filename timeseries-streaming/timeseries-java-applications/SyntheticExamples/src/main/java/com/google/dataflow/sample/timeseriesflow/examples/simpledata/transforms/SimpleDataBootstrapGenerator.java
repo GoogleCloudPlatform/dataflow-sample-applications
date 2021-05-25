@@ -22,10 +22,10 @@ import com.google.dataflow.sample.timeseriesflow.ExampleTimeseriesPipelineOption
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
+import com.google.dataflow.sample.timeseriesflow.graph.GenerateComputations;
 import com.google.dataflow.sample.timeseriesflow.io.tfexample.OutPutTFExampleToFile;
 import com.google.dataflow.sample.timeseriesflow.io.tfexample.TSAccumIterableToTFExample;
 import com.google.dataflow.sample.timeseriesflow.metrics.utils.AllMetricsWithDefaults;
-import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.dataflow.sample.timeseriesflow.transforms.PerfectRectangles;
 import com.google.protobuf.util.Timestamps;
 import java.util.ArrayList;
