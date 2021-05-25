@@ -30,7 +30,7 @@ import org.joda.time.Duration;
 import org.junit.Rule;
 import org.junit.Test;
 
-public class BackFillSessionDataTest {
+public class ClickStreamSessionTest {
 
   @Rule public transient TestPipeline pipeline = TestPipeline.create();
 
