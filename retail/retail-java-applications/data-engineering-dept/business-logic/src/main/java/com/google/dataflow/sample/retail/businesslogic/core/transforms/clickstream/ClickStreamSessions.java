@@ -86,7 +86,7 @@ public abstract class ClickStreamSessions extends PTransform<PCollection<Row>, P
      * }</pre>
      */
     return input
-        .apply("SessionWindow",
+        .apply("ClickStreamSessionWindow",
             Window.into(Sessions.withGapDuration(getSessionWindowGapDuration())))
         .apply("GroupByClientId", Group.byFieldNames("client_id"));
   }
