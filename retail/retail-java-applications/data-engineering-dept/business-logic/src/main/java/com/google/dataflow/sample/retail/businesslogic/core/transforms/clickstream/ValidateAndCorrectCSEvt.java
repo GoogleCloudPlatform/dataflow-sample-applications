@@ -52,11 +52,14 @@ import org.apache.beam.sdk.values.TypeDescriptors;
 @Experimental
 public class ValidateAndCorrectCSEvt extends PTransform<PCollection<Row>, PCollection<Row>> {
 
-  public static final TupleTag<Row> MAIN = new TupleTag<Row>() {};
+  public static final TupleTag<Row> MAIN = new TupleTag<Row>() {
+  };
 
-  public static final TupleTag<ErrorMsg> DEAD_LETTER = new TupleTag<ErrorMsg>() {};
+  public static final TupleTag<ErrorMsg> DEAD_LETTER = new TupleTag<ErrorMsg>() {
+  };
 
-  public static final TupleTag<Row> NEEDS_CORRECTIONS = new TupleTag<Row>() {};
+  public static final TupleTag<Row> NEEDS_CORRECTIONS = new TupleTag<Row>() {
+  };
 
   private final DeadLetterSink.SinkType sinkType;
 
@@ -102,12 +105,13 @@ public class ValidateAndCorrectCSEvt extends PTransform<PCollection<Row>, PColle
     // DeadLetter issues are not fixable
     PCollectionList.of(validateEventItems.get(DEAD_LETTER))
         .apply("FlattenDeadLetter", Flatten.pCollections())
-        .apply(DeadLetterSink.createSink(sinkType));
+        .apply("OutputDeadLetterEvents", DeadLetterSink.createSink(sinkType));
 
     // Next we chain the items through the correction transforms, if they have errors
 
     PCollectionTuple validatedCollections =
         validateItems.apply(
+            "SplitEventsToBeCorrected",
             ParDo.of(new ValidationUtils.ValidationRouter())
                 .withOutputTags(MAIN, TupleTagList.of(ImmutableList.of(NEEDS_CORRECTIONS))));
 
@@ -128,8 +132,9 @@ public class ValidateAndCorrectCSEvt extends PTransform<PCollection<Row>, PColle
     PCollection<Row> extractCleanedRows =
         PCollectionList.of(validatedCollections.get(MAIN).setRowSchema(wrapperSchema))
             .and(eventDateTimeFixed)
-            .apply(Flatten.pCollections())
-            .apply(MapElements.into(TypeDescriptors.rows()).via(x -> x.getRow("data")))
+            .apply("CombineValidAndCorrectedEvents", Flatten.pCollections())
+            .apply("RestoreOriginalSchema",
+                MapElements.into(TypeDescriptors.rows()).via(x -> x.getRow("data")))
             .setRowSchema(input.getSchema());
 
     return extractCleanedRows;
