@@ -20,15 +20,16 @@ package com.google.dataflow.sample.timeseriesflow.common;
 import static com.google.protobuf.util.Timestamps.toMillis;
 
 import com.google.common.base.Preconditions;
-import com.google.dataflow.sample.timeseriesflow.TFXOptions;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data.DataPointCase;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
+import com.google.dataflow.sample.timeseriesflow.options.TFXOptions;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ import org.apache.beam.sdk.extensions.protobuf.ProtoMessageSchema;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.TypeDescriptor;
+import org.apache.beam.sdk.values.TypeDescriptors;
 
 @Experimental
 /** Utilities. */
@@ -96,6 +98,12 @@ public class CommonUtils {
     throw new IllegalArgumentException("Must be Double, Long, Integer or Float");
   }
 
+  /** returns a {@link Data} given a string representing a number */
+  public static Data createNumAsStringData(String data) {
+
+    return Data.newBuilder().setNumAsString(data).build();
+  }
+
   /** Returns a {@link DataPointCase} with a value of 0. Support long, double, float, int only. */
   public static Data createZeroOfType(DataPointCase dataType) {
     Preconditions.checkArgument(
@@ -118,7 +126,8 @@ public class CommonUtils {
         data = createNumData(0);
         break;
       case NUM_AS_STRING:
-        throw new IllegalArgumentException("NUM AS STRING Not Implemented.");
+        data = createNumAsStringData(BigDecimal.ZERO.toString());
+        break;
     }
 
     return data;
@@ -163,9 +172,16 @@ public class CommonUtils {
         return Data.newBuilder().setDoubleVal(dataA.getDoubleVal() + dataB.getDoubleVal()).build();
       case LONG_VAL:
         return Data.newBuilder().setLongVal(dataA.getLongVal() + dataB.getLongVal()).build();
+      case NUM_AS_STRING:
+        return Data.newBuilder()
+            .setNumAsString(
+                new BigDecimal(dataA.getNumAsString())
+                    .add(new BigDecimal(dataB.getNumAsString()))
+                    .toString())
+            .build();
     }
 
-    throw new IllegalArgumentException("Must be Double, Long, Integer or Float");
+    throw new IllegalArgumentException("Must be Double, Long, Integer, Float, or Num as String");
   }
 
   public static Schema tsAccumSequenceSchema() {
@@ -184,6 +200,14 @@ public class CommonUtils {
     return KvCoder.of(ProtoCoder.of(TSKey.class), ProtoCoder.of(TSAccumSequence.class));
   }
 
+  public static TypeDescriptor<KV<TSKey, TSAccum>> getKvTSAccumTypedescritors() {
+    return TypeDescriptors.kvs(TypeDescriptor.of(TSKey.class), TypeDescriptor.of(TSAccum.class));
+  }
+
+  public static TypeDescriptor<KV<TSKey, TSAccumSequence>> getKvTSAccumSequenceTypedescritors() {
+    return TypeDescriptors.kvs(
+        TypeDescriptor.of(TSKey.class), TypeDescriptor.of(TSAccumSequence.class));
+  }
   /**
    * The output sequence length is derived from the Type 1 fixed length value divided by the desired
    * output sequence in seconds. The sequence length must be a multiple of the type 1 fixed value.
@@ -194,7 +218,7 @@ public class CommonUtils {
   public static Integer getNumOfSequenceTimesteps(TFXOptions tfxOptions) {
     Preconditions.checkNotNull(tfxOptions);
     Integer type1length = tfxOptions.getTypeOneComputationsLengthInSecs();
-    Integer desiredSequenceLength = tfxOptions.getSequenceLengthInSeconds();
+    Integer desiredSequenceLength = tfxOptions.getOutputTimestepLengthInSecs();
 
     Preconditions.checkNotNull(type1length);
     Preconditions.checkNotNull(desiredSequenceLength);

@@ -61,96 +61,12 @@ feature {
   }
 }
 feature {
-  name: "timeseries_x-value-BB_BOTTOM_BAND_EMA"
-  value_count {
-    min: 5
-    max: 5
-  }
-  type: FLOAT
-  presence {
-    min_fraction: 1.0
-    min_count: 1
-  }
-}
-feature {
-  name: "timeseries_x-value-BB_BOTTOM_BAND_SMA"
-  value_count {
-    min: 5
-    max: 5
-  }
-  type: FLOAT
-  presence {
-    min_fraction: 1.0
-    min_count: 1
-  }
-}
-feature {
-  name: "timeseries_x-value-BB_MIDDLE_BAND_EMA"
-  value_count {
-    min: 5
-    max: 5
-  }
-  type: FLOAT
-  presence {
-    min_fraction: 1.0
-    min_count: 1
-  }
-}
-feature {
-  name: "timeseries_x-value-BB_MIDDLE_BAND_SMA"
-  value_count {
-    min: 5
-    max: 5
-  }
-  type: FLOAT
-  presence {
-    min_fraction: 1.0
-    min_count: 1
-  }
-}
-feature {
-  name: "timeseries_x-value-BB_UPPER_BAND_EMA"
-  value_count {
-    min: 5
-    max: 5
-  }
-  type: FLOAT
-  presence {
-    min_fraction: 1.0
-    min_count: 1
-  }
-}
-feature {
-  name: "timeseries_x-value-BB_UPPER_BAND_SMA"
-  value_count {
-    min: 5
-    max: 5
-  }
-  type: FLOAT
-  presence {
-    min_fraction: 1.0
-    min_count: 1
-  }
-}
-feature {
   name: "timeseries_x-value-DATA_POINT_COUNT"
   value_count {
     min: 5
     max: 5
   }
   type: INT
-  presence {
-    min_fraction: 1.0
-    min_count: 1
-  }
-}
-feature {
-  name: "timeseries_x-value-EXPONENTIAL_MOVING_AVERAGE"
-  value_count {
-    min: 5
-    max: 5
-  }
-  type: FLOAT
   presence {
     min_fraction: 1.0
     min_count: 1
@@ -254,6 +170,18 @@ feature {
 }
 feature {
   name: "timeseries_x-value-SIMPLE_MOVING_AVERAGE"
+  value_count {
+    min: 5
+    max: 5
+  }
+  type: FLOAT
+  presence {
+    min_fraction: 1.0
+    min_count: 1
+  }
+}
+feature {
+  name: "timeseries_x-value-STANDARD_DEVIATION"
   value_count {
     min: 5
     max: 5

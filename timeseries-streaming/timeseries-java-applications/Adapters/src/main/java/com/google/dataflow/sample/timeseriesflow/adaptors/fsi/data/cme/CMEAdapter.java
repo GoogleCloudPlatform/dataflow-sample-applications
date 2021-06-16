@@ -27,6 +27,7 @@ import com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme.TradeInfo
 import com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme.Util.ErrorMessage;
 import java.util.Objects;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.CreateDisposition;
@@ -48,6 +49,7 @@ import org.slf4j.LoggerFactory;
  * href="https://www.cmegroup.com/confluence/display/EPICSANDBOX/CME+Smart+Stream+on+GCP+JSON">CME
  * Smart Stream on GCP JSON</a> data feeds
  */
+@Experimental
 public class CMEAdapter {
 
   public CMEAdapter() {}
@@ -90,6 +92,10 @@ public class CMEAdapter {
     @Nullable
     public abstract DeadLetterSink getDeadLetterSinkType();
 
+    public abstract Boolean getSuppressCategorical();
+
+    public abstract Boolean getUseSourceTimeMetadata();
+
     @Nullable
     public abstract String getBigQueryDeadLetterSinkProject();
 
@@ -99,7 +105,9 @@ public class CMEAdapter {
     public abstract Builder toBuilder();
 
     public static Builder newBuilder() {
-      return new AutoValue_CMEAdapter_SSCLTOBJsonTransform.Builder();
+      return new AutoValue_CMEAdapter_SSCLTOBJsonTransform.Builder()
+          .setSuppressCategorical(false)
+          .setUseSourceTimeMetadata(false);
     }
 
     @AutoValue.Builder
@@ -131,6 +139,12 @@ public class CMEAdapter {
        * @return SSCLTOBJsonTransform.Builder
        */
       public abstract Builder setBigQueryDeadLetterSinkTable(String value);
+
+      /** Suppress output of Categorical values. */
+      public abstract Builder setSuppressCategorical(Boolean value);
+
+      /** Override the element timestamp with the source timestamp */
+      public abstract Builder setUseSourceTimeMetadata(Boolean value);
 
       abstract SSCLTOBJsonTransform autoBuild();
 
@@ -199,11 +213,12 @@ public class CMEAdapter {
                           Util.extractAskBidSuccess, TupleTagList.of(Util.extractAskBidFailure)));
 
       // Convert Extracted Ask Bid Row Schema to TSDataPoints
+
       PCollection<TSDataPoint> tobTSDataPoint =
           askBidRow
               .get(Util.extractAskBidSuccess)
               .setRowSchema(Data.symbolAskBid)
-              .apply("Convert to TSDataPoints", new ConvertCMETOBRowToTSDataPoints());
+              .apply("Convert to TSDataPoints", new ConvertCMETOBRowToTSDataPoints(this));
 
       // Create ErrorMessage events for null data points (Failed records from ExtractAskBidDoFn)
       PCollection<ErrorMessage> errorMessages =
@@ -273,6 +288,10 @@ public class CMEAdapter {
     @Nullable
     public abstract DeadLetterSink getDeadLetterSinkType();
 
+    public abstract Boolean getSuppressCategorical();
+
+    public abstract Boolean getUseSourceTimeMetadata();
+
     @Nullable
     public abstract String getBigQueryDeadLetterSinkProject();
 
@@ -282,7 +301,9 @@ public class CMEAdapter {
     public abstract Builder toBuilder();
 
     public static Builder newBuilder() {
-      return new AutoValue_CMEAdapter_SSCLTRDJsonTransform.Builder();
+      return new AutoValue_CMEAdapter_SSCLTRDJsonTransform.Builder()
+          .setSuppressCategorical(false)
+          .setUseSourceTimeMetadata(false);
     }
 
     @AutoValue.Builder
@@ -305,6 +326,12 @@ public class CMEAdapter {
        * @return SSCLTSJsonTransform.Builder
        */
       public abstract Builder setBigQueryDeadLetterSinkProject(String value);
+
+      /** Suppress output of Categorical values. */
+      public abstract Builder setSuppressCategorical(Boolean value);
+
+      /** Override the element timestamp with the source timestamp */
+      public abstract Builder setUseSourceTimeMetadata(Boolean value);
 
       /**
        * Must be set when specifying {@link DeadLetterSink#BIGQUERY} as the value of
@@ -386,7 +413,7 @@ public class CMEAdapter {
           tradeInfo
               .get(Util.extractTradeInfoSuccess)
               .setRowSchema(Data.symbolTradeInfo)
-              .apply("Convert to TSDataPoints", new ConvertCMETRDRowToTSDataPoints());
+              .apply("Convert to TSDataPoints", new ConvertCMETRDRowToTSDataPoints(this));
 
       // Create ErrorMessage events for null data points (Failed records from ExtractTradeInfoDoFn)
       PCollection<ErrorMessage> errorMessages =

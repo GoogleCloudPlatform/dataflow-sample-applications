@@ -17,9 +17,9 @@
  */
 package com.google.dataflow.sample.timeseriesflow.test;
 
-import com.google.dataflow.sample.timeseriesflow.TFXOptions;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
+import com.google.dataflow.sample.timeseriesflow.options.TFXOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.junit.Assert;
 import org.junit.Test;
@@ -81,7 +81,7 @@ public class CommonUtilsTest {
   @Test()
   public void testComputeNumberOfSequenceTimesteps() {
     TFXOptions tfxOptions = PipelineOptionsFactory.create().as(TFXOptions.class);
-    tfxOptions.setSequenceLengthInSeconds(10);
+    tfxOptions.setOutputTimestepLengthInSecs(10);
     tfxOptions.setTypeOneComputationsLengthInSecs(5);
     Assert.assertEquals(2, (int) CommonUtils.getNumOfSequenceTimesteps(tfxOptions));
   }
@@ -89,7 +89,7 @@ public class CommonUtilsTest {
   @Test(expected = IllegalArgumentException.class)
   public void testComputeNumberOfSequenceWithIndivisable() {
     TFXOptions tfxOptions = PipelineOptionsFactory.create().as(TFXOptions.class);
-    tfxOptions.setSequenceLengthInSeconds(10);
+    tfxOptions.setOutputTimestepLengthInSecs(10);
     tfxOptions.setTypeOneComputationsLengthInSecs(6);
     Assert.assertEquals(2, (int) CommonUtils.getNumOfSequenceTimesteps(tfxOptions));
   }
@@ -104,7 +104,7 @@ public class CommonUtilsTest {
   @Test(expected = NullPointerException.class)
   public void testComputeNumberOfSequenceWithNullFixedLength() {
     TFXOptions tfxOptions = PipelineOptionsFactory.create().as(TFXOptions.class);
-    tfxOptions.setSequenceLengthInSeconds(10);
+    tfxOptions.setOutputTimestepLengthInSecs(10);
     Assert.assertEquals(2, (int) CommonUtils.getNumOfSequenceTimesteps(tfxOptions));
   }
 }

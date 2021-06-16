@@ -21,18 +21,17 @@ import com.google.auto.value.AutoValue;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSBaseCombiner;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import javax.annotation.Nullable;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.Filter;
-import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PCollectionList;
+import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 
 /**
  * Class that merges {@link TSAccum} in a single Window together. Will throw error if the same
@@ -40,45 +39,42 @@ import org.apache.beam.sdk.values.PCollectionList;
  *
  * <p>In order to match the Type 1 and Type 2 calculations the Type FixedWindow size must == the
  * Type 2 sliding window offset size.
+ *
+ * <p>Some computations generate extra metrics which may not be required in the final output. These
+ * can be excluded by setting the {@link
+ * MergeAllTypeCompsInSameKeyWindow.Builder#setMetricExcludeList(List)}
  */
 @AutoValue
 @Experimental
 public abstract class MergeAllTypeCompsInSameKeyWindow
-    extends PTransform<PCollectionList<KV<TSKey, TSAccum>>, PCollection<KV<TSKey, TSAccum>>> {
+    extends PTransform<PCollection<KV<TSKey, TSAccum>>, PCollection<KV<TSKey, TSAccum>>> {
 
-  public abstract Window<KV<TSKey, TSAccum>> mergeWindow();
+  @Nullable
+  public abstract List<String> metricExcludeList();
 
   public abstract Builder builder();
 
-  public static MergeAllTypeCompsInSameKeyWindow withMergeWindow(
-      Window<KV<TSKey, TSAccum>> mergeWindow) {
-    return new AutoValue_MergeAllTypeCompsInSameKeyWindow.Builder()
-        .setMergeWindow(mergeWindow)
-        .build();
+  public static MergeAllTypeCompsInSameKeyWindow create() {
+    return new AutoValue_MergeAllTypeCompsInSameKeyWindow.Builder().build();
   }
 
   @AutoValue.Builder
   public abstract static class Builder {
-    public abstract Builder setMergeWindow(Window<KV<TSKey, TSAccum>> value);
+
+    public abstract Builder setMetricExcludeList(List<String> excludeList);
 
     public abstract MergeAllTypeCompsInSameKeyWindow build();
   }
 
   @Override
-  public PCollection<KV<TSKey, TSAccum>> expand(PCollectionList<KV<TSKey, TSAccum>> input) {
+  public PCollection<KV<TSKey, TSAccum>> expand(PCollection<KV<TSKey, TSAccum>> input) {
 
-    List<PCollection<KV<TSKey, TSAccum>>> collections = input.getAll();
-    List<PCollection<KV<TSKey, TSAccum>>> windowedCollections = new ArrayList<>();
-
-    for (PCollection<KV<TSKey, TSAccum>> coll : collections) {
-
-      windowedCollections.add(coll.apply(coll.getName(), mergeWindow()));
-    }
-
-    return PCollectionList.of(windowedCollections)
-        .apply(Flatten.pCollections())
+    return input
         .apply(GroupByKey.create())
-        .apply(ParDo.of(new MergeTSAccum()))
+        .apply(
+            ParDo.of(
+                new MergeTSAccum(
+                    Optional.ofNullable(metricExcludeList()).orElse(ImmutableList.of()))))
         /*
         Check if the merged value contains type 1 computations, if not then we do not output as this will result in TSAccum without some features.
         This can happen as the type 2 window is a sliding one , which will slide forward until the last known type 1 computation passes the tail of the sliding window.

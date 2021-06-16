@@ -19,12 +19,12 @@ from os.path import join
 from tfx.orchestration.beam.beam_dag_runner import BeamDagRunner
 from tfx.proto import trainer_pb2
 
-import timeseries.pipeline_templates.timeseries_pipeline as pipeline
+import ml_pipeline.timeseries.pipeline_templates.timeseries_pipeline as pipeline
 from tfx.orchestration import metadata
 from absl import logging
 
 import ml_pipeline_examples.sin_wave_example.config as config
-from timeseries.utils import timeseries_transform_utils
+from ml_pipeline.timeseries.utils import timeseries_transform_utils
 
 
 def run():
@@ -39,9 +39,9 @@ def run():
     tfx_pipeline = pipeline.create_pipeline(
             pipeline_name=config.PIPELINE_NAME,
             enable_cache=False,
-            run_fn='timeseries.encoder_decoder.encoder_decoder_run_fn.run_fn',
+            run_fn='ml_pipeline.timeseries.encoder_decoder.encoder_decoder_run_fn.run_fn',
             preprocessing_fn=
-            'timeseries.encoder_decoder.encoder_decoder_preprocessing.preprocessing_fn',
+            'ml_pipeline.timeseries.encoder_decoder.encoder_decoder_preprocessing.preprocessing_fn',
             data_path=config.SYNTHETIC_DATASET['local-raw'],
             pipeline_root=config.LOCAL_PIPELINE_ROOT,
             serving_model_dir=join(config.LOCAL_PIPELINE_ROOT, os.pathsep),

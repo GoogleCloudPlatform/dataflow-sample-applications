@@ -17,6 +17,9 @@
  */
 package com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme;
 
+import org.apache.beam.sdk.annotations.Experimental;
+
+@Experimental
 public enum DeadLetterSink {
   LOG,
   BIGQUERY

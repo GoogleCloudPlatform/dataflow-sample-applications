@@ -35,6 +35,7 @@ import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.Values;
 import org.apache.beam.sdk.transforms.WithKeys;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.junit.Test;
@@ -68,7 +69,7 @@ public class TSNumericCombinerTest {
         p.apply(Create.of(a, b))
             .apply(WithKeys.of(TSDataPoint::getKey))
             .setCoder(CommonUtils.getKvTSDataPointCoder())
-            .apply(Combine.perKey(TSNumericCombiner.combine()))
+            .apply(Combine.perKey(TSNumericCombiner.combine(ImmutableList.of())))
             .apply(Values.create());
 
     TSAccum.Builder output = TSAccum.newBuilder().setKey(key);
@@ -79,9 +80,6 @@ public class TSNumericCombinerTest {
         Indicators.LAST_TIMESTAMP.name(), CommonUtils.createNumData(Timestamps.toMillis(timeB)));
     output.putDataStore(Indicators.FIRST.name(), CommonUtils.createNumData(1));
     output.putDataStore(Indicators.LAST.name(), CommonUtils.createNumData(2));
-    output.putDataStore(Indicators.SUM.name(), CommonUtils.createNumData(3));
-    output.putDataStore(Indicators.MAX.name(), CommonUtils.createNumData(2));
-    output.putDataStore(Indicators.MIN.name(), CommonUtils.createNumData(1));
     output.putDataStore(Indicators.DATA_POINT_COUNT.name(), CommonUtils.createNumData(2L));
     output.putMetadata(TSBaseCombiner._BASE_COMBINER, "t");
 
@@ -96,7 +94,7 @@ public class TSNumericCombinerTest {
    */
   public void testNumericCombineWithAllGapFill() {
 
-    Instant instant = Instant.parse("2000-01-01T00:00:00");
+    Instant instant = Instant.parse("2000-01-01T00:00:00Z");
     Timestamp timeA = Timestamps.fromMillis(instant.getMillis());
     Timestamp timeB = Timestamps.fromMillis(instant.plus(Duration.standardSeconds(10)).getMillis());
 
@@ -119,10 +117,11 @@ public class TSNumericCombinerTest {
         p.apply(Create.of(a, b))
             .apply(WithKeys.of(TSDataPoint::getKey))
             .setCoder(CommonUtils.getKvTSDataPointCoder())
-            .apply(Combine.perKey(TSNumericCombiner.combine()))
+            .apply(Combine.perKey(TSNumericCombiner.combine(ImmutableList.of())))
             .apply(Values.create());
 
-    TSAccum.Builder output = TSAccum.newBuilder().setKey(key).setIsAllGapFillMessages(true);
+    TSAccum.Builder output =
+        TSAccum.newBuilder().setKey(key).setIsAllGapFillMessages(true).setHasAGapFillMessage(true);
 
     output.putDataStore(
         Indicators.FIRST_TIMESTAMP.name(), CommonUtils.createNumData(Timestamps.toMillis(timeA)));
@@ -130,10 +129,7 @@ public class TSNumericCombinerTest {
         Indicators.LAST_TIMESTAMP.name(), CommonUtils.createNumData(Timestamps.toMillis(timeB)));
     output.putDataStore(Indicators.FIRST.name(), CommonUtils.createNumData(1));
     output.putDataStore(Indicators.LAST.name(), CommonUtils.createNumData(2));
-    output.putDataStore(Indicators.SUM.name(), CommonUtils.createNumData(3));
-    output.putDataStore(Indicators.MAX.name(), CommonUtils.createNumData(2));
-    output.putDataStore(Indicators.MIN.name(), CommonUtils.createNumData(1));
-    output.putDataStore(Indicators.DATA_POINT_COUNT.name(), CommonUtils.createNumData(2L));
+    output.putDataStore(Indicators.DATA_POINT_COUNT.name(), CommonUtils.createNumData(0L));
     output.putMetadata(TSBaseCombiner._BASE_COMBINER, "t");
 
     PAssert.that(collection).containsInAnyOrder(output.build());

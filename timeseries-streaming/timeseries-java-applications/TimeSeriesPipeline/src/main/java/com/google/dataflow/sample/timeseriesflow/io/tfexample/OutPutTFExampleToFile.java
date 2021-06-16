@@ -18,9 +18,9 @@
 package com.google.dataflow.sample.timeseriesflow.io.tfexample;
 
 import com.google.auto.value.AutoValue;
-import com.google.dataflow.sample.timeseriesflow.TFXOptions;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesTFExampleKeys.ExampleMetadata;
 import com.google.dataflow.sample.timeseriesflow.io.tfexample.TSToTFExampleUtils.ExampleToKeyValue;
+import com.google.dataflow.sample.timeseriesflow.options.TFXOptions;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.io.FileIO;

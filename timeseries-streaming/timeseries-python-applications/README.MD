@@ -1,6 +1,12 @@
 # Quickstart
 
 ----
+*** Known Issues ***
+
+The inference example currently instantiates tft.layer in the post process layer. This is inefficient and will be 
+corrected in 0.4.1. (See [issue 84](https://github.com/GoogleCloudPlatform/dataflow-sample-applications/issues/84) for updates).   
+
+----
 
 *** Note ***
 
@@ -49,7 +55,7 @@ The Auto encoder / decoder will output values based on the input, these are not 
 There are two versions which can be run;
 
 [batch_inference](ml_pipeline_examples/sin_wave_example/inference/batch_inference.py)
-* Step 1 - Follow the quick start on the Java README to run [SimpleDataStreamGenerator.java](../timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java) with example_2.
+* Step 1 - Follow the quick start on the Java README to run [SimpleDataStreamGenerator.java](../timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SinWaveExample.java) with example_2.
 * Step 2 - Run the command with the virtual-env activated, providing values for the location of the ```--saved_model_location``` using the uncompressed provided model, and the location of the generated data from previous step with ```--tfrecord_folder```.
 ```
 python ml_pipeline_examples/sin_wave_example/inference/batch_inference.py --saved_model_location=ml_pipeline_examples/sin_wave_example/saved_model_example/serving_model_dir --tf_transform_graph_dir=ml_pipeline_examples/sin_wave_example/tf_transform_graph_dir --tfrecord_folder=/<your-directory>/simple-data/data/*
@@ -57,7 +63,7 @@ python ml_pipeline_examples/sin_wave_example/inference/batch_inference.py --save
 Dependent on how long you ran the ```SimpleDataStreamGenerator``` you will see outliers in the range of 120 to 300 being detected.
 
 [stream_inference](ml_pipeline_examples/sin_wave_example/inference/stream_inference.py)
-* Step 1 - Follow the quick start on the Java README to run [SimpleDataStreamGenerator.java](../timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SimpleDataStreamGenerator.java) with example_4.
+* Step 1 - Follow the quick start on the Java README to run [SimpleDataStreamGenerator.java](../timeseries-java-applications/SyntheticExamples/src/main/java/com/google/dataflow/sample/timeseriesflow/examples/simpledata/transforms/SinWaveExample.java) with example_4.
 * Step 2 - Create a subscription in the topic, to the read events generated in previous step
 * Step 3 - Run the command with the virtual-env activated, providing values for the location of the ```--saved_model_location``` using the uncompressed provided model, and set the subscription to read events from ```--pubsub_subscription```.
 ```
@@ -75,7 +81,7 @@ That job will generate 86400 data points, which will be aggregated to 43200 exam
 Once that is done, change the information in the [config.py](ml_pipeline_examples/sin_wave_example/config.py) to match your local env.
 Run the command with the virtual-env activated:
 ```
-python ml_pipeline_examples/sin_wave_example/timeseries_local_simple_data.py
+python ml_pipeline_examples/sin_wave_example/training/timeseries_local_sin_wave.py
 ``` 
 
 This will output a serving_model_dir and a tf_transform_graph under the location you specified for ```PIPELINE_ROOT``` in the config.py file. With this you can now follow the rest of the steps outlines in Option 1 but using your own model.

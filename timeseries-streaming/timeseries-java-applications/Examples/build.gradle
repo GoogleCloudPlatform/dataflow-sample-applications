@@ -25,6 +25,7 @@ sourceCompatibility = 1.8
 
 dependencies {
 
+    compile project(':Adapters')
     compile project(':TimeSeriesPipeline')
     compile project(':TimeSeriesMetricsLibrary')
 

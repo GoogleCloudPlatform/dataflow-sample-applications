@@ -61,6 +61,7 @@ message TSDataPoint {
     google.protobuf.Timestamp timestamp = 3;
     map<string, string> metadata = 4;
     bool is_a_gap_fill_message = 5;
+    map<string,Data> extendedData = 6;
 }
 
 

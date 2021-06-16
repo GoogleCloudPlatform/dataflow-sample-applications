@@ -21,48 +21,62 @@ import com.google.common.base.Preconditions;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data.DataPointCase;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
+import com.google.dataflow.sample.timeseriesflow.combiners.BTypeOne;
 import com.google.dataflow.sample.timeseriesflow.combiners.TSCombiner;
-import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
-import com.google.dataflow.sample.timeseriesflow.common.TSDataUtils;
-import com.google.dataflow.sample.timeseriesflow.datamap.AccumCoreNumericBuilder;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.beam.sdk.annotations.Experimental;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Experimental
 /** Base type 1 combiner, which computes First / Last / Min / Max / Count and Sum. */
 public class TSNumericCombiner extends TSBaseCombiner implements TSCombiner {
 
-  public static TSNumericCombiner combine() {
-    return new TSNumericCombiner();
+  public static Logger LOG = LoggerFactory.getLogger(TSNumericCombiner.class);
+  // Type one metrics list
+  public final List<Class<? extends BTypeOne>> basicType1Metrics;
+
+  public List<BTypeOne> fnCache;
+
+  public TSNumericCombiner(List<Class<? extends BTypeOne>> basicType1Metrics) {
+    Preconditions.checkNotNull(basicType1Metrics);
+
+    this.basicType1Metrics = basicType1Metrics;
+
+    fnCache = new ArrayList<>();
+    for (Class<? extends BTypeOne> bTypeOne : basicType1Metrics) {
+      try {
+        fnCache.add(bTypeOne.newInstance());
+      } catch (InstantiationException | IllegalAccessException e) {
+        LOG.error("Unable to create instance of bTypeOne", e);
+      }
+    }
+  }
+
+  public static TSNumericCombiner combine(List<Class<? extends BTypeOne>> basicType1Metrics) {
+    return new TSNumericCombiner(basicType1Metrics);
   }
 
   @Override
   public TSAccum mergeTypedDataAccum(TSAccum a, TSAccum b) {
 
-    AccumCoreNumericBuilder aBuilder = new AccumCoreNumericBuilder(a);
-    AccumCoreNumericBuilder bBuilder = new AccumCoreNumericBuilder(b);
-
-    aBuilder.setSum(
-        CommonUtils.sumNumericDataNullAsZero(aBuilder.getSumOrNull(), bBuilder.getSumOrNull()));
-    aBuilder.setMin(TSDataUtils.findMinData(aBuilder.getMinOrNull(), bBuilder.getMinOrNull()));
-    aBuilder.setMax(TSDataUtils.findMaxValue(aBuilder.getMaxOrNull(), bBuilder.getMaxOrNull()));
-
-    return aBuilder.build();
+    for (BTypeOne bTypeOne : fnCache) {
+      a = bTypeOne.mergeDataAccums(a, b);
+    }
+    return a;
   }
 
   @Override
   public TSAccum addTypeSpecificInput(TSAccum accumulator, TSDataPoint dataPoint) {
-    AccumCoreNumericBuilder coreNumeric = new AccumCoreNumericBuilder(accumulator);
 
     Preconditions.checkArgument(
         !dataPoint.getData().getDataPointCase().equals(DataPointCase.DATAPOINT_NOT_SET));
 
-    coreNumeric.setSum(
-        CommonUtils.sumNumericDataNullAsZero(coreNumeric.getSumOrNull(), dataPoint.getData()));
+    for (BTypeOne bTypeOne : fnCache) {
+      accumulator = bTypeOne.addInput(accumulator, dataPoint);
+    }
 
-    coreNumeric.setMin(TSDataUtils.findMinData(coreNumeric.getMinOrNull(), dataPoint.getData()));
-
-    coreNumeric.setMax(TSDataUtils.findMaxValue(coreNumeric.getMaxOrNull(), dataPoint.getData()));
-
-    return coreNumeric.build();
+    return accumulator;
   }
 }

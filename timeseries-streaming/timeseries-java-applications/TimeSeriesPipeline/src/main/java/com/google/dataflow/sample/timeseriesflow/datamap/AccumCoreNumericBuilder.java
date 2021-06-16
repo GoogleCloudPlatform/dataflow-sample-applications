@@ -21,14 +21,11 @@ import com.google.common.base.Preconditions;
 import com.google.dataflow.sample.timeseriesflow.DerivedAggregations.Indicators;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
-import java.util.List;
 import org.apache.beam.sdk.annotations.Experimental;
-import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 
 @Experimental
 /** Accum Numeric Builder, dealing with common numeric aggregations Sum, Min, Max, First, Last. */
-public class AccumCoreNumericBuilder extends AccumCoreMetadataBuilder
-    implements ComputationKeyRegister {
+public class AccumCoreNumericBuilder extends AccumCoreMetadataBuilder {
 
   public AccumCoreNumericBuilder(TSAccum tsAccum) {
     super(tsAccum);
@@ -60,15 +57,5 @@ public class AccumCoreNumericBuilder extends AccumCoreMetadataBuilder
   public void setMin(Data data) {
     Preconditions.checkNotNull(data);
     setValue(Indicators.MIN.name(), data);
-  }
-
-  @Override
-  public List<String> getComputationKeys() {
-    return ImmutableList.of(
-        Indicators.MAX.name(),
-        Indicators.MIN.name(),
-        Indicators.FIRST.name(),
-        Indicators.LAST.name(),
-        Indicators.SUM.name());
   }
 }

@@ -841,4 +841,144 @@ public class PerfectRectanglesTests {
 
   @Test
   public void testGarbageCollection() {}
+
+  public TestStream<KV<TSKey, TSDataPoint>> getStreamWithEventTimeMismatch(TSDataPoint datapoint) {
+    // Stream has gaps at mid point along the stream.
+    // There should be continuous values in every window as well as a final Gap value when the
+    // stream finally stops
+    // In this stream the value of the Event time will be earlier than the Source TimestampedValue
+    return TestStream.create(CommonUtils.getKvTSDataPointCoder())
+        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START))
+        .addElements(KV.of(datapoint.getKey(), datapoint))
+        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 1000))
+        .addElements(
+            KV.of(
+                datapoint.getKey(),
+                datapoint
+                    .toBuilder()
+                    .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 1000))
+                    .build()))
+        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 4000))
+        .addElements(
+            KV.of(
+                datapoint.getKey(),
+                datapoint
+                    .toBuilder()
+                    .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 4000))
+                    .build()))
+        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 6000))
+        .addElements(
+            KV.of(
+                datapoint.getKey(),
+                datapoint
+                    .toBuilder()
+                    .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 6000))
+                    .build()))
+        .advanceWatermarkTo(Instant.ofEpochMilli(TSDataTestUtils.START + 7000))
+        .advanceWatermarkToInfinity();
+  }
+
+  @Test
+  /*
+  This test is to catch issues where the Source and data points do not have EvenTime alignment.
+  For example where PubSubIO does not have TimestampedID set
+  */
+  public void testBeamTimestampDataPointTimestampMismatch() {
+
+    Duration ttlDuration = Duration.standardSeconds(1);
+
+    Pipeline p = Pipeline.create(PipelineOptionsFactory.create());
+
+    PCollection<TSDataPoint> perfectRectangle =
+        PCollectionList.of(p.apply(getStreamWithEventTimeMismatch(DATA_POINT_A_A)))
+            .and(p.apply(getStreamWithEventTimeMismatch(DATA_POINT_A_B)))
+            .apply(Flatten.pCollections())
+            .apply(
+                PerfectRectangles.withWindowAndTTLDuration(Duration.standardSeconds(1), ttlDuration)
+                    .enablePreviousValueFill())
+            .apply(Values.create())
+            .apply(Window.into(FixedWindows.of(Duration.standardSeconds(1))));
+
+    PAssert.that(perfectRectangle)
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 2000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_A
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 2999))
+                .setIsAGapFillMessage(true)
+                .build(),
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 2999))
+                .setIsAGapFillMessage(true)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 3000), Duration.standardSeconds(1)))
+        .empty()
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 4000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_A
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 4000))
+                .setIsAGapFillMessage(false)
+                .build(),
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 4000))
+                .setIsAGapFillMessage(false)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 5000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_A
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 5999))
+                .setIsAGapFillMessage(true)
+                .build(),
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 5999))
+                .setIsAGapFillMessage(true)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 6000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_A
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 6000))
+                .setIsAGapFillMessage(false)
+                .build(),
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 6000))
+                .setIsAGapFillMessage(false)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 7000), Duration.standardSeconds(1)))
+        .containsInAnyOrder(
+            DATA_POINT_A_A
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 7999))
+                .setIsAGapFillMessage(true)
+                .build(),
+            DATA_POINT_A_B
+                .toBuilder()
+                .setTimestamp(Timestamps.fromMillis(TSDataTestUtils.START + 7999))
+                .setIsAGapFillMessage(true)
+                .build())
+        .inWindow(
+            new IntervalWindow(
+                Instant.ofEpochMilli(TSDataTestUtils.START + 8000), Duration.standardSeconds(1)))
+        .empty();
+
+    p.run();
+  }
 }

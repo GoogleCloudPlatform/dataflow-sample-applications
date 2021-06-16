@@ -17,10 +17,10 @@
  */
 package com.google.dataflow.sample.timeseriesflow.test;
 
-import com.google.dataflow.sample.timeseriesflow.TFXOptions;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
 import com.google.dataflow.sample.timeseriesflow.io.tfexample.FeaturesFromIterableAccumSequence;
+import com.google.dataflow.sample.timeseriesflow.options.TFXOptions;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.values.PCollection;
@@ -36,7 +36,7 @@ public class SnapShotScalability_1D_100M_100K_1FW_60SW_withTFExampleSerlization 
     options.setAppName("SimpleDataStreamTSDataPoints");
     options.setTypeOneComputationsLengthInSecs(1);
     options.setTypeTwoComputationsLengthInSecs(60);
-    options.setSequenceLengthInSeconds(60);
+    options.setOutputTimestepLengthInSecs(60);
     options.setNumKeys(100);
     options.setNumSecs(86400);
     options.setNumFeatures(100);

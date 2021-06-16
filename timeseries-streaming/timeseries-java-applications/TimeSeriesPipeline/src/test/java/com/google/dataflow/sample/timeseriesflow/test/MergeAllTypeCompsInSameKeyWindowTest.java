@@ -31,6 +31,7 @@ import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testing.TestStream;
 import org.apache.beam.sdk.transforms.FlatMapElements;
+import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.windowing.FixedWindows;
 import org.apache.beam.sdk.transforms.windowing.Window;
@@ -99,11 +100,20 @@ public class MergeAllTypeCompsInSameKeyWindowTest {
             .advanceWatermarkToInfinity();
 
     PCollection<KV<TSKey, TSAccum>> allAccum =
-        PCollectionList.of(p.apply("A", stream1))
-            .and(p.apply("B", stream2))
-            .apply(
-                MergeAllTypeCompsInSameKeyWindow.withMergeWindow(
-                    Window.into(FixedWindows.of(Duration.standardSeconds(10)))));
+        PCollectionList.of(
+                p.apply("A", stream1)
+                    .apply(
+                        "WINDOW_T1",
+                        Window.<KV<TSKey, TSAccum>>into(
+                            FixedWindows.of(Duration.standardSeconds(10)))))
+            .and(
+                p.apply("B", stream2)
+                    .apply(
+                        "WINDOW_T2",
+                        Window.<KV<TSKey, TSAccum>>into(
+                            FixedWindows.of(Duration.standardSeconds(10)))))
+            .apply(Flatten.pCollections())
+            .apply(MergeAllTypeCompsInSameKeyWindow.create());
 
     // Strip out accums as they are unordered and test metadata
     PAssert.that(
@@ -183,11 +193,20 @@ public class MergeAllTypeCompsInSameKeyWindowTest {
             .advanceWatermarkToInfinity();
 
     PCollection<KV<TSKey, TSAccum>> allAccum =
-        PCollectionList.of(p.apply("A", stream1))
-            .and(p.apply("B", stream2))
-            .apply(
-                MergeAllTypeCompsInSameKeyWindow.withMergeWindow(
-                    Window.into(FixedWindows.of(Duration.standardSeconds(10)))));
+        PCollectionList.of(
+                p.apply("A", stream1)
+                    .apply(
+                        "WINDOW_T1",
+                        Window.<KV<TSKey, TSAccum>>into(
+                            FixedWindows.of(Duration.standardSeconds(10)))))
+            .and(
+                p.apply("B", stream2)
+                    .apply(
+                        "WINDOW_T2",
+                        Window.<KV<TSKey, TSAccum>>into(
+                            FixedWindows.of(Duration.standardSeconds(10)))))
+            .apply(Flatten.pCollections())
+            .apply(MergeAllTypeCompsInSameKeyWindow.create());
 
     // Strip out accums as they are unordered and test metadata
     PAssert.that(

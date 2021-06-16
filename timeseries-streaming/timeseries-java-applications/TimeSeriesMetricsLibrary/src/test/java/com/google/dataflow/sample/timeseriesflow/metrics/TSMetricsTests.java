@@ -17,14 +17,25 @@
  */
 package com.google.dataflow.sample.timeseriesflow.metrics;
 
+import static com.google.dataflow.sample.timeseriesflow.test.TestUtils.timestampedValueFromTSDataPoint;
+
 import com.google.dataflow.sample.timeseriesflow.FSITechnicalDerivedAggregations.FsiTechnicalIndicators;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
-import com.google.dataflow.sample.timeseriesflow.combiners.typeone.TSNumericCombiner;
 import com.google.dataflow.sample.timeseriesflow.common.CommonUtils;
+import com.google.dataflow.sample.timeseriesflow.graph.GenerateComputations;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.complex.fsi.rsi.RSIGFn;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typeone.Max;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typeone.Min;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typeone.Sum;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typetwo.basic.logrtn.LogRtnFn;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typetwo.basic.ma.MAFn;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typetwo.basic.ma.MAFn.MAAvgComputeMethod;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typetwo.basic.ma.MAFn.MAOptions;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typetwo.basic.stddev.StdDevFn;
+import com.google.dataflow.sample.timeseriesflow.metrics.core.typetwo.basic.sumupdown.SumUpDownFn;
 import com.google.dataflow.sample.timeseriesflow.test.TSDataTestUtils;
-import com.google.dataflow.sample.timeseriesflow.transforms.GenerateComputations;
 import com.google.gson.stream.JsonReader;
 import common.TSTestData;
 import common.TSTestDataBaseline;
@@ -33,8 +44,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Arrays;
-import java.util.List;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
@@ -58,56 +67,64 @@ public class TSMetricsTests {
 
   @Test
   /* Simple test to check RSI Technical is created correctly */
-  public void testCreateRSI() {
+  public void testCreateSumUpDown() {
 
     // Key A-A will increase, Key A-B will decrease, Key A-C will remain stationary
     TestStream<TSDataPoint> stream =
         TestStream.create(ProtoCoder.of(TSDataPoint.class))
             .advanceWatermarkTo(Instant.ofEpochMilli(TSTestDataBaseline.START))
-            .addElements(TSTestDataBaseline.DOUBLE_POINT_1_A_A)
+            .addElements(timestampedValueFromTSDataPoint(TSTestDataBaseline.DOUBLE_POINT_1_A_A))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_2_A_B
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(0D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_1_A_B
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(0D))
+                        .build()))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_3_A_C
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(7D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_1_A_C
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(7D))
+                        .build()))
             .advanceWatermarkTo(Instant.ofEpochMilli(TSTestDataBaseline.PLUS_FIVE_SECS))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_2_A_A
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(4D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_2_A_A
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(4D))
+                        .build()))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_2_A_B
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(12D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_2_A_B
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(12D))
+                        .build()))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_2_A_C
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(4D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_2_A_C
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(4D))
+                        .build()))
             .advanceWatermarkTo(Instant.ofEpochMilli(TSTestDataBaseline.PLUS_TEN_SECS))
             // Mutate final value so we have div with no remainder
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_3_A_A
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(7D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_3_A_A
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(7D))
+                        .build()))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_2_A_B
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(6D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_3_A_B
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(6D))
+                        .build()))
             .addElements(
-                TSTestDataBaseline.DOUBLE_POINT_1_A_C
-                    .toBuilder()
-                    .setData(CommonUtils.createNumData(1D))
-                    .build())
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_3_A_C
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(1D))
+                        .build()))
             .advanceWatermarkToInfinity();
 
     PCollection<KV<TSKey, TSAccum>> techAccum =
@@ -116,13 +133,143 @@ public class TSMetricsTests {
                 GenerateComputations.builder()
                     .setType1FixedWindow(Duration.standardSeconds(5))
                     .setType2SlidingWindowDuration(Duration.standardSeconds(15))
-                    .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
-                    .setType2NumericComputations(
-                        ImmutableList.of(
-                            RSI.toBuilder()
-                                .setAverageComputationMethod(RSI.AverageComputationMethod.ALL)
-                                .build()
-                                .create()))
+                    .setEnableGapFill(false)
+                    .setBasicType1Metrics(ImmutableList.of(Sum.class, Min.class, Max.class))
+                    .setBasicType2Metrics(ImmutableList.of(SumUpDownFn.class))
+                    .build());
+
+    // The sliding window will create partial values, to keep testing simple we just test
+    // correctness of RSI for the full value
+
+    PCollection<KV<TSKey, TSAccum>> fullAccum =
+        techAccum.apply(
+            Filter.by(
+                x ->
+                    x.getValue()
+                            .getDataStoreOrThrow(FsiTechnicalIndicators.SUM_MOVEMENT_COUNT.name())
+                            .getIntVal()
+                        == 3));
+
+    PCollection<KV<TSKey, Double>> sumUp =
+        fullAccum.apply(
+            "SumUP",
+            MapElements.into(
+                    TypeDescriptors.kvs(TypeDescriptor.of(TSKey.class), TypeDescriptors.doubles()))
+                .via(
+                    x ->
+                        KV.of(
+                            x.getKey(),
+                            x.getValue()
+                                .getDataStoreOrThrow(FsiTechnicalIndicators.SUM_UP_MOVEMENT.name())
+                                .getDoubleVal())));
+
+    PCollection<KV<TSKey, Double>> sumDown =
+        fullAccum.apply(
+            "SumDown",
+            MapElements.into(
+                    TypeDescriptors.kvs(TypeDescriptor.of(TSKey.class), TypeDescriptors.doubles()))
+                .via(
+                    x ->
+                        KV.of(
+                            x.getKey(),
+                            x.getValue()
+                                .getDataStoreOrThrow(
+                                    FsiTechnicalIndicators.SUM_DOWN_MOVEMENT.name())
+                                .getDoubleVal())));
+
+    /*
+    AvgG / AvgL
+    Key_A_A = AvgGain 6 AvgLoss 0
+    Key_A_B = AvgGain 12 AvgLoss -6
+    Key_A_C = AvgGain 0 AvgLoss -6
+
+     */
+
+    PAssert.that(sumUp)
+        .containsInAnyOrder(
+            KV.of(TSTestDataBaseline.KEY_A_A, 6D),
+            KV.of(TSTestDataBaseline.KEY_A_B, 12D),
+            KV.of(TSTestDataBaseline.KEY_A_C, 0D));
+    PAssert.that(sumDown)
+        .containsInAnyOrder(
+            KV.of(TSTestDataBaseline.KEY_A_A, 0D),
+            KV.of(TSTestDataBaseline.KEY_A_B, -6D),
+            KV.of(TSTestDataBaseline.KEY_A_C, -6D));
+
+    p.run();
+  }
+
+  @Test
+  /* Simple test to check RSI Technical is created correctly */
+  public void testCreateRSI() {
+
+    // Key A-A will increase, Key A-B will decrease, Key A-C will remain stationary
+    TestStream<TSDataPoint> stream =
+        TestStream.create(ProtoCoder.of(TSDataPoint.class))
+            .advanceWatermarkTo(Instant.ofEpochMilli(TSTestDataBaseline.START))
+            .addElements(timestampedValueFromTSDataPoint(TSTestDataBaseline.DOUBLE_POINT_1_A_A))
+            .addElements(
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_1_A_B
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(0D))
+                        .build()))
+            .addElements(
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_1_A_C
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(7D))
+                        .build()))
+            .advanceWatermarkTo(Instant.ofEpochMilli(TSTestDataBaseline.PLUS_FIVE_SECS))
+            .addElements(
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_2_A_A
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(4D))
+                        .build()))
+            .addElements(
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_2_A_B
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(12D))
+                        .build()))
+            .addElements(
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_2_A_C
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(4D))
+                        .build()))
+            .advanceWatermarkTo(Instant.ofEpochMilli(TSTestDataBaseline.PLUS_TEN_SECS))
+            // Mutate final value so we have div with no remainder
+            .addElements(
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_3_A_A
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(7D))
+                        .build()))
+            .addElements(
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_3_A_B
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(6D))
+                        .build()))
+            .addElements(
+                timestampedValueFromTSDataPoint(
+                    TSTestDataBaseline.DOUBLE_POINT_3_A_C
+                        .toBuilder()
+                        .setData(CommonUtils.createNumData(1D))
+                        .build()))
+            .advanceWatermarkToInfinity();
+
+    PCollection<KV<TSKey, TSAccum>> techAccum =
+        p.apply(stream)
+            .apply(
+                GenerateComputations.builder()
+                    .setType1FixedWindow(Duration.standardSeconds(5))
+                    .setType2SlidingWindowDuration(Duration.standardSeconds(15))
+                    .setEnableGapFill(false)
+                    .setBasicType1Metrics(ImmutableList.of(Sum.class, Min.class, Max.class))
+                    .setComplexType2Metrics(ImmutableList.of(RSIGFn.class))
                     .build());
 
     // The sliding window will create partial values, to keep testing simple we just test
@@ -178,6 +325,7 @@ public class TSMetricsTests {
     Key_A_C = 0 = 100 - 100 = 0
 
      */
+
     PAssert.that(rs)
         .containsInAnyOrder(
             KV.of(TSTestDataBaseline.KEY_A_A, 0D),
@@ -196,7 +344,11 @@ public class TSMetricsTests {
   /* Simple test to check Simple Moving Average Technical is created correctly */
   public void testCreateSMA() throws IOException {
 
-    String resourceName = "TSTestData.json";
+    MAOptions options = p.getOptions().as(MAOptions.class);
+    options.setMAAvgComputeAlpha(BigDecimal.valueOf(2D / (3D + 1D)).doubleValue());
+    options.setMAAvgComputeMethod(MAAvgComputeMethod.SIMPLE_MOVING_AVERAGE);
+
+    String resourceName = "TSTestDataHints.json";
     ClassLoader classLoader = getClass().getClassLoader();
     File file = new File(classLoader.getResource(resourceName).getFile());
     String absolutePath = file.getAbsolutePath();
@@ -217,14 +369,9 @@ public class TSMetricsTests {
                 GenerateComputations.builder()
                     .setType1FixedWindow(Duration.standardSeconds(5))
                     .setType2SlidingWindowDuration(Duration.standardSeconds(15))
-                    .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
-                    .setType2NumericComputations(
-                        ImmutableList.of(
-                            MA.toBuilder()
-                                .setAverageComputationMethod(
-                                    MA.AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
-                                .build()
-                                .create()))
+                    .setEnableGapFill(false)
+                    .setBasicType1Metrics(ImmutableList.of(Sum.class, Min.class, Max.class))
+                    .setBasicType2Metrics(ImmutableList.of(MAFn.class))
                     .build());
 
     // The sliding window will create partial values, to keep testing simple we just test
@@ -261,6 +408,7 @@ public class TSMetricsTests {
     SMA Key_A_C = 12 + 12 + 12 / 3 = 12
 
      */
+
     PAssert.that(sma)
         .containsInAnyOrder(
             KV.of(TSTestDataBaseline.KEY_A_A, 4D),
@@ -287,6 +435,10 @@ public class TSMetricsTests {
                 Duration.standardSeconds(15))
             .build();
 
+    MAOptions options = p.getOptions().as(MAOptions.class);
+    options.setMAAvgComputeAlpha(BigDecimal.valueOf(2D / (3D + 1D)).doubleValue());
+    options.setMAAvgComputeMethod(MAAvgComputeMethod.EXPONENTIAL_MOVING_AVERAGE);
+
     TestStream<TSDataPoint> stream = tsTestData.inputTSData();
 
     PCollection<KV<TSKey, TSAccum>> techAccum =
@@ -295,15 +447,9 @@ public class TSMetricsTests {
                 GenerateComputations.builder()
                     .setType1FixedWindow(Duration.standardSeconds(5))
                     .setType2SlidingWindowDuration(Duration.standardSeconds(15))
-                    .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
-                    .setType2NumericComputations(
-                        ImmutableList.of(
-                            MA.toBuilder()
-                                .setAverageComputationMethod(
-                                    MA.AverageComputationMethod.EXPONENTIAL_MOVING_AVERAGE)
-                                .setWeight(BigDecimal.valueOf(2D / (3D + 1D)))
-                                .build()
-                                .create()))
+                    .setEnableGapFill(false)
+                    .setBasicType1Metrics(ImmutableList.of(Sum.class, Min.class, Max.class))
+                    .setBasicType2Metrics(ImmutableList.of(MAFn.class))
                     .build());
 
     // The sliding window will create partial values, to keep testing simple we just test
@@ -350,95 +496,6 @@ public class TSMetricsTests {
 
   @Test
   /* Simple test to check Exponential Moving Average Technical is created correctly */
-  public void testCreateBB() throws IOException {
-
-    String resourceName = "TSTestDataHints.json";
-    ClassLoader classLoader = getClass().getClassLoader();
-    File file = new File(classLoader.getResource(resourceName).getFile());
-    String absolutePath = file.getAbsolutePath();
-
-    TSTestData tsTestData =
-        TSTestData.toBuilder()
-            .setInputTSDataFromJSON(
-                new JsonReader(new FileReader(absolutePath)),
-                Duration.standardSeconds(5),
-                Duration.standardSeconds(15))
-            .build();
-
-    TestStream<TSDataPoint> stream = tsTestData.inputTSData();
-
-    PCollection<KV<TSKey, TSAccum>> techAccum =
-        p.apply(stream)
-            .apply(
-                GenerateComputations.builder()
-                    .setType1FixedWindow(Duration.standardSeconds(5))
-                    .setType2SlidingWindowDuration(Duration.standardSeconds(15))
-                    .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
-                    .setType2NumericComputations(
-                        ImmutableList.of(
-                            BB.toBuilder()
-                                .setAverageComputationMethod(
-                                    BB.AverageComputationMethod.SIMPLE_MOVING_AVERAGE)
-                                .setDevFactor(2)
-                                .build()
-                                .create()))
-                    .build());
-
-    // The sliding window will create partial values, to keep testing simple we just test
-    // correctness of BB for the full value
-
-    PCollection<KV<TSKey, TSAccum>> fullAccum =
-        techAccum.apply(
-            Filter.by(
-                x ->
-                    x.getValue()
-                            .getDataStoreOrThrow(FsiTechnicalIndicators.SUM_MOVEMENT_COUNT.name())
-                            .getIntVal()
-                        == 3));
-
-    PCollection<KV<TSKey, List<Double>>> bollingerBand =
-        fullAccum.apply(
-            "BB",
-            MapElements.into(
-                    TypeDescriptors.kvs(
-                        TypeDescriptor.of(TSKey.class),
-                        TypeDescriptors.lists(TypeDescriptors.doubles())))
-                .via(
-                    x ->
-                        KV.of(
-                            x.getKey(),
-                            Arrays.asList(
-                                x.getValue()
-                                    .getDataStoreOrThrow(
-                                        FsiTechnicalIndicators.BB_MIDDLE_BAND_SMA.name())
-                                    .getDoubleVal(),
-                                x.getValue()
-                                    .getDataStoreOrThrow(
-                                        FsiTechnicalIndicators.BB_UPPER_BAND_SMA.name())
-                                    .getDoubleVal(),
-                                x.getValue()
-                                    .getDataStoreOrThrow(
-                                        FsiTechnicalIndicators.BB_BOTTOM_BAND_SMA.name())
-                                    .getDoubleVal()))));
-
-    /*
-    BB MIDDLE_BAND = SMA or EMA, UPPER_BAND = MIDDLE_BAND + dev_factor * STDDEV, BOTTOM_BAND = MIDDLE_BAND - dev_factor * STDDEV
-    BB SMA Key_A_A = [1, 3, 8] = [4.0, 9.8878405776, -1.8878405776]
-    BB SMA Key_A_B = [16, 12, 8] = [12.0, 18.5319726474, 5.4680273526]
-    BB SMA Key_A_C = [12, 12, 12] = [12, 12, 12]
-
-     */
-    PAssert.that(bollingerBand)
-        .containsInAnyOrder(
-            KV.of(TSTestDataBaseline.KEY_A_A, Arrays.asList(4.0D, 9.8878405776, -1.8878405776D)),
-            KV.of(TSTestDataBaseline.KEY_A_B, Arrays.asList(12.0D, 18.5319726474D, 5.4680273526D)),
-            KV.of(TSTestDataBaseline.KEY_A_C, Arrays.asList(12D, 12D, 12D)));
-
-    p.run();
-  }
-
-  @Test
-  /* Simple test to check Exponential Moving Average Technical is created correctly */
   public void testCreateStdDev() throws IOException {
 
     String resourceName = "TSTestDataHints.json";
@@ -462,9 +519,9 @@ public class TSMetricsTests {
                 GenerateComputations.builder()
                     .setType1FixedWindow(Duration.standardSeconds(5))
                     .setType2SlidingWindowDuration(Duration.standardSeconds(15))
-                    .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
-                    .setType2NumericComputations(
-                        ImmutableList.of(StdDev.toBuilder().build().create()))
+                    .setEnableGapFill(false)
+                    .setBasicType1Metrics(ImmutableList.of(Sum.class, Min.class, Max.class))
+                    .setBasicType2Metrics(ImmutableList.of(StdDevFn.class))
                     .build());
 
     // The sliding window will create partial values, to keep testing simple we just test
@@ -535,9 +592,9 @@ public class TSMetricsTests {
                 GenerateComputations.builder()
                     .setType1FixedWindow(Duration.standardSeconds(5))
                     .setType2SlidingWindowDuration(Duration.standardSeconds(15))
-                    .setType1NumericComputations(ImmutableList.of(new TSNumericCombiner()))
-                    .setType2NumericComputations(
-                        ImmutableList.of(LogRtn.builder().build().create()))
+                    .setEnableGapFill(false)
+                    .setBasicType1Metrics(ImmutableList.of(Sum.class, Min.class, Max.class))
+                    .setBasicType2Metrics(ImmutableList.of(LogRtnFn.class))
                     .build());
 
     // The sliding window will create partial values, to keep testing simple we just test

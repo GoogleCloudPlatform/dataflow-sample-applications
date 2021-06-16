@@ -17,6 +17,7 @@
  */
 package com.google.dataflow.sample.timeseriesflow.adaptors.fsi.data.cme;
 
+import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.schemas.Schema;
@@ -25,6 +26,7 @@ import org.apache.beam.sdk.values.Row;
 import org.joda.time.Instant;
 
 /** Objects to map to Error Message events */
+@Experimental
 class GenerateErrorMessageEvents {
 
   /** Create ErrorMessage for JsonToRow Conversation failed records */

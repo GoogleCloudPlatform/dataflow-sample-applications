@@ -43,7 +43,7 @@ public class SnapShotScalabilityUtilsTest {
     OPTIONS.setAppName("SimpleDataStreamTSDataPoints");
     OPTIONS.setTypeOneComputationsLengthInSecs(1);
     OPTIONS.setTypeTwoComputationsLengthInSecs(3);
-    OPTIONS.setSequenceLengthInSeconds(3);
+    OPTIONS.setOutputTimestepLengthInSecs(3);
     OPTIONS.setNumKeys(1);
     OPTIONS.setNumSecs(3);
     OPTIONS.setNumFeatures(1);

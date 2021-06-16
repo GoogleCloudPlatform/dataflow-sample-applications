@@ -26,11 +26,11 @@ import com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.AdvanceWatermarkExpression;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.TSTimePointTest;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesDataTest.Time.TimePointCase;
+import com.google.dataflow.sample.timeseriesflow.test.TestUtils;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 import com.google.protobuf.util.JsonFormat;
-import com.google.protobuf.util.Timestamps;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -41,6 +41,7 @@ import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
 import org.apache.beam.sdk.testing.TestStream;
 import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.TimestampedValue;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
@@ -71,7 +72,7 @@ public abstract class TSTestData implements Serializable {
         JsonReader input, Duration outputTSType1Window, Duration outputTSType2Window)
         throws IOException {
 
-      List<TSDataPoint> messages = new ArrayList<>();
+      List<TimestampedValue<TSDataPoint>> messages = new ArrayList<>();
       input.beginArray();
       Long instant = START;
       TestStream.Builder<TSDataPoint> stream =
@@ -96,10 +97,7 @@ public abstract class TSTestData implements Serializable {
           JsonFormat.parser()
               .ignoringUnknownFields()
               .merge(String.valueOf(element), tsDataPointBuilder);
-          messages.add(
-              TSDataPoint.newBuilder(tsDataPointBuilder.build())
-                  .setTimestamp(Timestamps.fromMillis(instant))
-                  .build());
+          messages.add(TestUtils.timestampedValueFromTSDataPoint(tsDataPointBuilder.build()));
           tsDataPointBuilder.clear();
 
           // Parse to TSTimePointTest in case hints are provided
