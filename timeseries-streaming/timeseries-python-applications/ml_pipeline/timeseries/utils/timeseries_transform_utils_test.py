@@ -18,18 +18,17 @@ import unittest
 import numpy
 from datetime import datetime
 import tensorflow as tf
-import timeseries.encoder_decoder.encoder_decoder_preprocessing as encoder_decoder_preprocessing
+import ml_pipeline.timeseries.encoder_decoder.encoder_decoder_preprocessing as encoder_decoder_preprocessing
 from scipy.stats import stats
 from tensorflow_transform.beam import tft_unit
 from tensorflow_transform.beam import impl as beam_impl
-from timeseries.utils import timeseries_transform_utils as ts_utils
-
+from ml_pipeline.timeseries.utils import timeseries_transform_utils as ts_utils
 
 
 class BeamImplTest(tft_unit.TransformTestCase):
     def setUp(self):
         tf.compat.v1.logging.info(
-                'Starting test case: %s', self._testMethodName)
+            'Starting test case: %s', self._testMethodName)
 
         self._context = beam_impl.Context(use_deep_copy_optimization=True)
         self._context.__enter__()
@@ -43,15 +42,15 @@ class BeamImplTest(tft_unit.TransformTestCase):
 
     def testBasicType(self):
         config = {
-                'timesteps': 3,
-                'time_features': [],
-                'features': ['a'],
-                'enable_timestamp_features': False
+            'timesteps': 3,
+            'time_features': [],
+            'features': ['a'],
+            'enable_timestamp_features': False
         }
 
         input_data = [{'a': [1000.0, 2000.0, 3000.0]}]
         input_metadata = tft_unit.metadata_from_feature_spec(
-                {'a': tf.io.VarLenFeature(tf.float32)})
+            {'a': tf.io.VarLenFeature(tf.float32)})
 
         output = [[1000], [2000], [3000]]
 
@@ -60,37 +59,37 @@ class BeamImplTest(tft_unit.TransformTestCase):
         expected_data = [{'Float32': output, 'LABEL': output}]
 
         expected_metadata = tft_unit.metadata_from_feature_spec({
-                'Float32': tf.io.FixedLenFeature([config['timesteps'], 1],
-                                                 tf.float32),
-                'LABEL': tf.io.FixedLenFeature([config['timesteps'], 1],
-                                               tf.float32)
+            'Float32': tf.io.FixedLenFeature([config['timesteps'], 1],
+                                             tf.float32),
+            'LABEL': tf.io.FixedLenFeature([config['timesteps'], 1],
+                                           tf.float32)
         })
 
         preprocessing_fn = functools.partial(
-                encoder_decoder_preprocessing.preprocessing_fn,
-                custom_config=config)
+            encoder_decoder_preprocessing.preprocessing_fn,
+            custom_config=config)
 
         self.assertAnalyzeAndTransformResults(
-                input_data,
-                input_metadata,
-                preprocessing_fn,
-                expected_data,
-                expected_metadata)
+            input_data,
+            input_metadata,
+            preprocessing_fn,
+            expected_data,
+            expected_metadata)
 
     def testMixedType(self):
         config = {
-                'timesteps': 3,
-                'time_features': ['MINUTE', 'MONTH', 'HOUR', 'DAY', 'YEAR'],
-                'features': ['a', 'b'],
-                'enable_timestamp_features': False
+            'timesteps': 3,
+            'time_features': ['MINUTE', 'MONTH', 'HOUR', 'DAY', 'YEAR'],
+            'features': ['a', 'b'],
+            'enable_timestamp_features': False
         }
 
         input_data = [{
-                'a': [1000.0, 2000.0, 3000.0], 'b': [3000, 2000, 1000]
+            'a': [1000.0, 2000.0, 3000.0], 'b': [3000, 2000, 1000]
         }]
         input_metadata = tft_unit.metadata_from_feature_spec({
-                'a': tf.io.VarLenFeature(tf.float32),
-                'b': tf.io.VarLenFeature(tf.int64)
+            'a': tf.io.VarLenFeature(tf.float32),
+            'b': tf.io.VarLenFeature(tf.int64)
         })
 
         output = [[1000.0, 3000.0], [2000.0, 2000.0], [3000.0, 1000.0]]
@@ -100,30 +99,30 @@ class BeamImplTest(tft_unit.TransformTestCase):
         expected_data = [{'Float32': output, 'LABEL': output}]
 
         expected_metadata = tft_unit.metadata_from_feature_spec({
-                'Float32': tf.io.FixedLenFeature([config['timesteps'], 2],
-                                                 tf.float32),
-                'LABEL': tf.io.FixedLenFeature([config['timesteps'], 2],
-                                               tf.float32)
+            'Float32': tf.io.FixedLenFeature([config['timesteps'], 2],
+                                             tf.float32),
+            'LABEL': tf.io.FixedLenFeature([config['timesteps'], 2],
+                                           tf.float32)
         })
 
         preprocessing_fn = functools.partial(
-                encoder_decoder_preprocessing.preprocessing_fn,
-                custom_config=config)
+            encoder_decoder_preprocessing.preprocessing_fn,
+            custom_config=config)
 
         self.assertAnalyzeAndTransformResults(
-                input_data,
-                input_metadata,
-                preprocessing_fn,
-                expected_data,
-                expected_metadata)
+            input_data,
+            input_metadata,
+            preprocessing_fn,
+            expected_data,
+            expected_metadata)
 
     def testWithTimeStamps(self):
 
         config = {
-                'timesteps': 2,
-                'time_features': ['MINUTE', 'MONTH', 'HOUR', 'DAY', 'YEAR'],
-                'features': ['float32', 'foo_TIMESTAMP'],
-                'enable_timestamp_features': True
+            'timesteps': 2,
+            'time_features': ['MINUTE', 'MONTH', 'HOUR', 'DAY', 'YEAR'],
+            'features': ['float32', 'foo_TIMESTAMP'],
+            'enable_timestamp_features': True
         }
 
         # The values will need to be different enough for the zscore not to nan
@@ -131,12 +130,12 @@ class BeamImplTest(tft_unit.TransformTestCase):
         timestamp_2 = int(datetime(2001, 6, 15, 12, 30, 30).timestamp())
 
         input_data = [{
-                'float32': [1000.0, 2000.0],
-                'foo_TIMESTAMP': [timestamp_1 * 1000, timestamp_2 * 1000]
+            'float32': [1000.0, 2000.0],
+            'foo_TIMESTAMP': [timestamp_1 * 1000, timestamp_2 * 1000]
         }]
         input_metadata = tft_unit.metadata_from_feature_spec({
-                'float32': tf.io.VarLenFeature(tf.float32),
-                'foo_TIMESTAMP': tf.io.VarLenFeature(tf.int64)
+            'float32': tf.io.VarLenFeature(tf.float32),
+            'foo_TIMESTAMP': tf.io.VarLenFeature(tf.int64)
         })
 
         output_timestep_1 = self.create_transform_output(timestamp_1)
@@ -160,22 +159,22 @@ class BeamImplTest(tft_unit.TransformTestCase):
         expected_data = [{'Float32': output, 'LABEL': output}]
 
         expected_metadata = tft_unit.metadata_from_feature_spec({
-                'Float32': tf.io.FixedLenFeature([config['timesteps'], 11],
-                                                 tf.float32),
-                'LABEL': tf.io.FixedLenFeature([config['timesteps'], 11],
-                                               tf.float32)
+            'Float32': tf.io.FixedLenFeature([config['timesteps'], 11],
+                                             tf.float32),
+            'LABEL': tf.io.FixedLenFeature([config['timesteps'], 11],
+                                           tf.float32)
         })
 
         preprocessing_fn = functools.partial(
-                encoder_decoder_preprocessing.preprocessing_fn,
-                custom_config=config)
+            encoder_decoder_preprocessing.preprocessing_fn,
+            custom_config=config)
 
         self.assertAnalyzeAndTransformResults(
-                input_data,
-                input_metadata,
-                preprocessing_fn,
-                expected_data,
-                expected_metadata)
+            input_data,
+            input_metadata,
+            preprocessing_fn,
+            expected_data,
+            expected_metadata)
 
     def create_transform_output(self, timestamp: int) -> [float]:
         # Needs to be in lexical order
@@ -195,16 +194,16 @@ class BeamImplTest(tft_unit.TransformTestCase):
         cos_year = math.cos(timestamp * (2.0 * math.pi / ts_utils.YEAR))
 
         return [
-                cos_day,
-                cos_hour,
-                cos_min,
-                cos_month,
-                cos_year,
-                sin_day,
-                sin_hour,
-                sin_min,
-                sin_month,
-                sin_year
+            cos_day,
+            cos_hour,
+            cos_min,
+            cos_month,
+            cos_year,
+            sin_day,
+            sin_hour,
+            sin_min,
+            sin_month,
+            sin_year
         ]
 
 

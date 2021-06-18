@@ -69,7 +69,7 @@ def _get_serve_tf_examples_fn(model, tf_transform_output):
                 serialized_tf_examples, feature_spec)
         transformed_features = create_training_data(
                 model.tft_layer(parsed_features))
-        return model(transformed_features)
+        return model(transformed_features), transformed_features
 
     return serve_tf_examples_fn
 
