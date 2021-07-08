@@ -30,7 +30,7 @@ message Time {
 
         int32 advance_watermark_seconds = 2;
 
-        int32 advance_processing_timeSeconds = 3;
+        int32 advance_processing_time_seconds = 3;
     }
 }
 
