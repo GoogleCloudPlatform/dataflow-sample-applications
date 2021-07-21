@@ -60,7 +60,7 @@ def run(args, pipeline_args):
                                         'model_config': config.MODEL_CONFIG
                                 }))
                 | beam.ParDo(
-                        process_encdec_inf_rtn.CheckAnomalous(threshold=0.7))
+                        process_encdec_inf_rtn.CheckAnomalous(output_false=False, threshold=0.7))
                 | beam.ParDo(print))
 
 
