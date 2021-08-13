@@ -34,7 +34,6 @@ import com.google.dataflow.sample.timeseriesflow.transforms.TypeTwoComputation;
 import com.google.dataflow.sample.timeseriesflow.transforms.TypeTwoComputation.ComputeType;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.transforms.Filter;
@@ -67,9 +66,9 @@ public class VWAPGFn extends CTypeTwo {
   /** Options for {@link VWAPGFn} fn. */
   public interface VWAPOptions extends TSFlowOptions {
 
-    List<String> getVWAPMajorKeyName();
+    String getVWAPKeyNamePattern();
 
-    void setVWAPMajorKeyName(List<String> majorKeyName);
+    void setVWAPKeyNamePattern(String pattern);
 
     String getVWAPPriceName();
 
@@ -87,24 +86,16 @@ public class VWAPGFn extends CTypeTwo {
     VWAPOptions vwapOptions = input.getPipeline().getOptions().as(VWAPOptions.class);
 
     String minorKeyNameForPrice = vwapOptions.getVWAPPriceName();
-    List<String> majorKeyNames = vwapOptions.getVWAPMajorKeyName();
-
-    // Construct all the keys that will have Vwap computed on them
-
-    List<TSKey> majorKeys =
-        majorKeyNames.stream()
-            .map(
-                x ->
-                    TSKey.newBuilder()
-                        .setMajorKey(x)
-                        .setMinorKeyString(minorKeyNameForPrice)
-                        .build())
-            .collect(Collectors.toList());
+    String majorKeyregExp = vwapOptions.getVWAPKeyNamePattern();
 
     // Use the Vwap combiner to get the SUM(Price * Vol) and SUM(VOL) within the fixed window Type1.
 
     return input
-        .apply(Filter.by(x -> majorKeys.contains(x.getKey())))
+        .apply(
+            Filter.by(
+                x ->
+                    (x.getKey().getMinorKeyString().equals(minorKeyNameForPrice))
+                        && x.getKey().getMajorKey().matches(majorKeyregExp)))
         .apply(
             BTypeTwo.builder()
                 .setMapping(

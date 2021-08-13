@@ -24,7 +24,6 @@ import com.google.dataflow.sample.timeseriesflow.metrics.core.complex.fsi.vwap.V
 import com.google.dataflow.sample.timeseriesflow.metrics.core.complex.fsi.vwap.VWAPGFn.AccumVWAPBuilder;
 import com.google.dataflow.sample.timeseriesflow.metrics.core.complex.fsi.vwap.VWAPGFn.VWAPOptions;
 import com.google.dataflow.sample.timeseriesflow.metrics.core.typeone.*;
-import com.google.dataflow.sample.timeseriesflow.test.TSDataTestUtils;
 import com.google.gson.stream.JsonReader;
 import common.TSTestData;
 import java.io.File;
@@ -68,9 +67,7 @@ public class VWAPGraphFnTest {
     String absolutePath = file.getAbsolutePath();
 
     VWAPOptions vwapOptions = p.getOptions().as(VWAPOptions.class);
-    vwapOptions.setVWAPMajorKeyName(
-        ImmutableList.of(
-            TSDataTestUtils.KEY_A_A.getMajorKey(), TSDataTestUtils.KEY_B_A.getMajorKey()));
+    vwapOptions.setVWAPKeyNamePattern("Key-(.*)");
     vwapOptions.setVWAPPriceName(PRICE);
     vwapOptions.setTypeOneComputationsLengthInSecs(5);
     vwapOptions.setTypeTwoComputationsLengthInSecs(5);
@@ -147,9 +144,7 @@ public class VWAPGraphFnTest {
     String absolutePath = file.getAbsolutePath();
 
     VWAPOptions vwapOptions = p.getOptions().as(VWAPOptions.class);
-    vwapOptions.setVWAPMajorKeyName(
-        ImmutableList.of(
-            TSDataTestUtils.KEY_A_A.getMajorKey(), TSDataTestUtils.KEY_B_A.getMajorKey()));
+    vwapOptions.setVWAPKeyNamePattern("Key-(.*)");
     vwapOptions.setVWAPPriceName(PRICE);
     vwapOptions.setTypeOneComputationsLengthInSecs(5);
     vwapOptions.setTypeTwoComputationsLengthInSecs(5);
@@ -237,9 +232,7 @@ public class VWAPGraphFnTest {
     String absolutePath = file.getAbsolutePath();
 
     VWAPOptions vwapOptions = p.getOptions().as(VWAPOptions.class);
-    vwapOptions.setVWAPMajorKeyName(
-        ImmutableList.of(
-            TSDataTestUtils.KEY_A_A.getMajorKey(), TSDataTestUtils.KEY_B_A.getMajorKey()));
+    vwapOptions.setVWAPKeyNamePattern("Key-(.*)");
     vwapOptions.setVWAPPriceName(PRICE);
     vwapOptions.setTypeOneComputationsLengthInSecs(5);
     vwapOptions.setTypeTwoComputationsLengthInSecs(5);

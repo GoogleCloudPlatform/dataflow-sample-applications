@@ -84,7 +84,7 @@ public class IntegrationMetricTest {
             TSDataTestUtils.KEY_A_A.getMajorKey(), TSDataTestUtils.KEY_B_A.getMajorKey());
 
     VWAPOptions vwapOptions = p.getOptions().as(VWAPOptions.class);
-    vwapOptions.setVWAPMajorKeyName(majorKeys);
+    vwapOptions.setVWAPKeyNamePattern("Key-(.*)");
     vwapOptions.setVWAPPriceName(PRICE);
     vwapOptions.setTypeOneComputationsLengthInSecs(5);
     vwapOptions.setTypeTwoComputationsLengthInSecs(5);
