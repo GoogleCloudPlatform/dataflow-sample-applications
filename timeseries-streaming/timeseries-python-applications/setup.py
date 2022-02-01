@@ -17,10 +17,10 @@ import setuptools
 
 setuptools.setup(
     name='tsflow',
-    version='0.3.2-sample',
+    version='0.4.1-sample',
     python_requires='>=3.7',
     install_requires=[
-        'tfx==0.24.0', 'kfp==1.0.3'
+        'tfx==1.0.0', 'kfp==1.0.3'
     ],
     packages=setuptools.find_packages()
 )

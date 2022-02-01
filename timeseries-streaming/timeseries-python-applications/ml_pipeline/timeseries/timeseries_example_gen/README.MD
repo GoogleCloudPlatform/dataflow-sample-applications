@@ -44,3 +44,22 @@ The order in which the Timeline will be consumed for the span will be based on t
 Configuration:
 
 The primary configuration will be based on the ratio provided for Test / Validate and Train. 
+
+Known issues:
+
+If providing a Span configuration where there is overlapping data from the timeline for example:
+
+Timeline = [0, 1000, 2000, 3000, 4000, 5000]
+
+Span-0
+	train-split	[0,1000,2000]
+	eval-split 	[3000]
+
+Span-1 
+	train-split	[0,1000,2000,3000]
+	eval-split 	[4000]
+
+Then components like statistics_gen will not be accurate 
+
+
+
