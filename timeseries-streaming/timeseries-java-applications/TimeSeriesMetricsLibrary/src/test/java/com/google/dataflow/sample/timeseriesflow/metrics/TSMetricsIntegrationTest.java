@@ -17,6 +17,7 @@
  */
 package com.google.dataflow.sample.timeseriesflow.metrics;
 
+import com.google.common.collect.ImmutableList;
 import com.google.dataflow.sample.timeseriesflow.FSITechnicalDerivedAggregations.FsiTechnicalIndicators;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
@@ -40,7 +41,6 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.TimestampedValue;
 import org.apache.beam.sdk.values.TypeDescriptor;
 import org.apache.beam.sdk.values.TypeDescriptors;
-import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 

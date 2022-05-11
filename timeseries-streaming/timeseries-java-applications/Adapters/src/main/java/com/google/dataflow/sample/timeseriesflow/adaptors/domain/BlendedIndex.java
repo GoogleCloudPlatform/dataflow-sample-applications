@@ -18,6 +18,7 @@
 package com.google.dataflow.sample.timeseriesflow.adaptors.domain;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
@@ -37,7 +38,6 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
-import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.slf4j.Logger;

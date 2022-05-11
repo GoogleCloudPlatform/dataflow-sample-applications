@@ -17,10 +17,11 @@
  */
 package com.google.dataflow.sample.timeseriesflow.transforms;
 
-import static org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions.checkArgument;
-import static org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
@@ -68,7 +69,6 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.ValueInSingleWindow;
-import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.annotations.VisibleForTesting;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.slf4j.Logger;

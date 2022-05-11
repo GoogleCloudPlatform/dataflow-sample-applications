@@ -53,10 +53,6 @@ clean {
     delete protobuf.generatedFilesBaseDir
 }
 
-repositories {
-    mavenCentral()
-}
-
 // Enable code formatting
 spotless {
     java {
@@ -78,7 +74,7 @@ spotless {
 
 dependencies {
 
-    compile group: 'com.google.guava', name: 'guava', version: '29.0-jre'
+    compile group: 'com.google.guava', name: 'guava', version: '30.1-jre'
     compile group: 'org.apache.beam', name: 'beam-sdks-java-core', version: "${beamVersion}"
     compile group: 'org.apache.beam', name: 'beam-sdks-java-io-google-cloud-platform', version:"${beamVersion}"
     compile group: 'org.apache.beam', name: 'beam-runners-portability-java', version: '2.22.0'

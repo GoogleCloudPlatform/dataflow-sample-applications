@@ -17,6 +17,7 @@
  */
 package com.google.dataflow.sample.timeseriesflow.metrics.core.typetwo;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
@@ -30,7 +31,6 @@ import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.annotations.VisibleForTesting;
 
 @VisibleForTesting
 @Experimental

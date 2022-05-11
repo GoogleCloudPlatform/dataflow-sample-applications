@@ -17,6 +17,7 @@
  */
 package com.google.dataflow.sample.timeseriesflow.metrics.utils;
 
+import com.google.common.collect.ImmutableList;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccumSequence;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
@@ -31,7 +32,6 @@ import org.apache.beam.sdk.transforms.Combine.CombineFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 
 /**
  * Wrapper class used to deploy pipelines with all available metrics. Currently includes:

@@ -17,6 +17,7 @@
  */
 package com.google.dataflow.sample.timeseriesflow.metrics;
 
+import com.google.common.collect.ImmutableList;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
@@ -32,7 +33,6 @@ import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.TypeDescriptors;
-import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 import org.joda.time.Instant;
 import org.junit.Assert;
 import org.junit.Rule;
