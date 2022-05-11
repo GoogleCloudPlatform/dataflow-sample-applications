@@ -17,13 +17,13 @@
  */
 package com.google.dataflow.sample.timeseriesflow.metrics.core.typeone;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.combiners.BTypeOne;
 import com.google.dataflow.sample.timeseriesflow.common.TSDataUtils;
 import com.google.dataflow.sample.timeseriesflow.datamap.AccumCoreNumericBuilder;
 import org.apache.beam.sdk.annotations.Experimental;
-import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.annotations.VisibleForTesting;
 
 @VisibleForTesting
 @Experimental

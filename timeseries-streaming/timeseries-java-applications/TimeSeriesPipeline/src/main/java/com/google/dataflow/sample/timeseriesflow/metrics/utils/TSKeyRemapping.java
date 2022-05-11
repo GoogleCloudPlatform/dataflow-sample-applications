@@ -18,6 +18,7 @@
 package com.google.dataflow.sample.timeseriesflow.metrics.utils;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,7 +33,6 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

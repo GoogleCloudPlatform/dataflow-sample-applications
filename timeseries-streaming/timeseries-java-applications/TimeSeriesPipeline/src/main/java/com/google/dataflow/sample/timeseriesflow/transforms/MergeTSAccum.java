@@ -17,6 +17,7 @@
  */
 package com.google.dataflow.sample.timeseriesflow.transforms;
 
+import com.google.common.collect.ImmutableList;
 import com.google.dataflow.sample.timeseriesflow.DerivedAggregations.Indicators;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.Data;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSAccum;
@@ -29,7 +30,6 @@ import java.util.Optional;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.windowing.IntervalWindow;
 import org.apache.beam.sdk.values.KV;
-import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 
 /**
  * Merges TSAccum which are in the same window. Carries out validation on the data as the merge is
