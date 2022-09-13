@@ -23,7 +23,7 @@ buildscript { repositories { mavenCentral() }}
 allprojects {
 
     ext {
-        beamVersion = '2.38.0'
+        beamVersion = '2.41.0'
         protobuf_version = '3.11.1'
         autoValueVersion = '1.6.3'
     }
