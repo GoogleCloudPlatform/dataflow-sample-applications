@@ -21,6 +21,7 @@ import static com.google.dataflow.sample.timeseriesflow.examples.fsi.forex.Histo
 import static com.google.dataflow.sample.timeseriesflow.examples.fsi.forex.HistoryForexReader.successfulParse;
 import static java.lang.Boolean.TRUE;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.dataflow.sample.timeseriesflow.graph.GenerateComputations;
 import com.google.dataflow.sample.timeseriesflow.metrics.core.complex.fsi.rsi.RSIGFn;
@@ -35,7 +36,6 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.TypeDescriptors;
-import org.apache.beam.vendor.grpc.v1p26p0.com.google.common.collect.ImmutableList;
 
 public class ForexBatchPipeline {
 

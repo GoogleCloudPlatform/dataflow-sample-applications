@@ -17,6 +17,8 @@
  */
 package com.google.dataflow.sample.timeseriesflow.adaptors.domain.tests;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSDataPoint;
 import com.google.dataflow.sample.timeseriesflow.TimeSeriesData.TSKey;
 import com.google.dataflow.sample.timeseriesflow.adaptors.domain.BlendedIndex;
@@ -35,8 +37,6 @@ import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.View;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
-import org.apache.beam.vendor.grpc.v1p26p0.com.google.common.collect.ImmutableMap;
-import org.apache.beam.vendor.grpc.v1p26p0.com.google.common.collect.ImmutableSet;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.junit.Rule;

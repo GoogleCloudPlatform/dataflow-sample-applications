@@ -93,9 +93,7 @@ public class TSKeyRemappingTest {
             .setType1FixedWindow(Duration.standardSeconds(5))
             .setType2SlidingWindowDuration(Duration.standardSeconds(5))
             .setEnableGapFill(false)
-            .setBasicType1Metrics(
-                org.apache.beam.vendor.grpc.v1p26p0.com.google.common.collect.ImmutableList.of(
-                    TestSum.class, TestMin.class, TestMax.class))
+            .setBasicType1Metrics(ImmutableList.of(TestSum.class, TestMin.class, TestMax.class))
             .build();
 
     PCollection<KV<TSKey, Iterable<TSAccum>>> results =

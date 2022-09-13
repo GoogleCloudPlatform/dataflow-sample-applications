@@ -19,7 +19,7 @@ plugins {
     id 'java'
     id 'idea'
     id "com.diffplug.gradle.spotless" version "3.24.2"
-    id "com.google.protobuf" version "0.8.12"
+    id "com.google.protobuf" version "0.8.19"
     id 'org.gradle.test-retry' version '1.0.0'
 }
 
@@ -53,7 +53,7 @@ protobuf {
     generatedFilesBaseDir = "$projectDir/build"
     protoc {
         // Download from repositories
-        artifact = 'com.google.protobuf:protoc:3.0.0'
+        artifact = 'com.google.protobuf:protoc:3.19.4'
     }
 }
 
@@ -73,7 +73,7 @@ dependencies {
     compile group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.7.7'
 
     // Use 'api' rather than 'compile' for Android or java-library projects.
-    compileOnly             "com.google.auto.value:auto-value-annotations:${autoValueVersion}"
+    compileOnly         "com.google.auto.value:auto-value-annotations:${autoValueVersion}"
     annotationProcessor "com.google.auto.value:auto-value:${autoValueVersion}"
 
     // Enable code formatting
