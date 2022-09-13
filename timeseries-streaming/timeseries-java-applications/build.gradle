@@ -24,7 +24,7 @@ allprojects {
 
     ext {
         beamVersion = '2.41.0'
-        protobuf_version = '3.11.1'
+        protobuf_version = '3.19.4'
         autoValueVersion = '1.6.3'
     }
 
