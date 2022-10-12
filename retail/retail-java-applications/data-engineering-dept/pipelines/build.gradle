@@ -33,3 +33,7 @@ dependencies {
     testCompile project(':data-engineering-dept:business-logic').sourceSets.test.output
 }
 
+task executeOnDataflow(type: JavaExec){
+    classpath=sourceSets.main.runtimeClasspath
+    main = "com.google.dataflow.sample.retail.pipeline.RetailDataProcessingPipeline"
+}
