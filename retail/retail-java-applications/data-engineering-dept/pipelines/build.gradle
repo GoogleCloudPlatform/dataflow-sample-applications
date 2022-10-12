@@ -36,4 +36,6 @@ dependencies {
 task executeOnDataflow(type: JavaExec){
     classpath=sourceSets.main.runtimeClasspath
     main = "com.google.dataflow.sample.retail.pipeline.RetailDataProcessingPipeline"
+    systemProperties System.getProperties()
+    args System.getProperty("exec.args", "").split()
 }
