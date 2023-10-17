@@ -131,7 +131,7 @@ badElements.apply(fixItemA).apply(fixItemB)
 
 This means that your pipeline might have more serial steps, but fusion should help minimize any processing overhead introduced by this.
 ### Examples
-[ValidateAndCorrectClickStreamEvents.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/ValidateAndCorrectClickStreamEvents.java)
+[ValidateAndCorrectCSEvt.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/ValidateAndCorrectCSEvt.java)
 
 ## Using DoFn.StartBundle to micro-batch calls to external services
 
@@ -144,7 +144,7 @@ Instead, we recommend that you use the StartBundle and FinishBundle lifecycle el
 
 One minor downside is that bundle sizes are dynamically determined by the implementation of the runner, based on what's currently happening inside the pipeline and its workers, and in stream mode will often be small in size. Dataflow bundling is influenced by backend factors like sharding usage, how much data is available for a particular key, and the throughput of the pipeline.
 ### Examples
-[ValidateAndCorrectClickStreamEvents.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/ValidateAndCorrectClickStreamEvents.java)
+[ValidateAndCorrectCSEvt.java](data-engineering-dept/business-logic/src/main/java/com/google/dataflow/sample/retail/businesslogic/core/transforms/clickstream/ValidateAndCorrectCSEvt.java)
 
 ## Using an appropriate side-input pattern
 ### Content
