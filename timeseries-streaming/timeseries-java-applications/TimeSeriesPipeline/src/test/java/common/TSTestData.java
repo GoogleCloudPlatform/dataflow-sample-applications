@@ -132,6 +132,13 @@ public abstract class TSTestData implements Serializable {
                 if (advanceWatermark_expression == AdvanceWatermarkExpression.INFINITY) {
                   testStream = stream.advanceWatermarkToInfinity();
                 }
+                break;
+              case ADVANCE_PROCESSING_TIME_SECONDS:
+                stream =
+                    stream.advanceProcessingTime(
+                        Duration.standardSeconds(
+                            tsTimePointTestBuilder.getTime().getAdvanceProcessingTimeSeconds()));
+                break;
             }
           }
           tsTimePointTestBuilder.clear();
